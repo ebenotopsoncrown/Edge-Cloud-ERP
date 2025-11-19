@@ -1,4 +1,4 @@
-# Base44 App
+# Edge Cloud ERP 
 
 
 This app was designed and developed by Ebenezer james.
