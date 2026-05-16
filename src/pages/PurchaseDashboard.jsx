@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, { PageHeader } from "../components/shared/PageShell";
 import AccountLedger from "../components/reports/AccountLedger";
 import { useFinancialMetrics, formatCurrency } from "../components/shared/FinancialCalculations";
 import AgedPayables from "../components/reports/AgedPayables";
@@ -203,7 +204,7 @@ export default function PurchaseDashboard() {
   };
 
   return (
-    <div style={{ padding: '28px 32px', background: '#F5F7FA', minHeight: '100%' }}>
+    <PageShell>
       {selectedAccount && (
         <AccountLedger
           account={selectedAccount}
@@ -216,29 +217,12 @@ export default function PurchaseDashboard() {
         <BillPaymentForm onClose={() => setShowBillPaymentForm(false)} />
       )}
 
-      {/* Page Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em', margin: 0 }}>
-          Purchases &amp; Vendors
-        </h1>
-        <p style={{ fontSize: 14, color: '#64748B', marginTop: 4 }}>
-          Manage your purchasing operations for <strong>{currentCompany?.company_name}</strong>
-        </p>
-        <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
-          <span style={{
-            fontSize: 12, fontWeight: 600, color: '#1B4F8A',
-            background: '#EFF6FF', padding: '4px 10px', borderRadius: 6
-          }}>
-            All amounts in {baseCurrency} — from posted journal entries
-          </span>
-          <span style={{
-            fontSize: 12, fontWeight: 600, color: '#00A86B',
-            background: '#F0FDF4', padding: '4px 10px', borderRadius: 6
-          }}>
-            Synced with financial statements in real-time
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        title="Purchases & Vendors"
+        subtitle={`${currentCompany?.company_name} · ${baseCurrency} · real-time from posted journal entries`}
+        icon={Receipt}
+        accentColor="#F97316"
+      />
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 24 }}>
@@ -397,6 +381,6 @@ export default function PurchaseDashboard() {
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

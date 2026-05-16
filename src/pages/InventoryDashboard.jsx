@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { Product, InventoryTransaction } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, { PageHeader } from "../components/shared/PageShell";
 import ProductForm from "../components/products/ProductForm";
 import { Plus, Package, AlertTriangle, TrendingUp, DollarSign, Layers } from "lucide-react";
 import { formatCurrency } from "../components/shared/FinancialCalculations";
@@ -115,7 +116,7 @@ export default function InventoryDashboard() {
   const baseCurrency = currentCompany?.base_currency || 'USD';
 
   return (
-    <div style={{ padding: '28px 32px', background: '#F5F7FA', minHeight: '100%' }}>
+    <PageShell>
       {showProductForm && (
         <ProductForm
           product={selectedProduct}
@@ -126,31 +127,28 @@ export default function InventoryDashboard() {
         />
       )}
 
-      {/* Page Header */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
-        <div>
-          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em', margin: 0 }}>
-            Inventory
-          </h1>
-          <p style={{ fontSize: 14, color: '#64748B', marginTop: 4 }}>
-            Setup / Maintain — <strong>{currentCompany?.company_name}</strong>
-          </p>
-        </div>
-        <button
-          onClick={() => {
-            setSelectedProduct(null);
-            setShowProductForm(true);
-          }}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: 8,
-            padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600,
-            background: '#1B4F8A', color: '#fff', border: 'none', cursor: 'pointer',
-            boxShadow: '0 2px 6px rgba(27,79,138,0.3)', transition: 'opacity 0.15s'
-          }}
-        >
-          <Plus size={16} /> New Inventory Item
-        </button>
-      </div>
+      <PageHeader
+        title="Inventory"
+        subtitle={`Setup / Maintain · ${currentCompany?.company_name}`}
+        icon={Package}
+        accentColor="#1B4F8A"
+        actions={
+          <button
+            onClick={() => {
+              setSelectedProduct(null);
+              setShowProductForm(true);
+            }}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 8,
+              padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600,
+              background: '#1B4F8A', color: '#fff', border: 'none', cursor: 'pointer',
+              boxShadow: '0 2px 6px rgba(27,79,138,0.3)', transition: 'opacity 0.15s'
+            }}
+          >
+            <Plus size={16} /> New Inventory Item
+          </button>
+        }
+      />
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 24 }}>
@@ -319,6 +317,6 @@ export default function InventoryDashboard() {
           </p>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

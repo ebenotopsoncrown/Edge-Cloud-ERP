@@ -2,8 +2,8 @@
 import React, { useState } from "react";
 import { Invoice, Customer, Account, JournalEntry } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import PageShell, { PageHeader } from "../components/shared/PageShell";
 import { createPageUrl } from "@/utils";
 import { useCompany } from "../components/auth/CompanyContext";
 import AccountLedger from "../components/reports/AccountLedger";
@@ -190,7 +190,7 @@ export default function SalesDashboard() {
   };
 
   return (
-    <div style={{ padding: '28px 32px', background: '#F5F7FA', minHeight: '100%' }}>
+    <PageShell>
       {selectedAccount && (
         <AccountLedger
           account={selectedAccount}
@@ -199,31 +199,12 @@ export default function SalesDashboard() {
         />
       )}
 
-      {/* Page Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em', margin: 0 }}>
-          Sales &amp; Invoicing
-        </h1>
-        <p style={{ fontSize: 14, color: '#64748B', marginTop: 4 }}>
-          Manage your sales operations for <strong>{currentCompany?.company_name}</strong>
-        </p>
-        <div style={{ display: 'flex', gap: 16, marginTop: 8, alignItems: 'center' }}>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            fontSize: 12, fontWeight: 600, color: '#1B4F8A',
-            background: '#EFF6FF', padding: '4px 10px', borderRadius: 6
-          }}>
-            All amounts in {baseCurrency} — from posted journal entries
-          </span>
-          <span style={{
-            display: 'inline-flex', alignItems: 'center', gap: 6,
-            fontSize: 12, fontWeight: 600, color: '#00A86B',
-            background: '#F0FDF4', padding: '4px 10px', borderRadius: 6
-          }}>
-            Synced with financial statements in real-time
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        title="Sales & Invoicing"
+        subtitle={`${currentCompany?.company_name} · ${baseCurrency} · real-time from posted journal entries`}
+        icon={FileText}
+        accentColor="#1B4F8A"
+      />
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 24 }}>
@@ -382,6 +363,6 @@ export default function SalesDashboard() {
           </div>
         )}
       </div>
-    </div>
+    </PageShell>
   );
 }

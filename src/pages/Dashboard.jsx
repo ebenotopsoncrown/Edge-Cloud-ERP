@@ -19,7 +19,7 @@ import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { Button } from "@/components/ui/button";
+import PageShell, { PageHeader } from "../components/shared/PageShell";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
@@ -208,7 +208,7 @@ export default function Dashboard() {
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
   return (
-    <div style={{ padding: '28px 32px', background: '#F5F7FA', minHeight: '100%' }}>
+    <PageShell>
       <GoogleReviewRequest />
 
       {/* Modals */}
@@ -216,36 +216,26 @@ export default function Dashboard() {
       {selectedBill    && <BillForm    bill={selectedBill}       onClose={() => setSelectedBill(null)} />}
       {selectedAccount && <AccountLedger account={selectedAccount} onClose={() => setSelectedAccount(null)} onTransactionClick={() => {}} />}
 
-      {/* ── Page header ── */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
-        <div>
-          <h1 style={{ fontSize: 26, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em', lineHeight: 1.2 }}>
-            Financial Dashboard
-          </h1>
-          <p style={{ color: '#64748B', fontSize: 14, marginTop: 4 }}>
-            Welcome back · <span style={{ fontWeight: 600 }}>{currentCompany.company_name}</span> · {today}
-          </p>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, background: '#EBF4FB', borderRadius: 99, padding: '4px 12px' }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: ACCENT }} />
-            <span style={{ fontSize: 12, fontWeight: 600, color: PRIMARY }}>
-              Amounts in {baseCurrency} · Calculated from Posted Journal Entries
-            </span>
+      <PageHeader
+        title="Financial Dashboard"
+        subtitle={`Welcome back · ${currentCompany.company_name} · ${today}`}
+        icon={DollarSign}
+        accentColor="#1B4F8A"
+        actions={
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <Link to={createPageUrl("Invoices")}>
+              <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', background: '#EBF4FB', color: PRIMARY, border: '1.5px solid #AED6F1', borderRadius: 9, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
+                <FileText style={{ width: 15, height: 15 }} /> New Invoice
+              </button>
+            </Link>
+            <Link to={createPageUrl("Bills")}>
+              <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', background: PRIMARY, color: 'white', border: 'none', borderRadius: 9, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
+                <Receipt style={{ width: 15, height: 15 }} /> New Bill
+              </button>
+            </Link>
           </div>
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Link to={createPageUrl("Invoices")}>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', background: '#EBF4FB', color: PRIMARY, border: '1.5px solid #AED6F1', borderRadius: 9, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
-              <FileText style={{ width: 15, height: 15 }} /> New Invoice
-            </button>
-          </Link>
-          <Link to={createPageUrl("Bills")}>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', background: PRIMARY, color: 'white', border: 'none', borderRadius: 9, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
-              <Receipt style={{ width: 15, height: 15 }} /> New Bill
-            </button>
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* ── Evaluation expired banner ── */}
       {evaluationExpired && (
@@ -527,6 +517,6 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
-    </div>
+    </PageShell>
   );
 }

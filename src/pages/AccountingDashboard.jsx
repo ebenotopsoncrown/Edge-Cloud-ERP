@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, { PageHeader } from "../components/shared/PageShell";
 import AccountLedger from "../components/reports/AccountLedger";
 import { useFinancialMetrics, formatCurrency } from "../components/shared/FinancialCalculations";
 import {
@@ -147,7 +148,7 @@ export default function AccountingDashboard() {
   const netIncomePositive = metrics.netIncome >= 0;
 
   return (
-    <div style={{ padding: '28px 32px', background: '#F5F7FA', minHeight: '100%' }}>
+    <PageShell>
       {selectedAccount && (
         <AccountLedger
           account={selectedAccount}
@@ -156,29 +157,12 @@ export default function AccountingDashboard() {
         />
       )}
 
-      {/* Page Header */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em', margin: 0 }}>
-          Accounting &amp; General Ledger
-        </h1>
-        <p style={{ fontSize: 14, color: '#64748B', marginTop: 4 }}>
-          Manage your accounting operations for <strong>{currentCompany?.company_name}</strong>
-        </p>
-        <div style={{ display: 'flex', gap: 16, marginTop: 8, flexWrap: 'wrap' }}>
-          <span style={{
-            fontSize: 12, fontWeight: 600, color: '#1B4F8A',
-            background: '#EFF6FF', padding: '4px 10px', borderRadius: 6
-          }}>
-            All amounts in {baseCurrency} — from posted journal entries
-          </span>
-          <span style={{
-            fontSize: 12, fontWeight: 600, color: '#00A86B',
-            background: '#F0FDF4', padding: '4px 10px', borderRadius: 6
-          }}>
-            Synced with financial statements in real-time
-          </span>
-        </div>
-      </div>
+      <PageHeader
+        title="Accounting & General Ledger"
+        subtitle={`${currentCompany?.company_name} · ${baseCurrency} · real-time from posted journal entries`}
+        icon={BookOpen}
+        accentColor="#1B4F8A"
+      />
 
       {/* KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 24 }}>
@@ -437,6 +421,6 @@ export default function AccountingDashboard() {
 
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }
