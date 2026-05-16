@@ -1,65 +1,40 @@
 import React, { useState } from "react";
 import { PurchaseOrder, Bill } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Plus, Search, ShoppingCart, Pencil, Trash2, FileText } from "lucide-react";
+import { ShoppingCart, Pencil, Trash2, FileText, DollarSign, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import PurchaseOrderForm from "../components/purchaseOrders/PurchaseOrderForm";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn, FilterSelect } from "../components/shared/PageShell";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-const statusColors = {
-  draft: "bg-gray-100 text-gray-800",
-  sent: "bg-blue-100 text-blue-800",
-  acknowledged: "bg-purple-100 text-purple-800",
-  partially_received: "bg-yellow-100 text-yellow-800",
-  fully_received: "bg-green-100 text-green-800",
-  cancelled: "bg-red-100 text-red-800"
-};
+const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return '—'; } };
+const currencySymbol = code => ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
 export default function PurchaseOrders() {
-  const [showForm, setShowForm] = useState(false);
-  const [editingPO, setEditingPO] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [poToDelete, setPoToDelete] = useState(null);
-
+  const [showForm, setShowForm]     = useState(false);
+  const [editing, setEditing]       = useState(null);
+  const [search, setSearch]         = useState("");
+  const [statusFilter, setStatus]   = useState("all");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [toDelete, setToDelete]     = useState(null);
   const queryClient = useQueryClient();
   const { currentCompany } = useCompany();
+  const sym = currencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: purchaseOrders = [], isLoading } = useQuery({
     queryKey: ['purchase-orders', currentCompany?.id],
-    queryFn: () => currentCompany ? PurchaseOrder.list({ filters: { company_id: currentCompany.id }, orderBy: 'po_date', ascending: false }) : Promise.resolve([]),
-    enabled: !!currentCompany
+    queryFn: () => currentCompany ? PurchaseOrder.list({ filters: { company_id: currentCompany.id }, orderBy: 'po_date', ascending: false }) : [],
+    enabled: !!currentCompany,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => PurchaseOrder.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['purchase-orders', currentCompany?.id]);
-      setDeleteDialogOpen(false);
-      setPoToDelete(null);
-    }
+    mutationFn: id => PurchaseOrder.delete(id),
+    onSuccess: () => { queryClient.invalidateQueries(['purchase-orders']); setDeleteOpen(false); setToDelete(null); },
   });
 
   const convertToBillMutation = useMutation({
@@ -67,217 +42,114 @@ export default function PurchaseOrders() {
       const bill = {
         company_id: currentCompany.id,
         bill_number: `BILL-${po.po_number}`,
-        vendor_id: po.vendor_id,
-        vendor_name: po.vendor_name,
+        vendor_id: po.vendor_id, vendor_name: po.vendor_name,
         bill_date: format(new Date(), 'yyyy-MM-dd'),
         due_date: format(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), 'yyyy-MM-dd'),
         status: 'pending',
-        line_items: po.line_items.map(item => ({
-          product_id: item.product_id,
-          description: item.description,
-          quantity: item.quantity_ordered,
-          unit_cost: item.unit_cost,
-          tax_rate: item.tax_rate,
-          tax_amount: item.tax_amount,
-          line_total: item.line_total
-        })),
-        subtotal: po.subtotal,
-        tax_total: po.tax_total,
-        total_amount: po.total_amount,
-        amount_paid: 0,
-        balance_due: po.total_amount,
-        reference: po.po_number,
-        notes: `Converted from PO ${po.po_number}`
+        line_items: po.line_items?.map(i => ({ product_id: i.product_id, description: i.description, quantity: i.quantity_ordered, unit_cost: i.unit_cost, tax_rate: i.tax_rate, tax_amount: i.tax_amount, line_total: i.line_total })),
+        subtotal: po.subtotal, tax_total: po.tax_total, total_amount: po.total_amount,
+        amount_paid: 0, balance_due: po.total_amount, reference: po.po_number,
+        notes: `Converted from PO ${po.po_number}`,
       };
-
       const createdBill = await Bill.create(bill);
-      
-      await PurchaseOrder.update(po.id, {
-        converted_to_bill: true,
-        bill_id: createdBill.id,
-        status: 'fully_received'
-      });
-
+      await PurchaseOrder.update(po.id, { converted_to_bill: true, bill_id: createdBill.id, status: 'fully_received' });
       return createdBill;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['purchase-orders', currentCompany?.id]);
-      queryClient.invalidateQueries(['bills', currentCompany?.id]);
-    }
+    onSuccess: () => { queryClient.invalidateQueries(['purchase-orders']); queryClient.invalidateQueries(['bills']); },
   });
 
-  const filteredPOs = purchaseOrders.filter(po =>
-    po.vendor_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    po.po_number?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = purchaseOrders.filter(po => {
+    const matchSearch = !search || po.vendor_name?.toLowerCase().includes(search.toLowerCase()) || po.po_number?.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = statusFilter === 'all' || po.status === statusFilter;
+    return matchSearch && matchStatus;
+  });
 
-  const handleEdit = (po) => {
-    setEditingPO(po);
-    setShowForm(true);
-  };
+  const totalAmt   = purchaseOrders.reduce((s, p) => s + (p.total_amount || 0), 0);
+  const openPOs    = purchaseOrders.filter(p => !['fully_received','cancelled'].includes(p.status)).length;
+  const received   = purchaseOrders.filter(p => p.status === 'fully_received').length;
+  const converted  = purchaseOrders.filter(p => p.converted_to_bill).length;
 
-  const handleDelete = (po) => {
-    setPoToDelete(po);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (poToDelete) {
-      deleteMutation.mutate(poToDelete.id);
-    }
-  };
-
-  const handleConvertToBill = (po) => {
-    if (window.confirm(`Convert PO ${po.po_number} to a bill?`)) {
-      convertToBillMutation.mutate(po);
-    }
-  };
-
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingPO(null);
-  };
+  const TABLE_HEADERS = [
+    { label: 'PO #' }, { label: 'Vendor' }, { label: 'Date' },
+    { label: 'Expected Delivery' }, { label: `Amount`, right: true },
+    { label: 'Status' }, { label: 'Actions' },
+  ];
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Purchase Orders</h1>
-          <p className="text-gray-500 mt-1">Manage orders to your vendors</p>
-        </div>
-        <Button 
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Purchase Order
-        </Button>
-      </div>
+    <PageShell>
+      {showForm && <PurchaseOrderForm purchaseOrder={editing} onClose={() => { setShowForm(false); setEditing(null); }} currentCompany={currentCompany} />}
 
-      {showForm && (
-        <PurchaseOrderForm
-          purchaseOrder={editingPO}
-          onClose={handleFormClose}
-          currentCompany={currentCompany}
-        />
-      )}
-
-      <Card className="p-6">
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search by vendor or PO number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>PO #</TableHead>
-                <TableHead>Vendor</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Expected Delivery</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-gray-500">
-                    Loading purchase orders...
-                  </TableCell>
-                </TableRow>
-              ) : filteredPOs.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <ShoppingCart className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p className="text-gray-500">No purchase orders found</p>
-                    <Button 
-                      onClick={() => setShowForm(true)}
-                      variant="outline"
-                      className="mt-3"
-                    >
-                      Create your first purchase order
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredPOs.map((po) => (
-                  <TableRow key={po.id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">{po.po_number}</TableCell>
-                    <TableCell>{po.vendor_name}</TableCell>
-                    <TableCell>{format(new Date(po.po_date), 'MMM d, yyyy')}</TableCell>
-                    <TableCell>
-                      {po.expected_delivery_date ? format(new Date(po.expected_delivery_date), 'MMM d, yyyy') : '-'}
-                    </TableCell>
-                    <TableCell className="font-semibold">${po.total_amount?.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge className={statusColors[po.status]}>
-                        {po.status.replace(/_/g, ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        {!po.converted_to_bill && po.status !== 'cancelled' && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleConvertToBill(po)}
-                            title="Convert to Bill"
-                          >
-                            <FileText className="w-4 h-4" />
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(po)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDelete(po)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Purchase Order</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete PO "{poToDelete?.po_number}"? 
-              This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Delete Purchase Order?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently delete PO <strong>{toDelete?.po_number}</strong>. This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => deleteMutation.mutate(toDelete?.id)} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+
+      <PageHeader
+        title="Purchase Orders"
+        subtitle={`${purchaseOrders.length} orders · vendor procurement`}
+        icon={ShoppingCart}
+        accentColor="#F59E0B"
+        actions={<NewBtn onClick={() => { setEditing(null); setShowForm(true); }} label="New Purchase Order" />}
+      />
+
+      <StatBar stats={[
+        { label: 'Total Orders',   value: purchaseOrders.length, icon: ShoppingCart, color: '#1B4F8A' },
+        { label: 'Open',           value: openPOs,               color: '#F59E0B' },
+        { label: 'Received',       value: received,              icon: CheckCircle,  color: '#00A86B' },
+        { label: 'Total Value',    value: fmt(totalAmt, sym),    icon: DollarSign,   color: '#8B5CF6' },
+      ]} />
+
+      <SearchBar value={search} onChange={setSearch} placeholder="Search PO number or vendor…">
+        <FilterSelect
+          value={statusFilter}
+          onChange={setStatus}
+          options={[
+            { value: 'all', label: 'All Statuses' },
+            { value: 'draft', label: 'Draft' },
+            { value: 'sent', label: 'Sent' },
+            { value: 'acknowledged', label: 'Acknowledged' },
+            { value: 'partially_received', label: 'Partially Received' },
+            { value: 'fully_received', label: 'Fully Received' },
+            { value: 'cancelled', label: 'Cancelled' },
+          ]}
+        />
+      </SearchBar>
+
+      <ERPTable headers={TABLE_HEADERS} emptyIcon={ShoppingCart} emptyTitle="No purchase orders yet" emptyDesc="Create your first purchase order to start procurement.">
+        {filtered.map(po => (
+          <ERPTableRow key={po.id}>
+            <ERPTableCell bold style={{ color: '#B45309', fontFamily: 'monospace' }}>{po.po_number}</ERPTableCell>
+            <ERPTableCell bold>{po.vendor_name}</ERPTableCell>
+            <ERPTableCell muted>{fmtDate(po.po_date)}</ERPTableCell>
+            <ERPTableCell muted>{po.expected_delivery_date ? fmtDate(po.expected_delivery_date) : '—'}</ERPTableCell>
+            <ERPTableCell right bold>{fmt(po.total_amount, sym)}</ERPTableCell>
+            <ERPTableCell><StatusBadge status={po.status} /></ERPTableCell>
+            <ERPTableCell>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {!po.converted_to_bill && po.status !== 'cancelled' && (
+                  <ActionBtn
+                    onClick={() => { if (window.confirm(`Convert PO ${po.po_number} to a bill?`)) convertToBillMutation.mutate(po); }}
+                    icon={FileText} label="To Bill" variant="outline"
+                  />
+                )}
+                {po.converted_to_bill && (
+                  <span style={{ padding: '4px 10px', background: '#E6F9F2', color: '#00875A', borderRadius: 99, fontSize: 11.5, fontWeight: 600 }}>Billed</span>
+                )}
+                <ActionBtn onClick={() => { setEditing(po); setShowForm(true); }} icon={Pencil} variant="outline" />
+                <ActionBtn onClick={() => { setToDelete(po); setDeleteOpen(true); }} icon={Trash2} danger />
+              </div>
+            </ERPTableCell>
+          </ERPTableRow>
+        ))}
+      </ERPTable>
+    </PageShell>
   );
 }

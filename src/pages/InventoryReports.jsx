@@ -1,15 +1,18 @@
 import React, { useState } from "react";
 import { Product, InventoryTransaction } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Download, Printer, FileSpreadsheet, AlertTriangle } from "lucide-react";
+import { Download, Printer, FileSpreadsheet, AlertTriangle, BarChart2 } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../components/auth/CompanyContext";
 import ReportHeader from "../components/reports/ReportHeader";
+import PageShell, { PageHeader, StatBar } from "../components/shared/PageShell";
+
+const PRIMARY = "#1B4F8A";
+const ACCENT  = "#00A86B";
 
 export default function InventoryReports() {
   const [activeReport, setActiveReport] = useState("stock-status");
@@ -18,30 +21,41 @@ export default function InventoryReports() {
 
   const { data: products = [] } = useQuery({
     queryKey: ['products', currentCompany?.id],
-    queryFn: () => currentCompany ? Product.list({ filters: { company_id: currentCompany.id } }) : Promise.resolve([]),
-    enabled: !!currentCompany
+    queryFn: () =>
+      currentCompany
+        ? Product.list({ filters: { company_id: currentCompany.id } })
+        : Promise.resolve([]),
+    enabled: !!currentCompany,
   });
 
   const { data: inventoryTransactions = [] } = useQuery({
     queryKey: ['inventory-transactions', currentCompany?.id],
-    queryFn: () => currentCompany ? InventoryTransaction.list({ filters: { company_id: currentCompany.id }, orderBy: 'transaction_date', ascending: true }) : Promise.resolve([]),
-    enabled: !!currentCompany
+    queryFn: () =>
+      currentCompany
+        ? InventoryTransaction.list({
+            filters: { company_id: currentCompany.id },
+            orderBy: 'transaction_date',
+            ascending: true,
+          })
+        : Promise.resolve([]),
+    enabled: !!currentCompany,
   });
 
   const inventoryProducts = products.filter(p => p.product_type === 'inventory');
 
-  // Calculate inventory values
-  const totalInventoryValue = inventoryProducts.reduce((sum, p) => 
-    sum + ((p.quantity_on_hand || 0) * (p.cost_price || 0)), 0
+  const totalInventoryValue = inventoryProducts.reduce(
+    (sum, p) => sum + ((p.quantity_on_hand || 0) * (p.cost_price || 0)),
+    0
   );
 
-  const lowStockItems = inventoryProducts.filter(p => 
-    p.quantity_on_hand <= p.reorder_level
+  const lowStockItems = inventoryProducts.filter(
+    p => p.quantity_on_hand <= p.reorder_level
   );
 
   const handlePrint = () => window.print();
 
   const handleExportCSV = (data, fileName) => {
+    if (!data || data.length === 0) return;
     const headers = Object.keys(data[0]).join(',');
     const rows = data.map(row => Object.values(row).join(','));
     const csv = [headers, ...rows].join('\n');
@@ -56,28 +70,61 @@ export default function InventoryReports() {
     window.URL.revokeObjectURL(url);
   };
 
+  const actionBtnStyle = (variant = 'default') => ({
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 6,
+    padding: '7px 14px',
+    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    cursor: 'pointer',
+    border: '1px solid #E2E8F0',
+    background: variant === 'print' ? '#EFF6FF' : '#F0FDF4',
+    color: variant === 'print' ? PRIMARY : ACCENT,
+    transition: 'opacity 150ms',
+  });
+
   return (
-    <div className="p-6 space-y-6">
-      {/* Screen Header */}
-      <div className="flex justify-between items-center print:hidden">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventory Reports</h1>
-          <p className="text-gray-500 mt-1">Comprehensive inventory analysis and reporting</p>
-        </div>
-        <div className="flex gap-3">
-          <Select value={dateRange} onValueChange={setDateRange}>
-            <SelectTrigger className="w-48">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="current-month">Current Month</SelectItem>
-              <SelectItem value="current-quarter">Current Quarter</SelectItem>
-              <SelectItem value="current-year">Current Year</SelectItem>
-              <SelectItem value="ytd">Year to Date</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Inventory Reports"
+        subtitle="Comprehensive inventory analysis and reporting"
+        icon={BarChart2}
+        accentColor={PRIMARY}
+        actions={
+          <div style={{ display: 'flex', gap: 8 }} className="print:hidden">
+            <Select value={dateRange} onValueChange={setDateRange}>
+              <SelectTrigger style={{ width: 180, fontSize: 13 }}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="current-month">Current Month</SelectItem>
+                <SelectItem value="current-quarter">Current Quarter</SelectItem>
+                <SelectItem value="current-year">Current Year</SelectItem>
+                <SelectItem value="ytd">Year to Date</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      />
+
+      <StatBar
+        stats={[
+          { label: 'Total SKUs', value: inventoryProducts.length, color: PRIMARY },
+          {
+            label: 'Total Value',
+            value: `$${totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            color: ACCENT,
+          },
+          { label: 'Low Stock', value: lowStockItems.length, color: '#EF4444' },
+          {
+            label: 'Total Units',
+            value: inventoryProducts.reduce((s, p) => s + (p.quantity_on_hand || 0), 0).toFixed(0),
+            color: '#64748B',
+          },
+        ]}
+      />
 
       <Tabs value={activeReport} onValueChange={setActiveReport} className="print:hidden">
         <TabsList className="grid w-full grid-cols-3">
@@ -88,35 +135,36 @@ export default function InventoryReports() {
 
         {/* STOCK STATUS REPORT */}
         <TabsContent value="stock-status" className="space-y-4">
-          <div className="flex justify-end gap-2 print:hidden">
-            <Button onClick={handlePrint} variant="outline" className="bg-blue-50 hover:bg-blue-100">
-              <Printer className="w-4 h-4 mr-2" />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }} className="print:hidden">
+            <button onClick={handlePrint} style={actionBtnStyle('print')}>
+              <Printer style={{ width: 15, height: 15 }} />
               Print
-            </Button>
-            <Button 
-              onClick={() => handleExportCSV(
-                inventoryProducts.map(p => ({
-                  SKU: p.sku,
-                  'Item Description': p.product_name,
-                  'Item Class': p.category || 'Stock Item',
-                  'Stocking UOM': p.unit_of_measure,
-                  'Qty on Hand': p.quantity_on_hand || 0,
-                  'Min Stock': p.reorder_level || 0,
-                  'Reorder Qty': p.reorder_quantity || 0,
-                  Location: 'Main'
-                })),
-                `Inventory_Stock_Status_${format(new Date(), 'yyyy-MM-dd')}.csv`
-              )}
-              variant="outline"
-              className="bg-green-50 hover:bg-green-100"
+            </button>
+            <button
+              onClick={() =>
+                handleExportCSV(
+                  inventoryProducts.map(p => ({
+                    SKU: p.sku,
+                    'Item Description': p.product_name,
+                    'Item Class': p.category || 'Stock Item',
+                    'Stocking UOM': p.unit_of_measure,
+                    'Qty on Hand': p.quantity_on_hand || 0,
+                    'Min Stock': p.reorder_level || 0,
+                    'Reorder Qty': p.reorder_quantity || 0,
+                    Location: 'Main',
+                  })),
+                  `Inventory_Stock_Status_${format(new Date(), 'yyyy-MM-dd')}.csv`
+                )
+              }
+              style={actionBtnStyle('export')}
             >
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              <FileSpreadsheet style={{ width: 15, height: 15 }} />
               Export CSV
-            </Button>
+            </button>
           </div>
 
           <div className="bg-white p-8 print:p-0">
-            <ReportHeader 
+            <ReportHeader
               reportTitle="Inventory Stock Status Report"
               reportDate={format(new Date(), 'MMMM dd, yyyy')}
               additionalInfo="Filter Criteria Includes: 1) StockAssetType=Stocked, Report order is by ID. Report is printed with shortened descriptions"
@@ -125,7 +173,7 @@ export default function InventoryReports() {
             <Table>
               <TableHeader>
                 <TableRow className="border-b-2 border-gray-800">
-                  <TableHead className="font-bold">Item ID<br/>Item Description<br/>Item Class</TableHead>
+                  <TableHead className="font-bold">Item ID<br />Item Description<br />Item Class</TableHead>
                   <TableHead className="font-bold text-center">Stocking UOM</TableHead>
                   <TableHead className="font-bold text-right">Qty on Hand</TableHead>
                   <TableHead className="font-bold text-right">Min Stock</TableHead>
@@ -142,9 +190,9 @@ export default function InventoryReports() {
                   </TableRow>
                 ) : (
                   inventoryProducts.map((product) => (
-                    <TableRow 
+                    <TableRow
                       key={product.id}
-                      className={product.quantity_on_hand <= product.reorder_level ? 'bg-red-50' : ''}
+                      style={product.quantity_on_hand <= product.reorder_level ? { background: '#FFF5F5' } : {}}
                     >
                       <TableCell>
                         <div>
@@ -171,12 +219,21 @@ export default function InventoryReports() {
             </Table>
 
             {lowStockItems.length > 0 && (
-              <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded print:hidden">
-                <div className="flex items-center gap-2 text-red-800 font-semibold mb-2">
-                  <AlertTriangle className="w-5 h-5" />
+              <div
+                style={{
+                  marginTop: 20,
+                  padding: '12px 16px',
+                  background: '#FFF5F5',
+                  border: '1px solid #FECACA',
+                  borderRadius: 8,
+                }}
+                className="print:hidden"
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#991B1B', fontWeight: 600, marginBottom: 4 }}>
+                  <AlertTriangle style={{ width: 16, height: 16 }} />
                   Low Stock Alert
                 </div>
-                <p className="text-red-700 text-sm">
+                <p style={{ fontSize: 13, color: '#B91C1C' }}>
                   {lowStockItems.length} item(s) are at or below reorder level and require attention.
                 </p>
               </div>
@@ -186,29 +243,20 @@ export default function InventoryReports() {
 
         {/* UNIT ACTIVITY REPORT */}
         <TabsContent value="unit-activity" className="space-y-4">
-          <div className="flex justify-end gap-2 print:hidden">
-            <Button onClick={handlePrint} variant="outline" className="bg-blue-50 hover:bg-blue-100">
-              <Printer className="w-4 h-4 mr-2" />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }} className="print:hidden">
+            <button onClick={handlePrint} style={actionBtnStyle('print')}>
+              <Printer style={{ width: 15, height: 15 }} />
               Print
-            </Button>
-            <Button 
+            </button>
+            <button
               onClick={() => {
                 const activityData = inventoryProducts.map(p => {
                   const productTransactions = inventoryTransactions.filter(t => t.product_id === p.id);
                   const beginQty = productTransactions.find(t => t.transaction_type === 'opening_balance')?.quantity_in || 0;
-                  const unitsSold = productTransactions
-                    .filter(t => t.transaction_type === 'sale')
-                    .reduce((sum, t) => sum + (t.quantity_out || 0), 0);
-                  const unitsPurc = productTransactions
-                    .filter(t => t.transaction_type === 'purchase')
-                    .reduce((sum, t) => sum + (t.quantity_in || 0), 0);
-                  const adjustQty = productTransactions
-                    .filter(t => t.transaction_type === 'adjustment')
-                    .reduce((sum, t) => sum + ((t.quantity_in || 0) - (t.quantity_out || 0)), 0);
-                  const assemblyQty = productTransactions
-                    .filter(t => t.transaction_type === 'assembly')
-                    .reduce((sum, t) => sum + ((t.quantity_in || 0) - (t.quantity_out || 0)), 0);
-
+                  const unitsSold = productTransactions.filter(t => t.transaction_type === 'sale').reduce((sum, t) => sum + (t.quantity_out || 0), 0);
+                  const unitsPurc = productTransactions.filter(t => t.transaction_type === 'purchase').reduce((sum, t) => sum + (t.quantity_in || 0), 0);
+                  const adjustQty = productTransactions.filter(t => t.transaction_type === 'adjustment').reduce((sum, t) => sum + ((t.quantity_in || 0) - (t.quantity_out || 0)), 0);
+                  const assemblyQty = productTransactions.filter(t => t.transaction_type === 'assembly').reduce((sum, t) => sum + ((t.quantity_in || 0) - (t.quantity_out || 0)), 0);
                   return {
                     SKU: p.sku,
                     'Item Description': p.product_name,
@@ -218,22 +266,20 @@ export default function InventoryReports() {
                     'Units Purc': unitsPurc,
                     'Adjust Qty': adjustQty,
                     'Assembly Qty': assemblyQty,
-                    'Qty on Hand': p.quantity_on_hand || 0
+                    'Qty on Hand': p.quantity_on_hand || 0,
                   };
                 });
-
                 handleExportCSV(activityData, `Inventory_Unit_Activity_${format(new Date(), 'yyyy-MM-dd')}.csv`);
               }}
-              variant="outline"
-              className="bg-green-50 hover:bg-green-100"
+              style={actionBtnStyle('export')}
             >
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              <FileSpreadsheet style={{ width: 15, height: 15 }} />
               Export CSV
-            </Button>
+            </button>
           </div>
 
           <div className="bg-white p-8 print:p-0">
-            <ReportHeader 
+            <ReportHeader
               reportTitle="Inventory Unit Activity Report"
               reportDate={`For the Period From ${format(new Date(), 'MMM d, yyyy')} to ${format(new Date(), 'MMM d, yyyy')}`}
               additionalInfo="Filter Criteria Includes: 1) StockAssetType=Stocked. Report order is by ID. Report is printed with shortened descriptions"
@@ -242,7 +288,7 @@ export default function InventoryReports() {
             <Table>
               <TableHeader>
                 <TableRow className="border-b-2 border-gray-800">
-                  <TableHead className="font-bold">Item ID<br/>Item Description<br/>Item Class</TableHead>
+                  <TableHead className="font-bold">Item ID<br />Item Description<br />Item Class</TableHead>
                   <TableHead className="font-bold text-right">Beg Qty</TableHead>
                   <TableHead className="font-bold text-right">Units Sold</TableHead>
                   <TableHead className="font-bold text-right">Units Purc</TableHead>
@@ -262,18 +308,10 @@ export default function InventoryReports() {
                   inventoryProducts.map((product) => {
                     const productTransactions = inventoryTransactions.filter(t => t.product_id === product.id);
                     const beginQty = productTransactions.find(t => t.transaction_type === 'opening_balance')?.quantity_in || 0;
-                    const unitsSold = productTransactions
-                      .filter(t => t.transaction_type === 'sale')
-                      .reduce((sum, t) => sum + (t.quantity_out || 0), 0);
-                    const unitsPurc = productTransactions
-                      .filter(t => t.transaction_type === 'purchase')
-                      .reduce((sum, t) => sum + (t.quantity_in || 0), 0);
-                    const adjustQty = productTransactions
-                      .filter(t => t.transaction_type === 'adjustment')
-                      .reduce((sum, t) => sum + ((t.quantity_in || 0) - (t.quantity_out || 0)), 0);
-                    const assemblyQty = productTransactions
-                      .filter(t => t.transaction_type === 'assembly')
-                      .reduce((sum, t) => sum + ((t.quantity_in || 0) - (t.quantity_out || 0)), 0);
+                    const unitsSold = productTransactions.filter(t => t.transaction_type === 'sale').reduce((sum, t) => sum + (t.quantity_out || 0), 0);
+                    const unitsPurc = productTransactions.filter(t => t.transaction_type === 'purchase').reduce((sum, t) => sum + (t.quantity_in || 0), 0);
+                    const adjustQty = productTransactions.filter(t => t.transaction_type === 'adjustment').reduce((sum, t) => sum + ((t.quantity_in || 0) - (t.quantity_out || 0)), 0);
+                    const assemblyQty = productTransactions.filter(t => t.transaction_type === 'assembly').reduce((sum, t) => sum + ((t.quantity_in || 0) - (t.quantity_out || 0)), 0);
 
                     return (
                       <TableRow key={product.id}>
@@ -303,32 +341,33 @@ export default function InventoryReports() {
 
         {/* INVENTORY VALUATION REPORT */}
         <TabsContent value="valuation" className="space-y-4">
-          <div className="flex justify-end gap-2 print:hidden">
-            <Button onClick={handlePrint} variant="outline" className="bg-blue-50 hover:bg-blue-100">
-              <Printer className="w-4 h-4 mr-2" />
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }} className="print:hidden">
+            <button onClick={handlePrint} style={actionBtnStyle('print')}>
+              <Printer style={{ width: 15, height: 15 }} />
               Print
-            </Button>
-            <Button 
-              onClick={() => handleExportCSV(
-                inventoryProducts.map(p => ({
-                  SKU: p.sku,
-                  'Item Description': p.product_name,
-                  'Qty on Hand': p.quantity_on_hand || 0,
-                  'Unit Cost': p.cost_price || 0,
-                  'Total Value': (p.quantity_on_hand || 0) * (p.cost_price || 0)
-                })),
-                `Inventory_Valuation_${format(new Date(), 'yyyy-MM-dd')}.csv`
-              )}
-              variant="outline"
-              className="bg-green-50 hover:bg-green-100"
+            </button>
+            <button
+              onClick={() =>
+                handleExportCSV(
+                  inventoryProducts.map(p => ({
+                    SKU: p.sku,
+                    'Item Description': p.product_name,
+                    'Qty on Hand': p.quantity_on_hand || 0,
+                    'Unit Cost': p.cost_price || 0,
+                    'Total Value': (p.quantity_on_hand || 0) * (p.cost_price || 0),
+                  })),
+                  `Inventory_Valuation_${format(new Date(), 'yyyy-MM-dd')}.csv`
+                )
+              }
+              style={actionBtnStyle('export')}
             >
-              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              <FileSpreadsheet style={{ width: 15, height: 15 }} />
               Export CSV
-            </Button>
+            </button>
           </div>
 
           <div className="bg-white p-8 print:p-0">
-            <ReportHeader 
+            <ReportHeader
               reportTitle="Inventory Valuation Report"
               reportDate={`As of ${format(new Date(), 'MMMM dd, yyyy')}`}
               additionalInfo="Valuation Method: Weighted Average Cost"
@@ -368,15 +407,17 @@ export default function InventoryReports() {
                           <TableCell className="text-right font-mono">{qty.toFixed(2)}</TableCell>
                           <TableCell className="text-right font-mono">{cost.toFixed(2)}</TableCell>
                           <TableCell className="text-right font-mono font-semibold">
-                            {totalValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                            {totalValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </TableCell>
                         </TableRow>
                       );
                     })}
-                    <TableRow className="border-t-2 border-gray-800 bg-gray-100 font-bold">
-                      <TableCell colSpan={4} className="text-right text-lg">TOTAL INVENTORY VALUE:</TableCell>
-                      <TableCell className="text-right text-lg font-mono">
-                        ${totalInventoryValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                    <TableRow style={{ borderTop: '2px solid #1E293B', background: '#F8FAFC', fontWeight: 700 }}>
+                      <TableCell colSpan={4} style={{ textAlign: 'right', fontSize: 15 }}>
+                        TOTAL INVENTORY VALUE:
+                      </TableCell>
+                      <TableCell style={{ textAlign: 'right', fontSize: 15, fontFamily: 'monospace' }}>
+                        ${totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </TableCell>
                     </TableRow>
                   </>
@@ -384,23 +425,31 @@ export default function InventoryReports() {
               </TableBody>
             </Table>
 
-            <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded">
-              <h3 className="font-semibold text-blue-900 mb-2">Valuation Summary</h3>
-              <div className="grid grid-cols-3 gap-4 text-sm">
+            <div
+              style={{
+                marginTop: 20,
+                padding: '14px 18px',
+                background: `${PRIMARY}08`,
+                border: `1px solid ${PRIMARY}20`,
+                borderRadius: 8,
+              }}
+            >
+              <p style={{ fontWeight: 700, color: PRIMARY, marginBottom: 10 }}>Valuation Summary</p>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, fontSize: 13 }}>
                 <div>
-                  <p className="text-blue-700">Total Items:</p>
-                  <p className="font-semibold text-blue-900">{inventoryProducts.length}</p>
+                  <p style={{ color: '#64748B' }}>Total Items:</p>
+                  <p style={{ fontWeight: 700, color: '#0F172A' }}>{inventoryProducts.length}</p>
                 </div>
                 <div>
-                  <p className="text-blue-700">Total Units:</p>
-                  <p className="font-semibold text-blue-900">
+                  <p style={{ color: '#64748B' }}>Total Units:</p>
+                  <p style={{ fontWeight: 700, color: '#0F172A' }}>
                     {inventoryProducts.reduce((sum, p) => sum + (p.quantity_on_hand || 0), 0).toFixed(2)}
                   </p>
                 </div>
                 <div>
-                  <p className="text-blue-700">Total Value:</p>
-                  <p className="font-semibold text-blue-900">
-                    ${totalInventoryValue.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                  <p style={{ color: '#64748B' }}>Total Value:</p>
+                  <p style={{ fontWeight: 700, color: '#0F172A' }}>
+                    ${totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
@@ -408,6 +457,6 @@ export default function InventoryReports() {
           </div>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   );
 }

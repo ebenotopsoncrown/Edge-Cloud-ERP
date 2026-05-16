@@ -25,10 +25,11 @@ import {
   PolarRadiusAxis,
   Radar
 } from "recharts";
-import { TrendingUp, Download, RefreshCw, FileText } from "lucide-react";
+import { TrendingUp, Download, RefreshCw, FileText, BarChart3 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useCompany } from "../components/auth/CompanyContext";
 import { useFinancialMetrics, formatCurrency, getCurrencySymbol } from "../components/shared/FinancialCalculations";
+import PageShell, { PageHeader, StatBar, ActionBtn } from "../components/shared/PageShell";
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
@@ -166,25 +167,30 @@ Format the response in markdown with clear headers.`;
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Management Dashboard</h1>
-          <p className="text-gray-500 mt-1">Executive-level insights for {currentCompany?.company_name}</p>
-          <p className="text-sm text-blue-600 font-semibold mt-1">
-            📊 All amounts shown in {baseCurrency} - Calculated from Posted Journal Entries
-          </p>
-          <p className="text-xs text-green-600 font-semibold mt-1">
-            ✅ Synchronized with Sales Dashboard, Income Statement & Balance Sheet
-          </p>
-        </div>
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={handleGenerateReport} disabled={generatingReport}>
-            <RefreshCw className={`w-4 h-4 mr-2 ${generatingReport ? 'animate-spin' : ''}`} />
-            {generatingReport ? 'Generating...' : 'Generate AI Report'}
-          </Button>
-        </div>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Management Dashboard"
+        subtitle={`Executive-level insights · ${currentCompany?.company_name} · ${baseCurrency}`}
+        icon={BarChart3}
+        accentColor="#1B4F8A"
+        actions={
+          <ActionBtn
+            onClick={handleGenerateReport}
+            icon={RefreshCw}
+            label={generatingReport ? 'Generating…' : 'Generate AI Report'}
+            variant="outline"
+            disabled={generatingReport}
+          />
+        }
+      />
+      <StatBar stats={[
+        { label: 'Total Revenue',  value: formatCurrency(totalRevenue, baseCurrency),  icon: TrendingUp, color: '#00A86B' },
+        { label: 'Net Profit',     value: formatCurrency(netProfit, baseCurrency),      icon: TrendingUp, color: netProfit >= 0 ? '#00A86B' : '#EF4444' },
+        { label: 'Profit Margin',  value: `${profitMargin.toFixed(1)}%`,              color: '#1B4F8A' },
+        { label: 'Current Ratio',  value: currentRatio.toFixed(2),                   color: currentRatio >= 1.5 ? '#00A86B' : '#F59E0B' },
+        { label: 'ROA',            value: `${returnOnAssets.toFixed(1)}%`,           color: '#8B5CF6' },
+      ]} />
+      <div>
 
       <Tabs defaultValue="overview">
         <TabsList>
@@ -447,6 +453,7 @@ Format the response in markdown with clear headers.`;
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </PageShell>
   );
 }

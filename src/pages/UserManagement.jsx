@@ -1,63 +1,49 @@
-
 import React, { useState } from "react";
 import { Company, createEntity } from "@/api/entities";
 const UserRecord = createEntity('users');
 const Role = createEntity('roles');
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Users, Shield, Pencil, Trash2, Key, Info, Copy, CheckCircle, Building2 } from "lucide-react";
+import { Plus, Users, Shield, Pencil, Key, Info, Copy, CheckCircle, Building2 } from "lucide-react";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, ActionBtn, NewBtn } from "../components/shared/PageShell";
+
+const PRIMARY = '#1B4F8A';
+const ACCENT  = '#00A86B';
+
+const inputStyle = {
+  width: '100%', padding: '9px 12px', border: '1.5px solid #E2E8F0', borderRadius: 8,
+  fontSize: 13.5, color: '#0F172A', background: 'white', outline: 'none', fontFamily: 'inherit',
+};
+
+function PermCheckbox({ checked, onChange, label }) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 7, cursor: 'pointer', fontSize: 13 }}>
+      <input type="checkbox" checked={checked} onChange={onChange} style={{ width: 14, height: 14, accentColor: ACCENT }} />
+      <span style={{ color: '#475569', textTransform: 'capitalize' }}>{label.replace(/_/g, ' ')}</span>
+    </label>
+  );
+}
 
 export default function UserManagement() {
   const { currentCompany, user } = useCompany();
   const queryClient = useQueryClient();
-  const [showUserDialog, setShowUserDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState('users');
   const [showRoleDialog, setShowRoleDialog] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
   const [editingRole, setEditingRole] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
 
-  const [userForm, setUserForm] = useState({
-    email: '',
-    full_name: '',
-    role_id: '',
-    is_active: true
-  });
-
   const [roleForm, setRoleForm] = useState({
-    role_name: '',
-    description: '',
+    role_name: '', description: '',
     permissions: {
-      sales: { access: false, create: false, edit: false, delete: false, view_reports: false },
-      purchases: { access: false, create: false, edit: false, delete: false, view_reports: false },
-      inventory: { access: false, create: false, edit: false, delete: false, view_reports: false },
+      sales:      { access: false, create: false, edit: false, delete: false, view_reports: false },
+      purchases:  { access: false, create: false, edit: false, delete: false, view_reports: false },
+      inventory:  { access: false, create: false, edit: false, delete: false, view_reports: false },
       accounting: { access: false, create_entries: false, post_entries: false, void_entries: false, view_reports: false, reconcile_accounts: false },
-      banking: { access: false, make_payments: false, write_checks: false, reconcile: false },
-      reports: { view_financial_reports: false, view_management_reports: false, export_reports: false },
-      settings: { manage_users: false, manage_company: false, manage_chart_of_accounts: false }
+      banking:    { access: false, make_payments: false, write_checks: false, reconcile: false },
+      reports:    { view_financial_reports: false, view_management_reports: false, export_reports: false },
+      settings:   { manage_users: false, manage_company: false, manage_chart_of_accounts: false }
     }
   });
 
@@ -66,10 +52,7 @@ export default function UserManagement() {
     queryFn: async () => {
       if (!currentCompany) return [];
       const allUsers = await UserRecord.list();
-      return allUsers.filter(u => 
-        u.company_id === currentCompany.id || 
-        u.accessible_companies?.includes(currentCompany.id)
-      );
+      return allUsers.filter(u => u.company_id === currentCompany.id || u.accessible_companies?.includes(currentCompany.id));
     },
     enabled: !!currentCompany
   });
@@ -77,7 +60,6 @@ export default function UserManagement() {
   const { data: companies = [] } = useQuery({
     queryKey: ['companies-list'],
     queryFn: () => Company.list(),
-    enabled: true
   });
 
   const { data: roles = [] } = useQuery({
@@ -88,529 +70,234 @@ export default function UserManagement() {
 
   const updateUserMutation = useMutation({
     mutationFn: ({ userId, data }) => UserRecord.update(userId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['users']);
-      alert('User updated successfully!');
-    }
+    onSuccess: () => { queryClient.invalidateQueries(['users']); alert('User updated!'); }
   });
 
   const saveRoleMutation = useMutation({
-    mutationFn: (data) => {
-      if (editingRole) {
-        return Role.update(editingRole.id, data);
-      }
-      return Role.create({ ...data, company_id: currentCompany.id });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['roles']);
-      setShowRoleDialog(false);
-      resetRoleForm();
-    }
+    mutationFn: (data) => editingRole ? Role.update(editingRole.id, data) : Role.create({ ...data, company_id: currentCompany.id }),
+    onSuccess: () => { queryClient.invalidateQueries(['roles']); setShowRoleDialog(false); resetRoleForm(); }
   });
 
   const handlePermissionToggle = (module, permission) => {
-    setRoleForm(prev => ({
-      ...prev,
-      permissions: {
-        ...prev.permissions,
-        [module]: {
-          ...prev.permissions[module],
-          [permission]: !prev.permissions[module][permission]
-        }
-      }
-    }));
+    setRoleForm(prev => ({ ...prev, permissions: { ...prev.permissions, [module]: { ...prev.permissions[module], [permission]: !prev.permissions[module][permission] } } }));
   };
 
   const handleModuleToggle = (module) => {
     const currentAccess = roleForm.permissions[module].access || false;
     const newPermissions = { ...roleForm.permissions };
-    
-    Object.keys(newPermissions[module]).forEach(key => {
-      newPermissions[module][key] = !currentAccess;
-    });
-
-    setRoleForm(prev => ({
-      ...prev,
-      permissions: newPermissions
-    }));
+    Object.keys(newPermissions[module]).forEach(key => { newPermissions[module][key] = !currentAccess; });
+    setRoleForm(prev => ({ ...prev, permissions: newPermissions }));
   };
 
   const resetRoleForm = () => {
     setEditingRole(null);
-    setRoleForm({
-      role_name: '',
-      description: '',
-      permissions: {
-        sales: { access: false, create: false, edit: false, delete: false, view_reports: false },
-        purchases: { access: false, create: false, edit: false, delete: false, view_reports: false },
-        inventory: { access: false, create: false, edit: false, delete: false, view_reports: false },
-        accounting: { access: false, create_entries: false, post_entries: false, void_entries: false, view_reports: false, reconcile_accounts: false },
-        banking: { access: false, make_payments: false, write_checks: false, reconcile: false },
-        reports: { view_financial_reports: false, view_management_reports: false, export_reports: false },
-        settings: { manage_users: false, manage_company: false, manage_chart_of_accounts: false }
-      }
-    });
+    setRoleForm({ role_name: '', description: '', permissions: { sales: { access: false, create: false, edit: false, delete: false, view_reports: false }, purchases: { access: false, create: false, edit: false, delete: false, view_reports: false }, inventory: { access: false, create: false, edit: false, delete: false, view_reports: false }, accounting: { access: false, create_entries: false, post_entries: false, void_entries: false, view_reports: false, reconcile_accounts: false }, banking: { access: false, make_payments: false, write_checks: false, reconcile: false }, reports: { view_financial_reports: false, view_management_reports: false, export_reports: false }, settings: { manage_users: false, manage_company: false, manage_chart_of_accounts: false } } });
   };
 
   const handleEditRole = (role) => {
     setEditingRole(role);
-    setRoleForm({
-      role_name: role.role_name,
-      description: role.description || '',
-      permissions: role.permissions || roleForm.permissions
-    });
+    setRoleForm({ role_name: role.role_name, description: role.description || '', permissions: role.permissions || roleForm.permissions });
     setShowRoleDialog(true);
   };
 
-  const handleCopyCompanyId = (companyId, companyName) => {
-    navigator.clipboard.writeText(companyId);
-    setCopiedId(companyId);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
+  const tabStyle = (id) => ({
+    padding: '10px 20px', border: 'none', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600,
+    fontSize: 13.5, borderBottom: activeTab === id ? `2.5px solid ${PRIMARY}` : '2.5px solid transparent',
+    color: activeTab === id ? PRIMARY : '#64748B', background: 'none',
+  });
 
-  const handleAssignUserToCompany = (userId, companyId) => {
-    updateUserMutation.mutate({
-      userId,
-      data: {
-        company_id: companyId,
-        accessible_companies: [companyId] // Per outline, replace accessible_companies with the new company_id
-      }
-    });
-  };
+  const TABS = [{ id: 'users', label: 'Users', icon: Users }, { id: 'companies', label: 'Company IDs', icon: Building2 }, { id: 'roles', label: 'Roles & Permissions', icon: Shield }];
+
+  const USER_HEADERS = [{ label: 'Name' }, { label: 'Email' }, { label: 'Primary Company' }, { label: 'Status' }, { label: 'Assign Company' }];
+  const CO_HEADERS   = [{ label: 'Company Name' }, { label: 'Company ID' }, { label: 'Contact Email' }, { label: 'Type' }, { label: '' }];
+  const ROLE_HEADERS = [{ label: 'Role Name' }, { label: 'Description' }, { label: 'Active Modules' }, { label: 'Actions' }];
+
+  const MODULES = [
+    { key: 'sales', label: 'Sales & Customers' },
+    { key: 'purchases', label: 'Purchases & Vendors' },
+    { key: 'inventory', label: 'Inventory' },
+    { key: 'accounting', label: 'Accounting' },
+    { key: 'banking', label: 'Banking' },
+    { key: 'reports', label: 'Reports' },
+    { key: 'settings', label: 'Settings' },
+  ];
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">User & Company Management</h1>
-        <p className="text-gray-500 mt-1">Manage users and assign them to companies</p>
+    <PageShell>
+      <PageHeader
+        title="User Management"
+        subtitle="Manage users, company access, and role-based permissions"
+        icon={Users}
+        accentColor={PRIMARY}
+        actions={activeTab === 'roles' ? <NewBtn onClick={() => { resetRoleForm(); setShowRoleDialog(true); }} label="New Role" /> : null}
+      />
+
+      <StatBar stats={[
+        { label: 'Total Users',     value: users.length,     icon: Users,    color: PRIMARY },
+        { label: 'Companies',       value: companies.length, icon: Building2, color: ACCENT },
+        { label: 'Roles Defined',   value: roles.length,     icon: Shield,   color: '#8B5CF6' },
+        { label: 'Active Users',    value: users.filter(u => u.is_active !== false).length, color: ACCENT },
+      ]} />
+
+      {/* Info Banner */}
+      <div style={{ background: '#EBF4FB', border: '1.5px solid #AED6F1', borderRadius: 12, padding: '14px 20px', marginBottom: 16, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <Info style={{ width: 18, height: 18, color: PRIMARY, flexShrink: 0, marginTop: 1 }} />
+        <div>
+          <p style={{ fontWeight: 700, color: PRIMARY, fontSize: 13.5 }}>Inviting New Users</p>
+          <p style={{ color: '#2E86C1', fontSize: 13, marginTop: 2 }}>Go to Supabase Dashboard → Authentication → Invite User. Then use "Assign Company" below to link users to this company.</p>
+        </div>
       </div>
 
-      <Tabs defaultValue="users" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 max-w-2xl">
-          <TabsTrigger value="users">
-            <Users className="w-4 h-4 mr-2" />
-            Users
-          </TabsTrigger>
-          <TabsTrigger value="companies">
-            <Building2 className="w-4 h-4 mr-2" />
-            Company IDs
-          </TabsTrigger>
-          <TabsTrigger value="roles">
-            <Shield className="w-4 h-4 mr-2" />
-            Roles
-          </TabsTrigger>
-        </TabsList>
+      {/* Tabs */}
+      <div style={{ background: 'white', borderRadius: 14, border: '1px solid #F1F5F9', boxShadow: '0 2px 8px rgba(15,43,91,0.06)', overflow: 'hidden' }}>
+        <div style={{ display: 'flex', borderBottom: '1px solid #F1F5F9', padding: '0 16px', gap: 4 }}>
+          {TABS.map(tab => (
+            <button key={tab.id} onClick={() => setActiveTab(tab.id)} style={tabStyle(tab.id)}>
+              <tab.icon style={{ width: 14, height: 14, display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-        {/* USERS TAB */}
-        <TabsContent value="users">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Users</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Alert className="bg-blue-50 border-blue-200">
-                <Info className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-900">
-                  <strong>To invite new users:</strong> Go to Supabase Dashboard → Authentication → Invite User.
-                  Then assign them to companies using the Company IDs tab.
-                </AlertDescription>
-              </Alert>
+        <div style={{ padding: 24 }}>
 
-              {users.length > 0 && (
-                <div className="mt-6">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>User Name</TableHead>
-                        <TableHead>Email</TableHead>
-                        <TableHead>Primary Company</TableHead>
-                        <TableHead>Accessible Companies</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {users.map(u => {
-                        const primaryCompany = companies.find(c => c.id === u.company_id);
-                        const accessibleCompanyNames = u.accessible_companies?.map(id => 
-                          companies.find(c => c.id === id)?.company_name || 'Unknown'
-                        ) || [];
-                        
-                        return (
-                          <TableRow key={u.id}>
-                            <TableCell className="font-medium">{u.full_name}</TableCell>
-                            <TableCell>{u.email}</TableCell>
-                            <TableCell>
-                              {primaryCompany ? (
-                                <Badge variant="outline">{primaryCompany.company_name}</Badge>
-                              ) : (
-                                <span className="text-red-600 text-sm">Not Assigned</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex flex-wrap gap-1">
-                                {accessibleCompanyNames.length > 0 ? (
-                                  accessibleCompanyNames.slice(0, 2).map((name, idx) => (
-                                    <Badge key={idx} variant="outline" className="text-xs">{name}</Badge>
-                                  ))
-                                ) : (
-                                  <span className="text-gray-500 text-sm">None</span>
-                                )}
-                                {accessibleCompanyNames.length > 2 && (
-                                  <Badge variant="outline" className="text-xs">+{accessibleCompanyNames.length - 2}</Badge>
-                                )}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge className={u.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                                {u.is_active ? 'Active' : 'Inactive'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Select onValueChange={(companyId) => handleAssignUserToCompany(u.id, companyId)}>
-                                <SelectTrigger className="w-40">
-                                  <SelectValue placeholder="Assign Company" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {companies.map(company => (
-                                    <SelectItem key={company.id} value={company.id}>
-                                      {company.company_name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
+          {activeTab === 'users' && (
+            <ERPTable headers={USER_HEADERS} emptyIcon={Users} emptyTitle="No users found" emptyDesc="Invite users via Supabase Dashboard.">
+              {users.map(u => {
+                const primaryCo = companies.find(c => c.id === u.company_id);
+                return (
+                  <ERPTableRow key={u.id}>
+                    <ERPTableCell bold>{u.full_name || '—'}</ERPTableCell>
+                    <ERPTableCell muted>{u.email}</ERPTableCell>
+                    <ERPTableCell>
+                      {primaryCo ? (
+                        <span style={{ padding: '3px 9px', background: '#EBF4FB', color: PRIMARY, borderRadius: 99, fontSize: 11.5, fontWeight: 600 }}>{primaryCo.company_name}</span>
+                      ) : (
+                        <span style={{ color: '#EF4444', fontSize: 12 }}>Not Assigned</span>
+                      )}
+                    </ERPTableCell>
+                    <ERPTableCell><StatusBadge status={u.is_active !== false ? 'active' : 'inactive'} /></ERPTableCell>
+                    <ERPTableCell>
+                      <Select onValueChange={(companyId) => updateUserMutation.mutate({ userId: u.id, data: { company_id: companyId, accessible_companies: [companyId] } })}>
+                        <SelectTrigger style={{ width: 160, fontSize: 12, borderRadius: 8 }}><SelectValue placeholder="Assign Company" /></SelectTrigger>
+                        <SelectContent>
+                          {companies.map(co => <SelectItem key={co.id} value={co.id}>{co.company_name}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </ERPTableCell>
+                  </ERPTableRow>
+                );
+              })}
+            </ERPTable>
+          )}
+
+          {activeTab === 'companies' && (
+            <>
+              <div style={{ background: '#F0FDF4', border: '1.5px solid #BBF7D0', borderRadius: 10, padding: '14px 18px', marginBottom: 20, display: 'flex', gap: 12 }}>
+                <CheckCircle style={{ width: 18, height: 18, color: ACCENT, flexShrink: 0, marginTop: 1 }} />
+                <div style={{ fontSize: 13, color: '#14532D' }}>
+                  <strong>How to assign users:</strong> Copy a company ID → Go to Supabase Auth → Edit User → paste in company_id field.
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+              </div>
+              <ERPTable headers={CO_HEADERS} emptyIcon={Building2} emptyTitle="No companies found" emptyDesc="">
+                {companies.map(co => (
+                  <ERPTableRow key={co.id}>
+                    <ERPTableCell bold>{co.company_name}</ERPTableCell>
+                    <ERPTableCell>
+                      <code style={{ background: '#F1F5F9', padding: '3px 8px', borderRadius: 5, fontSize: 11, fontFamily: 'monospace', color: '#475569' }}>{co.id}</code>
+                    </ERPTableCell>
+                    <ERPTableCell muted>{co.contact_email || '—'}</ERPTableCell>
+                    <ERPTableCell>
+                      <span style={{ padding: '3px 9px', background: '#F3E8FF', color: '#7C3AED', borderRadius: 99, fontSize: 11.5, fontWeight: 600, textTransform: 'capitalize' }}>
+                        {(co.company_type || 'trading').replace(/_/g, ' ')}
+                      </span>
+                    </ERPTableCell>
+                    <ERPTableCell>
+                      <button
+                        onClick={() => { navigator.clipboard.writeText(co.id); setCopiedId(co.id); setTimeout(() => setCopiedId(null), 2000); }}
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 12px', border: '1.5px solid #E2E8F0', borderRadius: 8, background: 'white', cursor: 'pointer', fontSize: 12.5, fontWeight: 600, color: copiedId === co.id ? ACCENT : '#475569', fontFamily: 'inherit' }}
+                      >
+                        {copiedId === co.id ? <><CheckCircle style={{ width: 12, height: 12 }} />Copied!</> : <><Copy style={{ width: 12, height: 12 }} />Copy ID</>}
+                      </button>
+                    </ERPTableCell>
+                  </ERPTableRow>
+                ))}
+              </ERPTable>
+            </>
+          )}
 
-        {/* COMPANY IDs TAB - NEW! */}
-        <TabsContent value="companies">
-          <Card>
-            <CardHeader>
-              <CardTitle>Company IDs Reference</CardTitle>
-              <p className="text-sm text-gray-600 mt-2">Copy company IDs to assign users in Supabase settings</p>
-            </CardHeader>
-            <CardContent>
-              <Alert className="mb-6 bg-green-50 border-green-200">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-900">
-                  <strong>How to assign users:</strong><br/>
-                  1. Click the copy button next to a company ID<br/>
-                  2. Go to Supabase Dashboard → Authentication → Edit User<br/>
-                  3. Paste the company ID in the "company_id" field<br/>
-                  4. Add the same ID to "accessible_companies" array<br/>
-                  5. Save!
-                </AlertDescription>
-              </Alert>
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Company Name</TableHead>
-                    <TableHead>Company ID</TableHead>
-                    <TableHead>Contact Email</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {companies.map(company => (
-                    <TableRow key={company.id}>
-                      <TableCell className="font-medium">{company.company_name}</TableCell>
-                      <TableCell>
-                        <code className="bg-gray-100 px-2 py-1 rounded text-xs">{company.id}</code>
-                      </TableCell>
-                      <TableCell>{company.contact_email}</TableCell>
-                      <TableCell>
-                        <Badge className="capitalize">{company.company_type?.replace(/_/g, ' ')}</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCopyCompanyId(company.id, company.company_name)}
-                          className="gap-2"
-                        >
-                          {copiedId === company.id ? (
-                            <>
-                              <CheckCircle className="w-3 h-3 text-green-600" />
-                              Copied!
-                            </>
-                          ) : (
-                            <>
-                              <Copy className="w-3 h-3" />
-                              Copy ID
-                            </>
-                          )}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ROLES TAB */}
-        <TabsContent value="roles">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>Roles</CardTitle>
-                <Dialog open={showRoleDialog} onOpenChange={(open) => {
-                  setShowRoleDialog(open);
-                  if (!open) resetRoleForm();
-                }}>
-                  <DialogTrigger asChild>
-                    <Button className="bg-green-600 hover:bg-green-700">
-                      <Plus className="w-4 h-4 mr-2" />
-                      New Role
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                      <DialogTitle>{editingRole ? 'Edit Role' : 'Create New Role'}</DialogTitle>
-                    </DialogHeader>
-
-                    <div className="space-y-6 pt-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label>Role Name *</Label>
-                          <Input
-                            value={roleForm.role_name}
-                            onChange={(e) => setRoleForm(prev => ({ ...prev, role_name: e.target.value }))}
-                            placeholder="e.g., Accountant, AR Manager"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Description</Label>
-                          <Input
-                            value={roleForm.description}
-                            onChange={(e) => setRoleForm(prev => ({ ...prev, description: e.target.value }))}
-                            placeholder="Brief description of role"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-4">
-                        <h3 className="font-semibold text-lg">Permissions</h3>
-                        
-                        {/* Sales Module */}
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={roleForm.permissions.sales.access}
-                                onCheckedChange={() => handleModuleToggle('sales')}
-                              />
-                              <Label className="font-semibold">Sales & Customers</Label>
-                            </div>
-                          </CardHeader>
-                          {roleForm.permissions.sales.access && (
-                            <CardContent className="grid grid-cols-3 gap-3 pt-0">
-                              {Object.keys(roleForm.permissions.sales).filter(k => k !== 'access').map(perm => (
-                                <div key={perm} className="flex items-center gap-2">
-                                  <Checkbox
-                                    checked={roleForm.permissions.sales[perm]}
-                                    onCheckedChange={() => handlePermissionToggle('sales', perm)}
-                                  />
-                                  <Label className="text-sm capitalize">{perm.replace(/_/g, ' ')}</Label>
-                                </div>
-                              ))}
-                            </CardContent>
-                          )}
-                        </Card>
-
-                        {/* Purchases Module */}
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={roleForm.permissions.purchases.access}
-                                onCheckedChange={() => handleModuleToggle('purchases')}
-                              />
-                              <Label className="font-semibold">Purchases & Vendors</Label>
-                            </div>
-                          </CardHeader>
-                          {roleForm.permissions.purchases.access && (
-                            <CardContent className="grid grid-cols-3 gap-3 pt-0">
-                              {Object.keys(roleForm.permissions.purchases).filter(k => k !== 'access').map(perm => (
-                                <div key={perm} className="flex items-center gap-2">
-                                  <Checkbox
-                                    checked={roleForm.permissions.purchases[perm]}
-                                    onCheckedChange={() => handlePermissionToggle('purchases', perm)}
-                                  />
-                                  <Label className="text-sm capitalize">{perm.replace(/_/g, ' ')}</Label>
-                                </div>
-                              ))}
-                            </CardContent>
-                          )}
-                        </Card>
-
-                        {/* Accounting Module */}
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={roleForm.permissions.accounting.access}
-                                onCheckedChange={() => handleModuleToggle('accounting')}
-                              />
-                              <Label className="font-semibold">Accounting & General Ledger</Label>
-                            </div>
-                          </CardHeader>
-                          {roleForm.permissions.accounting.access && (
-                            <CardContent className="grid grid-cols-3 gap-3 pt-0">
-                              {Object.keys(roleForm.permissions.accounting).filter(k => k !== 'access').map(perm => (
-                                <div key={perm} className="flex items-center gap-2">
-                                  <Checkbox
-                                    checked={roleForm.permissions.accounting[perm]}
-                                    onCheckedChange={() => handlePermissionToggle('accounting', perm)}
-                                  />
-                                  <Label className="text-sm capitalize">{perm.replace(/_/g, ' ')}</Label>
-                                </div>
-                              ))}
-                            </CardContent>
-                          )}
-                        </Card>
-
-                        {/* Banking Module */}
-                        <Card>
-                          <CardHeader className="pb-3">
-                            <div className="flex items-center gap-3">
-                              <Checkbox
-                                checked={roleForm.permissions.banking.access}
-                                onCheckedChange={() => handleModuleToggle('banking')}
-                              />
-                              <Label className="font-semibold">Banking</Label>
-                            </div>
-                          </CardHeader>
-                          {roleForm.permissions.banking.access && (
-                            <CardContent className="grid grid-cols-3 gap-3 pt-0">
-                              {Object.keys(roleForm.permissions.banking).filter(k => k !== 'access').map(perm => (
-                                <div key={perm} className="flex items-center gap-2">
-                                  <Checkbox
-                                    checked={roleForm.permissions.banking[perm]}
-                                    onCheckedChange={() => handlePermissionToggle('banking', perm)}
-                                  />
-                                  <Label className="text-sm capitalize">{perm.replace(/_/g, ' ')}</Label>
-                                </div>
-                              ))}
-                            </CardContent>
-                          )}
-                        </Card>
-                      </div>
-
-                      <div className="flex justify-end gap-3 pt-4 border-t">
-                        <Button variant="outline" onClick={() => {
-                          setShowRoleDialog(false);
-                          resetRoleForm();
-                        }}>
-                          Cancel
-                        </Button>
-                        <Button 
-                          onClick={() => saveRoleMutation.mutate(roleForm)}
-                          className="bg-green-600 hover:bg-green-700"
-                        >
-                          {editingRole ? 'Update Role' : 'Create Role'}
-                        </Button>
-                      </div>
+          {activeTab === 'roles' && (
+            <ERPTable headers={ROLE_HEADERS} emptyIcon={Shield} emptyTitle="No roles created yet" emptyDesc="Create roles to assign specific permissions to users">
+              {roles.map(role => (
+                <ERPTableRow key={role.id}>
+                  <ERPTableCell bold style={{ color: PRIMARY }}>{role.role_name}</ERPTableCell>
+                  <ERPTableCell muted>{role.description || '—'}</ERPTableCell>
+                  <ERPTableCell>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {Object.entries(role.permissions || {}).filter(([_, p]) => p.access).map(([mod]) => (
+                        <span key={mod} style={{ padding: '2px 8px', background: '#EBF4FB', color: PRIMARY, borderRadius: 99, fontSize: 11, fontWeight: 600, textTransform: 'capitalize' }}>{mod}</span>
+                      ))}
                     </div>
-                  </DialogContent>
-                </Dialog>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {roles.length === 0 ? (
-                <div className="text-center py-12">
-                  <Shield className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-                  <p className="text-gray-500 mb-4">No roles created yet</p>
-                  <p className="text-sm text-gray-400">Create roles to assign specific permissions to users</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Role Name</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead>Permissions</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {roles.map(role => (
-                      <TableRow key={role.id}>
-                        <TableCell className="font-medium">{role.role_name}</TableCell>
-                        <TableCell>{role.description}</TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            {Object.entries(role.permissions || {}).filter(([_, perms]) => perms.access).map(([module]) => (
-                              <Badge key={module} variant="outline" className="text-xs">
-                                {module}
-                              </Badge>
-                            ))}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={role.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                            {role.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline" onClick={() => handleEditRole(role)}>
-                              <Pencil className="w-3 h-3" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                  </ERPTableCell>
+                  <ERPTableCell>
+                    <ActionBtn onClick={() => handleEditRole(role)} icon={Pencil} variant="ghost" />
+                  </ERPTableCell>
+                </ERPTableRow>
+              ))}
+            </ERPTable>
+          )}
 
-      {/* Help Card */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="pt-6">
-          <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-            <Shield className="w-5 h-5 text-blue-600" />
-            User Assignment Made Easy
-          </h3>
-          <div className="space-y-3 text-sm text-gray-700">
-            <div className="flex gap-3">
-              <span className="font-bold text-blue-600">1.</span>
-              <p><strong>View Company IDs:</strong> Click the "Company IDs" tab to see all company IDs</p>
+        </div>
+      </div>
+
+      {/* Role Dialog */}
+      <Dialog open={showRoleDialog} onOpenChange={(open) => { setShowRoleDialog(open); if (!open) resetRoleForm(); }}>
+        <DialogContent style={{ maxWidth: 680, maxHeight: '90vh', overflowY: 'auto' }}>
+          <DialogHeader>
+            <DialogTitle>{editingRole ? 'Edit Role' : 'Create New Role'}</DialogTitle>
+          </DialogHeader>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+              <div>
+                <label style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#64748B', display: 'block', marginBottom: 6 }}>Role Name *</label>
+                <input style={inputStyle} value={roleForm.role_name} onChange={e => setRoleForm(p => ({ ...p, role_name: e.target.value }))} placeholder="e.g., Accountant, AR Manager" />
+              </div>
+              <div>
+                <label style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#64748B', display: 'block', marginBottom: 6 }}>Description</label>
+                <input style={inputStyle} value={roleForm.description} onChange={e => setRoleForm(p => ({ ...p, description: e.target.value }))} placeholder="Brief description" />
+              </div>
             </div>
-            <div className="flex gap-3">
-              <span className="font-bold text-blue-600">2.</span>
-              <p><strong>Copy Company ID:</strong> Click "Copy ID" button next to the company</p>
+
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Module Permissions</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {MODULES.map(({ key, label }) => (
+                  <div key={key} style={{ border: '1.5px solid #E2E8F0', borderRadius: 10, overflow: 'hidden' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: '#F8FAFC', cursor: 'pointer' }}>
+                      <input type="checkbox" checked={roleForm.permissions[key]?.access || false} onChange={() => handleModuleToggle(key)} style={{ width: 15, height: 15, accentColor: PRIMARY }} />
+                      <span style={{ fontSize: 13.5, fontWeight: 700, color: '#0F172A' }}>{label}</span>
+                    </label>
+                    {roleForm.permissions[key]?.access && (
+                      <div style={{ padding: '12px 16px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, borderTop: '1px solid #F1F5F9' }}>
+                        {Object.keys(roleForm.permissions[key]).filter(k => k !== 'access').map(perm => (
+                          <PermCheckbox key={perm} label={perm} checked={roleForm.permissions[key][perm]} onChange={() => handlePermissionToggle(key, perm)} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-3">
-              <span className="font-bold text-blue-600">3.</span>
-              <p><strong>Assign in Supabase:</strong> Edit user in Supabase Dashboard and paste the ID</p>
-            </div>
-            <div className="flex gap-3">
-              <span className="font-bold text-blue-600">4.</span>
-              <p><strong>Quick Assign:</strong> Or use the dropdown in the Users tab to assign instantly</p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 16, borderTop: '1px solid #F1F5F9' }}>
+              <button onClick={() => { setShowRoleDialog(false); resetRoleForm(); }} style={{ padding: '9px 18px', border: '1.5px solid #E2E8F0', borderRadius: 9, background: 'white', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: '#475569' }}>Cancel</button>
+              <button onClick={() => saveRoleMutation.mutate(roleForm)} disabled={saveRoleMutation.isPending} style={{ padding: '9px 18px', border: 'none', borderRadius: 9, background: PRIMARY, color: 'white', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {editingRole ? 'Update Role' : 'Create Role'}
+              </button>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </DialogContent>
+      </Dialog>
+    </PageShell>
   );
 }

@@ -1,5 +1,3 @@
-
-
 import React from "react";
 import { Link, useLocation } from "react-router-dom";
 import { createPageUrl } from "@/utils";
@@ -36,22 +34,17 @@ import {
   MapPin,
   Upload,
   Lock,
-  RefreshCw // Added RefreshCw icon
+  RefreshCw,
+  ChevronDown,
+  ChevronRight,
+  Bell,
+  Search,
+  Zap,
+  Cloud,
+  Menu,
+  X,
+  ArrowUpRight,
 } from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarHeader,
-  SidebarFooter,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -60,175 +53,319 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
-const navigationItems = [
+// ── Navigation structure ────────────────────────────────────
+const navigationGroups = [
   {
-    title: "Main Dashboard",
-    url: createPageUrl("Dashboard"),
-    icon: LayoutDashboard,
-    group: "main"
+    group: "main",
+    label: null,
+    items: [
+      { title: "Dashboard", url: createPageUrl("Dashboard"), icon: LayoutDashboard },
+    ]
   },
   {
-    title: "Sales",
-    icon: ShoppingCart,
     group: "sales",
-    children: [
+    label: "Sales & Revenue",
+    icon: ShoppingCart,
+    items: [
       { title: "Sales Dashboard", url: createPageUrl("SalesDashboard"), icon: LayoutDashboard },
-      { title: "Invoices", url: createPageUrl("Invoices"), icon: FileText },
-      { title: "Customers", url: createPageUrl("Customers"), icon: Users },
-      { title: "POS", url: createPageUrl("POS"), icon: Store },
-      { title: "POS Reports", url: createPageUrl("POSReports"), icon: BarChart3 }
+      { title: "Invoices",        url: createPageUrl("Invoices"),        icon: FileText },
+      { title: "Customers",       url: createPageUrl("Customers"),       icon: Users },
+      { title: "POS",             url: createPageUrl("POS"),             icon: Store },
+      { title: "POS Reports",     url: createPageUrl("POSReports"),      icon: BarChart3 },
     ]
   },
   {
-    title: "Purchases",
-    icon: Receipt,
     group: "purchases",
-    children: [
+    label: "Purchasing",
+    icon: Receipt,
+    items: [
       { title: "Purchase Dashboard", url: createPageUrl("PurchaseDashboard"), icon: LayoutDashboard },
-      { title: "Purchase Orders", url: createPageUrl("PurchaseOrders"), icon: ShoppingCart },
-      { title: "Receive Inventory", url: createPageUrl("ReceiveInventory"), icon: Package },
-      { title: "Bills", url: createPageUrl("Bills"), icon: Receipt },
-      { title: "Vendors", url: createPageUrl("Vendors"), icon: Building2 }
+      { title: "Purchase Orders",    url: createPageUrl("PurchaseOrders"),    icon: ShoppingCart },
+      { title: "Receive Inventory",  url: createPageUrl("ReceiveInventory"),  icon: Package },
+      { title: "Bills",              url: createPageUrl("Bills"),              icon: Receipt },
+      { title: "Vendors",            url: createPageUrl("Vendors"),            icon: Building2 },
     ]
   },
   {
-    title: "Inventory",
-    icon: Package,
     group: "inventory",
-    children: [
-      { title: "Inventory Dashboard", url: createPageUrl("InventoryDashboard"), icon: LayoutDashboard },
-      { title: "Products", url: createPageUrl("Products"), icon: Package },
-      { title: "Inventory Reports", url: createPageUrl("InventoryReports"), icon: BarChart3 },
-      { title: "Inventory Locations", url: createPageUrl("InventoryLocationManagement"), icon: MapPin }
-    ]
-  },
-  {
-    title: "Manufacturing",
-    icon: Factory,
-    group: "manufacturing",
-    children: [
-      { title: "Manufacturing Dashboard", url: createPageUrl("ManufacturingDashboard"), icon: LayoutDashboard },
-      { title: "Production", url: createPageUrl("Manufacturing"), icon: Factory }
-    ]
-  },
-  {
-    title: "Job Costing",
-    icon: Briefcase,
-    group: "job-costing",
-    children: [
-      { title: "Job Costing Dashboard", url: createPageUrl("JobCostingDashboard"), icon: LayoutDashboard },
-      { title: "Jobs & Costs", url: createPageUrl("JobCosting"), icon: Briefcase }
-    ]
-  },
-  {
-    title: "Payroll",
-    icon: Users,
-    group: "payroll",
-    children: [
-      { title: "Payroll Dashboard", url: createPageUrl("PayrollDashboard"), icon: LayoutDashboard },
-      { title: "Employees & Payroll", url: createPageUrl("Payroll"), icon: Users }
-    ]
-  },
-  {
-    title: "Non-Profit",
-    icon: Heart,
-    group: "non-profit",
-    children: [
-      { title: "Non-Profit Dashboard", url: createPageUrl("NonProfitDashboard"), icon: LayoutDashboard },
-      { title: "Donations & Programs", url: createPageUrl("NonProfit"), icon: Heart }
-    ]
-  },
-  {
-    title: "Accounting",
-    icon: Book,
-    group: "accounting",
-    children: [
-      { title: "Accounting Dashboard", url: createPageUrl("AccountingDashboard"), icon: LayoutDashboard },
-      { title: "Chart of Accounts", url: createPageUrl("ChartOfAccounts"), icon: Book },
-      { title: "Journal Entries", url: createPageUrl("JournalEntries"), icon: FileText },
-      { title: "Payments", url: createPageUrl("Payments"), icon: CreditCard },
-      { title: "Banking", url: createPageUrl("Banking"), icon: DollarSign }, // Changed icon from CreditCard to DollarSign
-      { title: "Exchange Rates", url: createPageUrl("ExchangeRates"), icon: TrendingUp },
-      { title: "FX Revaluation", url: createPageUrl("FXRevaluation"), icon: DollarSign }
-    ]
-  },
-  {
-    title: "Fixed Assets",
+    label: "Inventory",
     icon: Package,
+    items: [
+      { title: "Inventory Dashboard",  url: createPageUrl("InventoryDashboard"),          icon: LayoutDashboard },
+      { title: "Products",             url: createPageUrl("Products"),                    icon: Package },
+      { title: "Inventory Reports",    url: createPageUrl("InventoryReports"),            icon: BarChart3 },
+      { title: "Inventory Locations",  url: createPageUrl("InventoryLocationManagement"), icon: MapPin },
+    ]
+  },
+  {
+    group: "manufacturing",
+    label: "Manufacturing",
+    icon: Factory,
+    items: [
+      { title: "Mfg Dashboard", url: createPageUrl("ManufacturingDashboard"), icon: LayoutDashboard },
+      { title: "Production",    url: createPageUrl("Manufacturing"),           icon: Factory },
+    ]
+  },
+  {
+    group: "job-costing",
+    label: "Job Costing",
+    icon: Briefcase,
+    items: [
+      { title: "Job Costing Dashboard", url: createPageUrl("JobCostingDashboard"), icon: LayoutDashboard },
+      { title: "Jobs & Costs",          url: createPageUrl("JobCosting"),          icon: Briefcase },
+    ]
+  },
+  {
+    group: "payroll",
+    label: "Payroll",
+    icon: Users,
+    items: [
+      { title: "Payroll Dashboard",  url: createPageUrl("PayrollDashboard"), icon: LayoutDashboard },
+      { title: "Employees & Payroll", url: createPageUrl("Payroll"),          icon: Users },
+    ]
+  },
+  {
+    group: "non-profit",
+    label: "Non-Profit",
+    icon: Heart,
+    items: [
+      { title: "Non-Profit Dashboard", url: createPageUrl("NonProfitDashboard"), icon: LayoutDashboard },
+      { title: "Donations & Programs", url: createPageUrl("NonProfit"),           icon: Heart },
+    ]
+  },
+  {
+    group: "accounting",
+    label: "Accounting",
+    icon: Book,
+    items: [
+      { title: "Accounting Dashboard", url: createPageUrl("AccountingDashboard"), icon: LayoutDashboard },
+      { title: "Chart of Accounts",    url: createPageUrl("ChartOfAccounts"),     icon: Book },
+      { title: "Journal Entries",      url: createPageUrl("JournalEntries"),      icon: FileText },
+      { title: "Payments",             url: createPageUrl("Payments"),            icon: CreditCard },
+      { title: "Banking",              url: createPageUrl("Banking"),             icon: DollarSign },
+      { title: "Exchange Rates",       url: createPageUrl("ExchangeRates"),       icon: TrendingUp },
+      { title: "FX Revaluation",       url: createPageUrl("FXRevaluation"),       icon: DollarSign },
+    ]
+  },
+  {
     group: "fixed-assets",
-    children: [
-      { title: "Fixed Assets Dashboard", url: createPageUrl("FixedAssetsDashboard"), icon: LayoutDashboard },
-      { title: "Assets", url: createPageUrl("FixedAssets"), icon: Package }
+    label: "Fixed Assets",
+    icon: Package,
+    items: [
+      { title: "Assets Dashboard", url: createPageUrl("FixedAssetsDashboard"), icon: LayoutDashboard },
+      { title: "Assets",           url: createPageUrl("FixedAssets"),          icon: Package },
     ]
   },
   {
-    title: "Reports",
-    icon: BarChart3,
     group: "reports",
-    children: [
-      { title: "Financial Reports", url: createPageUrl("Reports"), icon: FileText },
-      { title: "Management Dashboard", url: createPageUrl("ManagementDashboard"), icon: TrendingUp }
+    label: "Reports & Analytics",
+    icon: BarChart3,
+    items: [
+      { title: "Financial Reports",    url: createPageUrl("Reports"),             icon: FileText },
+      { title: "Management Dashboard", url: createPageUrl("ManagementDashboard"), icon: TrendingUp },
     ]
   },
   {
-    title: "Settings",
-    icon: Settings,
     group: "settings",
-    children: [
-      { title: "App Settings", url: createPageUrl("Settings"), icon: Settings },
-      { title: "Company Management", url: createPageUrl("CompanyManagement"), icon: Building2 },
-      { title: "User Management", url: createPageUrl("UserManagement"), icon: Users },
-      { title: "Store Management", url: createPageUrl("StoreManagement"), icon: Store },
-      { title: "License Management", url: createPageUrl("LicenseManagement"), icon: Key },
-      { title: "Audit Trail", url: createPageUrl("AuditTrail"), icon: FileText },
-      { title: "Lock Management", url: createPageUrl("LockManagement"), icon: Lock },
-      { title: "Import Data", url: createPageUrl("ImportData"), icon: Upload }
+    label: "Administration",
+    icon: Settings,
+    items: [
+      { title: "App Settings",      url: createPageUrl("Settings"),          icon: Settings },
+      { title: "Companies",         url: createPageUrl("CompanyManagement"), icon: Building2 },
+      { title: "Users",             url: createPageUrl("UserManagement"),    icon: Users },
+      { title: "Stores",            url: createPageUrl("StoreManagement"),   icon: Store },
+      { title: "Licenses",          url: createPageUrl("LicenseManagement"), icon: Key },
+      { title: "Audit Trail",       url: createPageUrl("AuditTrail"),        icon: FileText },
+      { title: "Lock Management",   url: createPageUrl("LockManagement"),    icon: Lock },
+      { title: "Import Data",       url: createPageUrl("ImportData"),        icon: Upload },
     ]
   },
   {
-    title: "Help & Support",
-    icon: HelpCircle,
     group: "help",
-    children: [
-      { title: "Support Guide", url: createPageUrl("SupportGuide"), icon: HelpCircle },
-      { title: "Licensing Guide", url: createPageUrl("LicensingGuide"), icon: BookOpen },
-      { title: "Deployment Guide", url: createPageUrl("DeploymentGuide"), icon: BookOpen }
+    label: "Help & Guides",
+    icon: HelpCircle,
+    items: [
+      { title: "Support Guide",    url: createPageUrl("SupportGuide"),    icon: HelpCircle },
+      { title: "Licensing Guide",  url: createPageUrl("LicensingGuide"),  icon: BookOpen },
+      { title: "Deployment Guide", url: createPageUrl("DeploymentGuide"), icon: BookOpen },
     ]
-  }
+  },
 ];
 
-// Loading component
+// ── Loading screen ──────────────────────────────────────────
 function LoadingScreen() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-      <Card className="w-full max-w-md">
-        <CardContent className="p-12 text-center">
-          <div className="animate-spin w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-6"></div>
-          <p className="text-xl text-gray-700">Loading...</p>
-        </CardContent>
-      </Card>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F5F7FA' }}>
+      <div className="text-center">
+        <div
+          style={{
+            width: 64, height: 64,
+            background: 'linear-gradient(135deg, #1B4F8A, #2E86C1)',
+            borderRadius: 16,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            margin: '0 auto 20px',
+            boxShadow: '0 8px 24px rgba(27,79,138,0.3)',
+          }}
+        >
+          <Cloud style={{ width: 32, height: 32, color: 'white' }} />
+        </div>
+        <div
+          style={{
+            width: 40, height: 4, background: '#E2E8F0', borderRadius: 9999,
+            margin: '0 auto 12px', overflow: 'hidden',
+          }}
+        >
+          <div
+            style={{
+              height: '100%', width: '40%', background: '#1B4F8A',
+              borderRadius: 9999,
+              animation: 'loading-bar 1.2s ease-in-out infinite',
+            }}
+          />
+        </div>
+        <p style={{ color: '#64748B', fontSize: 14, fontWeight: 500 }}>Loading Edge Cloud ERP…</p>
+      </div>
+      <style>{`
+        @keyframes loading-bar {
+          0%   { transform: translateX(-100%); }
+          100% { transform: translateX(350%); }
+        }
+      `}</style>
     </div>
   );
 }
 
+// ── Sidebar nav item ────────────────────────────────────────
+function NavItem({ item, isActive }) {
+  const Icon = item.icon;
+  return (
+    <Link
+      to={item.url}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        padding: '7px 12px',
+        borderRadius: 7,
+        color: isActive ? '#00C97F' : 'rgba(255,255,255,0.65)',
+        fontWeight: isActive ? 600 : 400,
+        fontSize: 13.5,
+        textDecoration: 'none',
+        background: isActive ? 'rgba(0,168,107,0.18)' : 'transparent',
+        transition: 'all 150ms ease',
+        marginBottom: 1,
+      }}
+      onMouseEnter={e => {
+        if (!isActive) {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+          e.currentTarget.style.color = 'white';
+        }
+      }}
+      onMouseLeave={e => {
+        if (!isActive) {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = 'rgba(255,255,255,0.65)';
+        }
+      }}
+    >
+      <Icon style={{
+        width: 15, height: 15, flexShrink: 0,
+        color: isActive ? '#00C97F' : 'rgba(255,255,255,0.5)',
+      }} />
+      <span style={{ lineHeight: 1.3 }}>{item.title}</span>
+      {isActive && (
+        <div style={{
+          marginLeft: 'auto', width: 5, height: 5,
+          borderRadius: '50%', background: '#00C97F',
+          flexShrink: 0,
+        }} />
+      )}
+    </Link>
+  );
+}
+
+// ── Sidebar group ───────────────────────────────────────────
+function NavGroup({ group, isExpanded, onToggle, currentPath }) {
+  if (group.group === 'main') {
+    return (
+      <div style={{ marginBottom: 4 }}>
+        {group.items.map(item => (
+          <NavItem key={item.url} item={item} isActive={currentPath === item.url} />
+        ))}
+      </div>
+    );
+  }
+
+  const Icon = group.icon;
+  const hasActive = group.items.some(i => currentPath === i.url);
+
+  return (
+    <div style={{ marginBottom: 2 }}>
+      <button
+        onClick={() => onToggle(group.group)}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 10,
+          width: '100%', padding: '8px 12px', borderRadius: 7,
+          background: hasActive && !isExpanded ? 'rgba(0,168,107,0.12)' : 'transparent',
+          color: hasActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.75)',
+          fontWeight: 600, fontSize: 13.5,
+          cursor: 'pointer', border: 'none', textAlign: 'left',
+          transition: 'all 150ms ease',
+          justifyContent: 'space-between',
+        }}
+        onMouseEnter={e => {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
+          e.currentTarget.style.color = 'white';
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.background = hasActive && !isExpanded ? 'rgba(0,168,107,0.12)' : 'transparent';
+          e.currentTarget.style.color = hasActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.75)';
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Icon style={{
+            width: 15, height: 15, flexShrink: 0,
+            color: hasActive ? '#00C97F' : 'rgba(255,255,255,0.5)',
+          }} />
+          <span>{group.label}</span>
+        </div>
+        {isExpanded
+          ? <ChevronDown style={{ width: 13, height: 13, opacity: 0.5, flexShrink: 0 }} />
+          : <ChevronRight style={{ width: 13, height: 13, opacity: 0.5, flexShrink: 0 }} />
+        }
+      </button>
+
+      {isExpanded && (
+        <div style={{ marginLeft: 14, paddingLeft: 12, borderLeft: '1px solid rgba(255,255,255,0.1)', marginTop: 2 }}>
+          {group.items.map(item => (
+            <NavItem key={item.url} item={item} isActive={currentPath === item.url} />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main Layout Content ─────────────────────────────────────
 function LayoutContent({ children }) {
   const location = useLocation();
   const { currentCompany, switchCompany, user, networkError, retryConnection, hasNetworkError } = useCompany();
-  
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+
   const [expandedGroups, setExpandedGroups] = React.useState({
     sales: true,
-    purchases: true,
-    inventory: true,
-    manufacturing: true,
-    "job-costing": true,
-    payroll: true,
-    "non-profit": true,
+    purchases: false,
+    inventory: false,
+    manufacturing: false,
+    "job-costing": false,
+    payroll: false,
+    "non-profit": false,
     accounting: true,
-    "fixed-assets": true,
-    reports: true,
-    settings: true,
+    "fixed-assets": false,
+    reports: false,
+    settings: false,
     help: false,
   });
 
@@ -240,7 +377,7 @@ function LayoutContent({ children }) {
     payroll: false,
     non_profit: false,
     pos: true,
-    inventory: true
+    inventory: true,
   });
 
   React.useEffect(() => {
@@ -249,25 +386,23 @@ function LayoutContent({ children }) {
     }
   }, [currentCompany]);
 
+  // Auto-expand group when navigating to a child page
+  React.useEffect(() => {
+    navigationGroups.forEach(group => {
+      if (group.items?.some(i => i.url === location.pathname)) {
+        setExpandedGroups(prev => ({ ...prev, [group.group]: true }));
+      }
+    });
+  }, [location.pathname]);
+
   const evaluationDaysRemaining = React.useMemo(() => {
-    if (!currentCompany?.is_evaluation || !currentCompany?.license_expiry_date) {
-      return null;
-    }
-    
-    const today = new Date();
-    const expiryDate = new Date(currentCompany.license_expiry_date);
-    const diffTime = expiryDate - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    return diffDays > 0 ? diffDays : 0;
+    if (!currentCompany?.is_evaluation || !currentCompany?.license_expiry_date) return null;
+    const diffMs = new Date(currentCompany.license_expiry_date) - new Date();
+    return Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
   }, [currentCompany]);
 
-  const toggleGroup = (group) => {
-    setExpandedGroups(prev => ({
-      ...prev,
-      [group]: !prev[group]
-    }));
-  };
+  const toggleGroup = group =>
+    setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }));
 
   const handleLogout = () => {
     switchCompany(null);
@@ -276,339 +411,331 @@ function LayoutContent({ children }) {
     User.logout();
   };
 
-  const handleSwitchCompany = () => {
-    switchCompany(null);
-    window.location.reload();
-  };
-
   const isSuperAdmin = user?.is_super_admin === true;
 
-  // Show network error screen
-  if (hasNetworkError) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-red-50 to-red-100 flex items-center justify-center p-6">
-        <Card className="w-full max-w-2xl">
-          <CardContent className="p-12 text-center">
-            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-              <AlertCircle className="w-12 h-12 text-red-600" />
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-4">Connection Error</h1>
-            <p className="text-lg text-gray-700 mb-6">
-              Unable to connect to the server. Please check your internet connection and try again.
-            </p>
-            <div className="bg-gray-100 rounded-lg p-4 mb-6">
-              <p className="text-sm text-gray-600 font-mono break-words">
-                {networkError}
-              </p>
-            </div>
-            <div className="space-y-3">
-              <Button 
-                onClick={retryConnection}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-lg py-6"
-              >
-                <RefreshCw className="w-5 h-5 mr-2" />
-                Retry Connection
-              </Button>
-              <p className="text-sm text-gray-600">
-                If the problem persists, please contact your system administrator or check:
-              </p>
-              <ul className="text-sm text-gray-600 text-left list-disc list-inside space-y-1">
-                <li>Your internet connection is working</li>
-                <li>The server is running and accessible</li>
-                <li>You're not being blocked by a firewall</li>
-                <li>The API URL is correctly configured</li>
-              </ul>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // ── Build visible nav groups ──────────────────────────────
+  const visibleGroups = navigationGroups
+    .map(group => {
+      if (group.group === 'main') return group;
 
-  // CRITICAL FIX: Allow EvaluationSignup page even when logged in but no company
-  if (location.pathname === '/EvaluationSignup') {
-    return children;
-  }
+      let items = [...group.items];
 
-  // CRITICAL: Allow SetupSuperAdmin page without company access
-  if (location.pathname === '/SetupSuperAdmin') {
-    return children;
-  }
-
-  // CRITICAL FIX: Don't redirect to CompanySelector if already on a valid page with company in session
-  const hasStoredCompany = sessionStorage.getItem('current_company_id');
-  if (!currentCompany && !hasStoredCompany) {
-    return <CompanySelector />;
-  }
-
-  // CRITICAL FIX: Show loading while company is being restored from session
-  if (!currentCompany && hasStoredCompany) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardContent className="p-12 text-center">
-            <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading your company...</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  const filteredNavigationItems = navigationItems
-    .map(item => {
-      if (!isSuperAdmin && ['settings', 'help'].includes(item.group)) {
-        if (item.children) {
-          const filteredChildren = item.children.filter(child => {
-            // Include 'Audit Trail' here for non-super admins if needed, or keep it admin-only.
-            // For now, assuming it's an admin-level setting.
-            const allowedPages = ['App Settings', 'Support Guide'];
-            return allowedPages.includes(child.title);
-          });
-          
-          if (filteredChildren.length === 0) return null;
-          
-          return { ...item, children: filteredChildren };
-        }
+      // Filter POS if disabled
+      if (group.group === 'sales' && !enabledModules.pos) {
+        items = items.filter(i => !['POS', 'POS Reports'].includes(i.title));
+      }
+      // Filter FX if multi_currency off
+      if (group.group === 'accounting' && !enabledModules.multi_currency) {
+        items = items.filter(i => !['Exchange Rates', 'FX Revaluation'].includes(i.title));
+      }
+      // Admin-only sections limited for non-admin
+      if (!isSuperAdmin && group.group === 'settings') {
+        items = items.filter(i => ['App Settings'].includes(i.title));
+      }
+      if (!isSuperAdmin && group.group === 'help') {
+        items = items.filter(i => ['Support Guide'].includes(i.title));
       }
 
-      if (item.children) {
-        let filteredChildren = item.children;
-
-        if (item.group === 'sales' && !enabledModules.pos) {
-          filteredChildren = filteredChildren.filter(child => 
-            child.title !== 'POS' && child.title !== 'POS Reports'
-          );
-        }
-        
-        if (item.group === 'accounting' && !enabledModules.multi_currency) {
-          filteredChildren = filteredChildren.filter(child =>
-            child.title !== 'Exchange Rates' && child.title !== 'FX Revaluation'
-          );
-        }
-
-        return { ...item, children: filteredChildren };
-      }
-      return item;
+      return { ...group, items };
     })
-    .filter(item => {
-      if (!item) return false;
-      
-      if (['main', 'accounting', 'reports', 'sales', 'purchases'].includes(item.group)) {
-        return true;
-      }
+    .filter(group => {
+      if (group.group === 'main') return true;
+      if (['sales', 'purchases', 'accounting', 'reports'].includes(group.group)) return true;
+      if (group.group === 'settings') return isSuperAdmin || group.items.length > 0;
+      if (group.group === 'help') return group.items.length > 0;
 
-      if (item.group === 'settings' || item.group === 'help') {
-        if (isSuperAdmin) return true;
-        return item.children && item.children.length > 0;
-      }
-
-      const moduleKeyMap = {
-        'inventory': enabledModules.inventory,
-        'manufacturing': enabledModules.manufacturing,
-        'job-costing': enabledModules.job_costing,
-        'payroll': enabledModules.payroll,
-        'non-profit': enabledModules.non_profit,
-        'fixed-assets': enabledModules.fixed_assets,
+      const moduleMap = {
+        'inventory':       enabledModules.inventory,
+        'manufacturing':   enabledModules.manufacturing,
+        'job-costing':     enabledModules.job_costing,
+        'payroll':         enabledModules.payroll,
+        'non-profit':      enabledModules.non_profit,
+        'fixed-assets':    enabledModules.fixed_assets,
       };
-
-      if (Object.prototype.hasOwnProperty.call(moduleKeyMap, item.group)) {
-        return moduleKeyMap[item.group];
-      }
-
-      return false;
+      return moduleMap[group.group] ?? false;
     });
 
+  // ── Network error screen ──────────────────────────────────
+  if (hasNetworkError) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#F5F7FA', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ background: 'white', borderRadius: 16, padding: 48, maxWidth: 520, width: '100%', boxShadow: '0 20px 40px rgba(0,0,0,0.1)', textAlign: 'center' }}>
+          <div style={{ width: 64, height: 64, background: '#FEF2F2', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px' }}>
+            <AlertCircle style={{ width: 32, height: 32, color: '#EF4444' }} />
+          </div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#0F172A', marginBottom: 12 }}>Connection Error</h1>
+          <p style={{ color: '#64748B', fontSize: 15, marginBottom: 20, lineHeight: 1.6 }}>
+            Unable to connect to the server. Please check your internet connection and try again.
+          </p>
+          <div style={{ background: '#F8FAFC', borderRadius: 8, padding: '12px 16px', marginBottom: 24, fontFamily: 'monospace', fontSize: 12, color: '#475569', wordBreak: 'break-all', textAlign: 'left' }}>
+            {networkError}
+          </div>
+          <button
+            onClick={retryConnection}
+            style={{ width: '100%', padding: '12px 24px', background: '#1B4F8A', color: 'white', border: 'none', borderRadius: 8, fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+          >
+            <RefreshCw style={{ width: 18, height: 18 }} />
+            Retry Connection
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (location.pathname === '/EvaluationSignup') return children;
+  if (location.pathname === '/SetupSuperAdmin') return children;
+
+  const hasStoredCompany = sessionStorage.getItem('current_company_id');
+  if (!currentCompany && !hasStoredCompany) return <CompanySelector />;
+  if (!currentCompany && hasStoredCompany) return <LoadingScreen />;
+
+  // ── User initials ─────────────────────────────────────────
+  const userInitials = user?.full_name
+    ? user.full_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    : 'U';
+
+  // ── Sidebar JSX ───────────────────────────────────────────
+  const sidebarContent = (
+    <div style={{
+      width: 256, minWidth: 256,
+      background: '#0F2B5B',
+      height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      position: 'sticky', top: 0, flexShrink: 0,
+    }}>
+      {/* Logo / Brand */}
+      <div style={{
+        padding: '20px 18px 16px',
+        borderBottom: '1px solid rgba(255,255,255,0.08)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+          <div style={{
+            width: 40, height: 40, flexShrink: 0,
+            background: 'linear-gradient(135deg, #2E86C1, #00A86B)',
+            borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 12px rgba(0,168,107,0.35)',
+          }}>
+            <Cloud style={{ width: 22, height: 22, color: 'white' }} />
+          </div>
+          <div>
+            <div style={{ color: 'white', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+              Edge Cloud
+            </div>
+            <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+              ERP Platform
+            </div>
+          </div>
+        </div>
+
+        {/* Company pill */}
+        {currentCompany && (
+          <div style={{
+            background: 'rgba(255,255,255,0.06)', borderRadius: 8,
+            padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8,
+            border: '1px solid rgba(255,255,255,0.08)',
+          }}>
+            <div style={{
+              width: 24, height: 24, background: '#1B4F8A', borderRadius: 6,
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <Building2 style={{ width: 13, height: 13, color: 'rgba(255,255,255,0.8)' }} />
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: 600, truncate: true, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {currentCompany.company_name}
+              </div>
+              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10.5, fontWeight: 500 }}>
+                {isSuperAdmin ? 'Super Admin' : 'Standard User'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Active users widget */}
+        <div style={{ marginTop: 10 }}>
+          <ActiveUsersWidget compact />
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px', scrollbarWidth: 'thin', scrollbarColor: 'rgba(255,255,255,0.15) transparent' }}>
+        {visibleGroups.map(group => (
+          <NavGroup
+            key={group.group}
+            group={group}
+            isExpanded={expandedGroups[group.group]}
+            onToggle={toggleGroup}
+            currentPath={location.pathname}
+          />
+        ))}
+
+        <div style={{ height: 16 }} />
+      </div>
+
+      {/* User profile footer */}
+      <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              width: '100%', padding: '10px 12px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+              cursor: 'pointer', transition: 'background 150ms',
+              textAlign: 'left',
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.1)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+            >
+              <div style={{
+                width: 34, height: 34, flexShrink: 0,
+                background: 'linear-gradient(135deg, #1B4F8A, #00A86B)',
+                borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                <span style={{ color: 'white', fontWeight: 700, fontSize: 12.5 }}>{userInitials}</span>
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.full_name || 'User'}
+                </div>
+                <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 11, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.email || ''}
+                </div>
+              </div>
+              <Settings style={{ width: 13, height: 13, color: 'rgba(255,255,255,0.35)', flexShrink: 0 }} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            side="top"
+            style={{ width: 200, marginBottom: 8 }}
+            className="border border-gray-200 shadow-xl rounded-xl bg-white"
+          >
+            <div style={{ padding: '10px 12px 8px', borderBottom: '1px solid #F1F5F9' }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{user?.full_name || 'User'}</p>
+              <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>{user?.email}</p>
+              {isSuperAdmin && (
+                <span style={{ display: 'inline-block', marginTop: 4, fontSize: 10, fontWeight: 700, background: '#EBF4FB', color: '#1B4F8A', padding: '2px 8px', borderRadius: 99, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                  Super Admin
+                </span>
+              )}
+            </div>
+            <div style={{ padding: '4px' }}>
+              <DropdownMenuItem
+                onClick={() => window.location.href = createPageUrl("Settings")}
+                className="rounded-lg text-sm font-medium"
+              >
+                <UserIcon className="w-4 h-4 mr-2 text-gray-400" />
+                My Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => { switchCompany(null); window.location.reload(); }}
+                className="rounded-lg text-sm font-medium"
+              >
+                <Building2 className="w-4 h-4 mr-2 text-gray-400" />
+                Switch Company
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleLogout}
+                className="rounded-lg text-sm font-medium text-red-600 focus:text-red-600 focus:bg-red-50"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </DropdownMenuItem>
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+
   return (
-    <SidebarProvider>
+    <>
+      <RealtimeNotifications />
       <style>{`
-        :root {
-          --primary: 220 70% 50%;
-          --primary-foreground: 0 0% 100%;
-          --secondary: 220 14% 96%;
-          --accent: 220 14% 96%;
-          --background: 0 0% 99%;
-          --foreground: 222 47% 11%;
-        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
       `}</style>
 
-      {/* Realtime Notifications */}
-      <RealtimeNotifications />
-      
-      <div className="min-h-screen flex w-full bg-gray-50">
-        <Sidebar className="border-r border-gray-200 bg-white">
-          <SidebarHeader className="border-b border-gray-200 p-6">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-blue-700 rounded-xl flex items-center justify-center shadow-lg">
-                <TrendingUp className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Edge Cloud ERP</h2>
-                {currentCompany && (
-                  <p className="text-xs text-gray-500">{currentCompany.company_name}</p>
-                )}
-              </div>
+      <div style={{ display: 'flex', minHeight: '100vh', background: '#F5F7FA' }}>
+        {/* Desktop sidebar */}
+        <div className="hidden md:flex">
+          {sidebarContent}
+        </div>
+
+        {/* Mobile sidebar overlay */}
+        {mobileOpen && (
+          <div
+            style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex' }}
+            onClick={() => setMobileOpen(false)}
+          >
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} />
+            <div style={{ position: 'relative', zIndex: 10 }} onClick={e => e.stopPropagation()}>
+              {sidebarContent}
             </div>
+          </div>
+        )}
 
-            {/* Active Users Widget in Sidebar */}
-            <div className="mt-4">
-              <ActiveUsersWidget compact />
-            </div>
-          </SidebarHeader>
-          
-          <SidebarContent className="p-3">
-            <SidebarMenu>
-              {filteredNavigationItems.map((item) => {
-                if (item.children) {
-                  return (
-                    <div key={item.group} className="mb-2">
-                      <button
-                        onClick={() => toggleGroup(item.group)}
-                        className="flex items-center justify-between w-full px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <item.icon className="w-4 h-4" />
-                          <span>{item.title}</span>
-                        </div>
-                        <span className={`transition-transform ${expandedGroups[item.group] ? 'rotate-90' : ''}`}>
-                          ›
-                        </span>
-                      </button>
-                      {expandedGroups[item.group] && item.children.length > 0 && (
-                        <div className="ml-4 mt-1 space-y-1">
-                          {item.children.map((child) => (
-                            <SidebarMenuItem key={child.title}>
-                              <SidebarMenuButton 
-                                asChild 
-                                className={`hover:bg-blue-50 hover:text-blue-700 transition-colors rounded-lg ${
-                                  location.pathname === child.url ? 'bg-blue-50 text-blue-700 font-medium' : ''
-                                }`}
-                              >
-                                <Link to={child.url} className="flex items-center gap-3 px-3 py-2">
-                                  <child.icon className="w-4 h-4" />
-                                  <span className="text-sm">{child.title}</span>
-                                </Link>
-                              </SidebarMenuButton>
-                            </SidebarMenuItem>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
-                
-                return (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton 
-                      asChild 
-                      className={`hover:bg-blue-50 hover:text-blue-700 transition-colors rounded-lg mb-1 ${
-                        location.pathname === item.url ? 'bg-blue-50 text-blue-700 font-medium' : ''
-                      }`}
-                    >
-                      <Link to={item.url} className="flex items-center gap-3 px-3 py-2">
-                        <item.icon className="w-4 h-4" />
-                        <span>{item.title}</span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
-          </SidebarContent>
-
-          <SidebarFooter className="border-t border-gray-200 p-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="flex items-center justify-between w-full hover:bg-gray-50 p-2 rounded-lg transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                      <span className="text-white font-semibold text-sm">
-                        {user?.full_name ? user.full_name.charAt(0).toUpperCase() : 'U'}
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0 text-left">
-                      <p className="font-medium text-gray-900 text-sm truncate">
-                        {user?.full_name || 'User'}
-                      </p>
-                      <p className="text-xs text-gray-500 truncate">{user?.email || ''}</p>
-                      {isSuperAdmin && (
-                        <p className="text-xs text-blue-600 font-semibold">Super Admin</p>
-                      )}
-                    </div>
-                  </div>
-                  <Settings className="w-4 h-4 text-gray-400" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuItem onClick={() => window.location.href = createPageUrl("Settings")}>
-                  <UserIcon className="w-4 h-4 mr-2" />
-                  My Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleSwitchCompany}>
-                  <Building2 className="w-4 h-4 mr-2" />
-                  Switch Company
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarFooter>
-        </Sidebar>
-
-        <main className="flex-1 flex flex-col">
+        {/* Main content */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
+          {/* Evaluation banner */}
           {evaluationDaysRemaining !== null && (
-            <div className={`w-full px-6 py-3 ${
-              evaluationDaysRemaining <= 5 ? 'bg-red-600' : 
-              evaluationDaysRemaining <= 10 ? 'bg-orange-500' : 
-              'bg-blue-600'
-            } text-white`}>
-              <div className="flex items-center justify-between max-w-7xl mx-auto">
-                <div className="flex items-center gap-3">
-                  <AlertCircle className="w-5 h-5" />
-                  <span className="font-semibold">
-                    {evaluationDaysRemaining === 0 ? (
-                      'Your evaluation period has expired'
-                    ) : evaluationDaysRemaining === 1 ? (
-                      'Last day of your evaluation period!'
-                    ) : (
-                      `${evaluationDaysRemaining} days remaining in your evaluation period`
-                    )}
-                  </span>
-                </div>
-                <Link to={createPageUrl("UpgradeSubscription")}>
-                  <Button 
-                    size="sm" 
-                    className={`${
-                      evaluationDaysRemaining <= 5 ? 'bg-white text-red-600 hover:bg-gray-100' : 
-                      'bg-white text-blue-600 hover:bg-gray-100'
-                    } font-semibold`}
-                  >
-                    Upgrade Now
-                  </Button>
-                </Link>
+            <div style={{
+              background: evaluationDaysRemaining <= 5 ? '#EF4444' : evaluationDaysRemaining <= 10 ? '#F59E0B' : '#1B4F8A',
+              color: 'white', padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              fontSize: 13.5, fontWeight: 500, flexShrink: 0,
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AlertCircle style={{ width: 16, height: 16 }} />
+                {evaluationDaysRemaining === 0
+                  ? 'Your evaluation period has expired.'
+                  : evaluationDaysRemaining === 1
+                    ? 'Last day of your evaluation period!'
+                    : `${evaluationDaysRemaining} days remaining in your evaluation period.`}
               </div>
+              <Link
+                to={createPageUrl("UpgradeSubscription")}
+                style={{
+                  background: 'rgba(255,255,255,0.2)', color: 'white', padding: '4px 14px',
+                  borderRadius: 6, fontSize: 12, fontWeight: 700, textDecoration: 'none',
+                  border: '1px solid rgba(255,255,255,0.3)', display: 'flex', alignItems: 'center', gap: 6,
+                  transition: 'background 150ms',
+                }}
+                onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.3)'}
+                onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              >
+                Upgrade Now <ArrowUpRight style={{ width: 13, height: 13 }} />
+              </Link>
             </div>
           )}
 
-          <header className="bg-white border-b border-gray-200 px-6 py-4 md:hidden">
-            <div className="flex items-center gap-4">
-              <SidebarTrigger className="hover:bg-gray-100 p-2 rounded-lg transition-colors" />
-              <h1 className="text-xl font-semibold">Edge Cloud ERP</h1>
+          {/* Mobile top bar */}
+          <div className="flex md:hidden" style={{
+            background: '#0F2B5B', color: 'white', padding: '12px 16px',
+            alignItems: 'center', gap: 12, flexShrink: 0,
+          }}>
+            <button
+              onClick={() => setMobileOpen(true)}
+              style={{ background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 8, padding: 8, color: 'white', cursor: 'pointer' }}
+            >
+              <Menu style={{ width: 20, height: 20 }} />
+            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Cloud style={{ width: 18, height: 18 }} />
+              <span style={{ fontWeight: 700, fontSize: 15 }}>Edge Cloud ERP</span>
             </div>
-          </header>
+          </div>
 
-          <div className="flex-1 overflow-auto">
+          {/* Page content */}
+          <div style={{ flex: 1, overflow: 'auto' }}>
             {children}
           </div>
-        </main>
+        </div>
       </div>
-    </SidebarProvider>
+    </>
   );
 }
 
+// ── Auth wrapper ────────────────────────────────────────────
 function AuthWrapper({ children }) {
   const location = useLocation();
   const [isChecking, setIsChecking] = React.useState(true);
@@ -619,35 +746,35 @@ function AuthWrapper({ children }) {
       try {
         const currentUser = await User.getCurrent();
         setIsAuthenticated(!!currentUser);
-      } catch (error) {
+      } catch {
         setIsAuthenticated(false);
       } finally {
         setIsChecking(false);
       }
     };
-
     checkAuth();
   }, []);
 
-  if (isChecking) {
-    return <LoadingScreen />;
-  }
+  if (isChecking) return <LoadingScreen />;
 
-  // CRITICAL: Allow access to these pages without authentication
   const publicPages = ['/SetupSuperAdmin', '/EvaluationSignup'];
-  const isPublicPage = publicPages.includes(location.pathname);
-  
-  if (isPublicPage) {
-    return children;
-  }
+  if (publicPages.includes(location.pathname)) return children;
 
   if (!isAuthenticated) {
-    return <LandingPage onLogin={() => { sessionStorage.setItem('returnUrl', window.location.pathname); window.location.href = '/'; }} />;
+    return (
+      <LandingPage
+        onLogin={() => {
+          sessionStorage.setItem('returnUrl', window.location.pathname);
+          window.location.href = '/';
+        }}
+      />
+    );
   }
 
   return children;
 }
 
+// ── Root export ─────────────────────────────────────────────
 export default function Layout({ children }) {
   return (
     <AuthWrapper>
@@ -657,4 +784,3 @@ export default function Layout({ children }) {
     </AuthWrapper>
   );
 }
-

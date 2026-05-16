@@ -1,359 +1,166 @@
 import React, { useState } from "react";
 import { FixedAsset, Account, JournalEntry } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, Search, Package, Pencil, TrendingDown, AlertCircle, Play } from "lucide-react";
+import { Package, Pencil, TrendingDown, AlertCircle, Play, DollarSign } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
 import FixedAssetForm from "../components/fixedAssets/FixedAssetForm";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn, FilterSelect } from "../components/shared/PageShell";
 
-const categoryColors = {
-  machinery: "bg-blue-100 text-blue-800",
-  vehicles: "bg-purple-100 text-purple-800",
-  office_equipment: "bg-green-100 text-green-800",
-  furniture: "bg-yellow-100 text-yellow-800",
-  computers: "bg-indigo-100 text-indigo-800",
-  buildings: "bg-orange-100 text-orange-800",
-  land: "bg-pink-100 text-pink-800",
-  other: "bg-gray-100 text-gray-800"
-};
+const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return '—'; } };
+const currencySymbol = code => ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
+
+function calculateDepreciation(asset) {
+  const today = new Date();
+  const months = differenceInMonths(today, new Date(asset.acquisition_date));
+  const cost = asset.acquisition_cost || 0;
+  const salvage = asset.salvage_value || 0;
+  const lifeMonths = (asset.useful_life_years || 10) * 12;
+  const monthly = asset.depreciation_method === 'straight_line'
+    ? (cost - salvage) / lifeMonths
+    : 0;
+  const accumulated = Math.min(months * monthly, cost - salvage);
+  return { accumulated, bookValue: cost - accumulated };
+}
 
 export default function FixedAssets() {
-  const [showForm, setShowForm] = useState(false);
-  const [editingAsset, setEditingAsset] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [showForm, setShowForm]   = useState(false);
+  const [editing, setEditing]     = useState(null);
+  const [search, setSearch]       = useState("");
+  const [catFilter, setCatFilter] = useState("all");
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
+  const sym = currencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ['fixed-assets', currentCompany?.id],
-    queryFn: () => currentCompany ? FixedAsset.list({ filters: { company_id: currentCompany.id }, orderBy: 'acquisition_date', ascending: false }) : Promise.resolve([]),
-    enabled: !!currentCompany
+    queryFn: () => currentCompany ? FixedAsset.list({ filters: { company_id: currentCompany.id }, orderBy: 'acquisition_date', ascending: false }) : [],
+    enabled: !!currentCompany,
   });
-
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts', currentCompany?.id],
-    queryFn: () => currentCompany ? Account.list({ filters: { company_id: currentCompany.id } }) : Promise.resolve([]),
-    enabled: !!currentCompany
+    queryFn: () => currentCompany ? Account.list({ filters: { company_id: currentCompany.id } }) : [],
+    enabled: !!currentCompany,
   });
 
   const runDepreciationMutation = useMutation({
     mutationFn: async () => {
       const today = new Date();
-      const results = [];
-      
       for (const asset of assets) {
-        if (!asset.is_active || !asset.depreciation_account_id || !asset.accumulated_depreciation_account_id) {
-          continue;
-        }
-        
-        // Calculate depreciation for this month
+        if (!asset.is_active || !asset.depreciation_account_id || !asset.accumulated_depreciation_account_id) continue;
         const { accumulated, bookValue } = calculateDepreciation(asset);
         const monthsSinceAcquisition = differenceInMonths(today, new Date(asset.acquisition_date));
-        const monthlyDepreciation = asset.depreciation_method === 'straight_line' 
-          ? ((asset.acquisition_cost - (asset.salvage_value || 0)) / (asset.useful_life_years * 12))
+        const monthlyDep = asset.depreciation_method === 'straight_line'
+          ? ((asset.acquisition_cost - (asset.salvage_value || 0)) / ((asset.useful_life_years || 10) * 12))
           : 0;
-        
-        if (monthlyDepreciation > 0 && monthsSinceAcquisition > 0) {
-          // Post depreciation journal entry
-          const depreciationAccount = accounts.find(a => a.id === asset.depreciation_account_id);
-          const accumulatedDepAccount = accounts.find(a => a.id === asset.accumulated_depreciation_account_id);
-          
-          if (depreciationAccount && accumulatedDepAccount) {
-            const journalEntry = {
+        if (monthlyDep > 0 && monthsSinceAcquisition > 0) {
+          const depAcc  = accounts.find(a => a.id === asset.depreciation_account_id);
+          const accumAcc = accounts.find(a => a.id === asset.accumulated_depreciation_account_id);
+          if (depAcc && accumAcc) {
+            await JournalEntry.create({
               company_id: currentCompany.id,
               entry_number: `DEP-${asset.asset_code}-${format(today, 'yyyyMM')}`,
               entry_date: format(today, 'yyyy-MM-dd'),
               reference: `Depreciation - ${asset.asset_name}`,
-              source_type: 'manual',
+              source_type: 'manual', status: 'posted',
               description: `Monthly depreciation for ${asset.asset_name}`,
-              status: 'posted',
+              total_debits: monthlyDep, total_credits: monthlyDep,
               line_items: [
-                {
-                  account_id: asset.depreciation_account_id,
-                  account_name: depreciationAccount.account_name,
-                  account_code: depreciationAccount.account_code,
-                  description: `Depreciation expense - ${asset.asset_name}`,
-                  debit: monthlyDepreciation,
-                  credit: 0
-                },
-                {
-                  account_id: asset.accumulated_depreciation_account_id,
-                  account_name: accumulatedDepAccount.account_name,
-                  account_code: accumulatedDepAccount.account_code,
-                  description: `Accumulated depreciation - ${asset.asset_name}`,
-                  debit: 0,
-                  credit: monthlyDepreciation
-                }
+                { account_id: asset.depreciation_account_id, account_name: depAcc.account_name, debit: monthlyDep, credit: 0, description: `Depreciation expense - ${asset.asset_name}` },
+                { account_id: asset.accumulated_depreciation_account_id, account_name: accumAcc.account_name, debit: 0, credit: monthlyDep, description: `Accumulated depreciation - ${asset.asset_name}` },
               ],
-              total_debits: monthlyDepreciation,
-              total_credits: monthlyDepreciation,
-              posted_by: currentCompany.admin_user_id || 'system',
-              posted_date: new Date().toISOString()
-            };
-            
-            await JournalEntry.create(journalEntry);
-            
-            // Update depreciation expense account balance
-            await Account.update(depreciationAccount.id, {
-              balance: (depreciationAccount.balance || 0) + monthlyDepreciation
             });
-            
-            // Update accumulated depreciation account balance
-            await Account.update(accumulatedDepAccount.id, {
-              balance: (accumulatedDepAccount.balance || 0) + monthlyDepreciation
-            });
-            
-            // Update fixed asset record
             await FixedAsset.update(asset.id, {
-              accumulated_depreciation: accumulated + monthlyDepreciation,
-              current_book_value: bookValue - monthlyDepreciation
+              accumulated_depreciation: (asset.accumulated_depreciation || 0) + monthlyDep,
+              book_value: bookValue,
+              last_depreciation_date: format(today, 'yyyy-MM-dd'),
             });
-            
-            results.push({ asset: asset.asset_name, amount: monthlyDepreciation });
           }
         }
       }
-      
-      return results;
     },
-    onSuccess: (results) => {
-      queryClient.invalidateQueries(['fixed-assets', currentCompany?.id]);
-      queryClient.invalidateQueries(['accounts', currentCompany?.id]);
-      queryClient.invalidateQueries(['journal-entries', currentCompany?.id]);
-      
-      alert(`Depreciation posted successfully for ${results.length} assets!\n\nTotal Depreciation: $${results.reduce((sum, r) => sum + r.amount, 0).toFixed(2)}`);
-    }
+    onSuccess: () => { queryClient.invalidateQueries(['fixed-assets']); queryClient.invalidateQueries(['journal-entries']); alert('Depreciation posted for all active assets.'); },
+    onError: err => alert(`Error: ${err.message}`),
   });
 
-  const calculateDepreciation = (asset) => {
-    if (!asset.acquisition_date || !asset.acquisition_cost || !asset.useful_life_years) {
-      return { accumulated: 0, bookValue: asset.acquisition_cost || 0 };
-    }
+  const filtered = assets.filter(a => {
+    const matchSearch = !search || a.asset_name?.toLowerCase().includes(search.toLowerCase()) || a.asset_code?.toLowerCase().includes(search.toLowerCase());
+    const matchCat    = catFilter === 'all' || a.category === catFilter;
+    return matchSearch && matchCat;
+  });
 
-    const monthsSinceAcquisition = differenceInMonths(new Date(), new Date(asset.acquisition_date));
-    const totalMonths = asset.useful_life_years * 12;
-    
-    if (asset.depreciation_method === 'straight_line') {
-      const depreciableAmount = asset.acquisition_cost - (asset.salvage_value || 0);
-      const monthlyDepreciation = depreciableAmount / totalMonths;
-      const accumulated = Math.min(monthlyDepreciation * monthsSinceAcquisition, depreciableAmount);
-      const bookValue = Math.max(asset.acquisition_cost - accumulated, asset.salvage_value || 0);
-      
-      return { accumulated, bookValue };
-    }
-    
-    return { 
-      accumulated: asset.accumulated_depreciation || 0, 
-      bookValue: asset.current_book_value || asset.acquisition_cost 
-    };
-  };
+  const totalCost   = assets.reduce((s, a) => s + (a.acquisition_cost || 0), 0);
+  const totalBook   = assets.reduce((s, a) => s + (a.book_value || calculateDepreciation(a).bookValue), 0);
+  const activeCount = assets.filter(a => a.is_active).length;
 
-  const assetsWithCalculations = assets.map(asset => ({
-    ...asset,
-    ...calculateDepreciation(asset)
-  }));
+  const TABLE_HEADERS = [
+    { label: 'Code' }, { label: 'Asset Name' }, { label: 'Category' },
+    { label: 'Acquired' }, { label: 'Cost', right: true },
+    { label: 'Book Value', right: true }, { label: 'Status' }, { label: 'Actions' },
+  ];
 
-  const filteredAssets = assetsWithCalculations.filter(asset =>
-    asset.asset_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.asset_code?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.category?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const totalAssetValue = filteredAssets.reduce((sum, asset) => sum + (asset.bookValue || 0), 0);
-  const totalAcquisitionCost = filteredAssets.reduce((sum, asset) => sum + (asset.acquisition_cost || 0), 0);
-  const totalDepreciation = filteredAssets.reduce((sum, asset) => sum + (asset.accumulated || 0), 0);
-
-  const handleEdit = (asset) => {
-    setEditingAsset(asset);
-    setShowForm(true);
-  };
-
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingAsset(null);
-  };
+  const cats = [...new Set(assets.map(a => a.category).filter(Boolean))];
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Fixed Assets</h1>
-          <p className="text-gray-500 mt-1">Manage your long-term assets and depreciation</p>
-        </div>
-        <div className="flex gap-3">
-          <Button 
-            onClick={() => runDepreciationMutation.mutate()}
-            className="bg-orange-600 hover:bg-orange-700"
-            disabled={runDepreciationMutation.isPending}
-          >
-            {runDepreciationMutation.isPending ? (
-              <>
-                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4 mr-2" />
-                Run Depreciation
-              </>
-            )}
-          </Button>
-          <Button 
-            onClick={() => setShowForm(true)}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            New Asset
-          </Button>
-        </div>
-      </div>
+    <PageShell>
+      {showForm && <FixedAssetForm asset={editing} onClose={() => { setShowForm(false); setEditing(null); }} companyId={currentCompany?.id} />}
 
-      <Alert className="bg-yellow-50 border-yellow-200">
-        <AlertCircle className="h-4 w-4 text-yellow-600" />
-        <AlertDescription className="text-yellow-900">
-          <strong>Important:</strong> Click "Run Depreciation" monthly to post depreciation journals to GL. This updates your P&L and Balance Sheet with accurate depreciation expenses.
-        </AlertDescription>
-      </Alert>
-
-      {showForm && (
-        <FixedAssetForm
-          asset={editingAsset}
-          onClose={handleFormClose}
-        />
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="p-6 border-none shadow-lg bg-gradient-to-br from-blue-50 to-blue-100">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-blue-900">Total Asset Value</h3>
-            <Package className="w-8 h-8 text-blue-600" />
-          </div>
-          <p className="text-3xl font-bold text-blue-900">${totalAssetValue.toFixed(2)}</p>
-          <p className="text-xs text-blue-700 mt-1">Current book value</p>
-        </Card>
-
-        <Card className="p-6 border-none shadow-lg bg-gradient-to-br from-green-50 to-green-100">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-green-900">Acquisition Cost</h3>
-            <Package className="w-8 h-8 text-green-600" />
-          </div>
-          <p className="text-3xl font-bold text-green-900">${totalAcquisitionCost.toFixed(2)}</p>
-          <p className="text-xs text-green-700 mt-1">Original purchase value</p>
-        </Card>
-
-        <Card className="p-6 border-none shadow-lg bg-gradient-to-br from-orange-50 to-orange-100">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-orange-900">Total Depreciation</h3>
-            <TrendingDown className="w-8 h-8 text-orange-600" />
-          </div>
-          <p className="text-3xl font-bold text-orange-900">${totalDepreciation.toFixed(2)}</p>
-          <p className="text-xs text-orange-700 mt-1">Accumulated to date</p>
-        </Card>
-      </div>
-
-      <Card className="p-6">
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search assets by name, code, or category..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
+      <PageHeader
+        title="Fixed Assets"
+        subtitle={`${assets.length} assets · depreciation management`}
+        icon={Package}
+        accentColor="#8B5CF6"
+        actions={
+          <div style={{ display: 'flex', gap: 8 }}>
+            <ActionBtn
+              onClick={() => { if (window.confirm('Run monthly depreciation for all active assets?')) runDepreciationMutation.mutate(); }}
+              icon={Play} label="Run Depreciation" variant="outline"
             />
+            <NewBtn onClick={() => { setEditing(null); setShowForm(true); }} label="New Asset" />
           </div>
-        </div>
+        }
+      />
 
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Asset Code</TableHead>
-                <TableHead>Asset Name</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Acquisition Date</TableHead>
-                <TableHead>Acquisition Cost</TableHead>
-                <TableHead>Accumulated Depreciation</TableHead>
-                <TableHead>Book Value</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8 text-gray-500">
-                    Loading assets...
-                  </TableCell>
-                </TableRow>
-              ) : filteredAssets.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center py-8">
-                    <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p className="text-gray-500">No fixed assets found</p>
-                    <Button 
-                      onClick={() => setShowForm(true)}
-                      variant="outline"
-                      className="mt-3"
-                    >
-                      Add your first asset
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredAssets.map((asset) => (
-                  <TableRow key={asset.id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">{asset.asset_code}</TableCell>
-                    <TableCell>{asset.asset_name}</TableCell>
-                    <TableCell>
-                      <Badge className={categoryColors[asset.category]}>
-                        {asset.category?.replace(/_/g, ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{format(new Date(asset.acquisition_date), 'MMM d, yyyy')}</TableCell>
-                    <TableCell className="font-semibold text-green-600">
-                      ${asset.acquisition_cost?.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="font-semibold text-orange-600">
-                      ${asset.accumulated?.toFixed(2)}
-                    </TableCell>
-                    <TableCell className="font-semibold text-blue-600">
-                      ${asset.bookValue?.toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={asset.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                        {asset.is_active ? 'Active' : 'Disposed'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEdit(asset)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-    </div>
+      <StatBar stats={[
+        { label: 'Total Assets',   value: assets.length, icon: Package,      color: '#1B4F8A' },
+        { label: 'Active',         value: activeCount,   color: '#00A86B' },
+        { label: 'Total Cost',     value: fmt(totalCost, sym),  icon: DollarSign, color: '#F59E0B' },
+        { label: 'Net Book Value', value: fmt(totalBook, sym), icon: TrendingDown, color: '#8B5CF6' },
+      ]} />
+
+      <SearchBar value={search} onChange={setSearch} placeholder="Search by asset name or code…">
+        <FilterSelect
+          value={catFilter}
+          onChange={setCatFilter}
+          options={[{ value: 'all', label: 'All Categories' }, ...cats.map(c => ({ value: c, label: c.replace(/_/g, ' ').replace(/\b\w/g, x => x.toUpperCase()) }))]}
+        />
+      </SearchBar>
+
+      <ERPTable headers={TABLE_HEADERS} emptyIcon={Package} emptyTitle="No fixed assets yet" emptyDesc="Add your first asset to track depreciation.">
+        {filtered.map(a => {
+          const { bookValue } = calculateDepreciation(a);
+          const bv = a.book_value ?? bookValue;
+          return (
+            <ERPTableRow key={a.id}>
+              <ERPTableCell style={{ fontFamily: 'monospace', fontSize: 12.5, color: '#8B5CF6', fontWeight: 700 }}>{a.asset_code}</ERPTableCell>
+              <ERPTableCell bold>{a.asset_name}</ERPTableCell>
+              <ERPTableCell>
+                <span style={{ padding: '3px 9px', background: '#F3E8FF', color: '#7C3AED', borderRadius: 99, fontSize: 11.5, fontWeight: 600 }}>
+                  {(a.category || '').replace(/_/g, ' ').replace(/\b\w/g, x => x.toUpperCase())}
+                </span>
+              </ERPTableCell>
+              <ERPTableCell muted>{fmtDate(a.acquisition_date)}</ERPTableCell>
+              <ERPTableCell right bold>{fmt(a.acquisition_cost, sym)}</ERPTableCell>
+              <ERPTableCell right style={{ color: bv < a.acquisition_cost * 0.2 ? '#EF4444' : '#0F172A', fontWeight: 700 }}>{fmt(bv, sym)}</ERPTableCell>
+              <ERPTableCell><StatusBadge status={a.is_active ? 'active' : 'inactive'} /></ERPTableCell>
+              <ERPTableCell>
+                <ActionBtn onClick={() => { setEditing(a); setShowForm(true); }} icon={Pencil} variant="outline" />
+              </ERPTableCell>
+            </ERPTableRow>
+          );
+        })}
+      </ERPTable>
+    </PageShell>
   );
 }

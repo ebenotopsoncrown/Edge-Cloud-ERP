@@ -1,15 +1,18 @@
 import React, { useState } from "react";
 import { ExchangeRate, Account, Invoice, Bill, JournalEntry } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { TrendingUp, TrendingDown, RefreshCw, Save, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, ActionBtn } from "../components/shared/PageShell";
+
+const PRIMARY = '#1B4F8A';
+const ACCENT  = '#00A86B';
+
+const inputStyle = {
+  width: '100%', padding: '9px 12px', border: '1.5px solid #E2E8F0', borderRadius: 8,
+  fontSize: 13.5, color: '#0F172A', background: 'white', outline: 'none', fontFamily: 'inherit',
+};
 
 export default function FXRevaluation() {
   const { currentCompany, user } = useCompany();
@@ -19,287 +22,110 @@ export default function FXRevaluation() {
 
   const { data: exchangeRates = [] } = useQuery({
     queryKey: ['exchange-rates', currentCompany?.id],
-    queryFn: () => currentCompany 
-      ? ExchangeRate.list({ filters: { company_id: currentCompany.id }, orderBy: 'effective_date', ascending: false })
-      : Promise.resolve([]),
+    queryFn: () => currentCompany ? ExchangeRate.list({ filters: { company_id: currentCompany.id }, orderBy: 'effective_date', ascending: false }) : Promise.resolve([]),
     enabled: !!currentCompany
   });
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['accounts', currentCompany?.id],
-    queryFn: () => currentCompany 
-      ? Account.list({ filters: { company_id: currentCompany.id } })
-      : Promise.resolve([]),
+    queryFn: () => currentCompany ? Account.list({ filters: { company_id: currentCompany.id } }) : Promise.resolve([]),
     enabled: !!currentCompany
   });
 
   const { data: invoices = [] } = useQuery({
     queryKey: ['invoices', currentCompany?.id],
-    queryFn: () => currentCompany 
-      ? Invoice.list({ filters: { company_id: currentCompany.id } })
-      : Promise.resolve([]),
+    queryFn: () => currentCompany ? Invoice.list({ filters: { company_id: currentCompany.id } }) : Promise.resolve([]),
     enabled: !!currentCompany
   });
 
   const { data: bills = [] } = useQuery({
     queryKey: ['bills', currentCompany?.id],
-    queryFn: () => currentCompany 
-      ? Bill.list({ filters: { company_id: currentCompany.id } })
-      : Promise.resolve([]),
+    queryFn: () => currentCompany ? Bill.list({ filters: { company_id: currentCompany.id } }) : Promise.resolve([]),
     enabled: !!currentCompany
   });
 
+  const baseCurrency = currentCompany?.base_currency || 'USD';
+
   const calculateRevaluation = () => {
-    const baseCurrency = currentCompany?.base_currency || 'USD';
     const results = [];
 
-    // Get foreign currency invoices that are not fully paid
-    const foreignInvoices = invoices.filter(inv => 
-      inv.currency !== baseCurrency && 
-      inv.balance_due > 0
-    );
+    const foreignInvoices = invoices.filter(inv => inv.currency !== baseCurrency && inv.balance_due > 0);
+    const foreignBills    = bills.filter(b => b.currency !== baseCurrency && b.balance_due > 0);
 
-    // Get foreign currency bills that are not fully paid
-    const foreignBills = bills.filter(bill => 
-      bill.currency !== baseCurrency && 
-      bill.balance_due > 0
-    );
-
-    // Calculate FX gain/loss for invoices
     foreignInvoices.forEach(invoice => {
-      const latestRate = exchangeRates
-        .filter(r => 
-          r.from_currency === baseCurrency &&
-          r.to_currency === invoice.currency &&
-          new Date(r.effective_date) <= new Date(revaluationDate)
-        )
-        .sort((a, b) => new Date(b.effective_date) - new Date(a.effective_date))[0];
-
+      const latestRate = exchangeRates.filter(r => r.from_currency === baseCurrency && r.to_currency === invoice.currency && new Date(r.effective_date) <= new Date(revaluationDate)).sort((a, b) => new Date(b.effective_date) - new Date(a.effective_date))[0];
       if (latestRate) {
-        const currentValueBase = invoice.balance_due / latestRate.exchange_rate;
+        const currentValueBase  = invoice.balance_due / latestRate.exchange_rate;
         const originalValueBase = invoice.balance_due_base_currency || (invoice.balance_due / invoice.exchange_rate);
         const fxGainLoss = currentValueBase - originalValueBase;
-
         if (Math.abs(fxGainLoss) > 0.01) {
-          results.push({
-            type: 'Invoice',
-            document_number: invoice.invoice_number,
-            customer_vendor: invoice.customer_name,
-            currency: invoice.currency,
-            balance_foreign: invoice.balance_due,
-            original_rate: invoice.exchange_rate,
-            current_rate: latestRate.exchange_rate,
-            original_value_base: originalValueBase,
-            current_value_base: currentValueBase,
-            fx_gain_loss: fxGainLoss,
-            is_gain: fxGainLoss > 0
-          });
+          results.push({ type: 'Invoice', document_number: invoice.invoice_number, customer_vendor: invoice.customer_name, currency: invoice.currency, balance_foreign: invoice.balance_due, original_rate: invoice.exchange_rate, current_rate: latestRate.exchange_rate, original_value_base: originalValueBase, current_value_base: currentValueBase, fx_gain_loss: fxGainLoss, is_gain: fxGainLoss > 0 });
         }
       }
     });
 
-    // Calculate FX gain/loss for bills
     foreignBills.forEach(bill => {
-      const latestRate = exchangeRates
-        .filter(r => 
-          r.from_currency === baseCurrency &&
-          r.to_currency === bill.currency &&
-          new Date(r.effective_date) <= new Date(revaluationDate)
-        )
-        .sort((a, b) => new Date(b.effective_date) - new Date(a.effective_date))[0];
-
+      const latestRate = exchangeRates.filter(r => r.from_currency === baseCurrency && r.to_currency === bill.currency && new Date(r.effective_date) <= new Date(revaluationDate)).sort((a, b) => new Date(b.effective_date) - new Date(a.effective_date))[0];
       if (latestRate) {
-        const currentValueBase = bill.balance_due / latestRate.exchange_rate;
+        const currentValueBase  = bill.balance_due / latestRate.exchange_rate;
         const originalValueBase = bill.balance_due_base_currency || (bill.balance_due / bill.exchange_rate);
-        const fxGainLoss = originalValueBase - currentValueBase; // Reversed for bills
-
+        const fxGainLoss = originalValueBase - currentValueBase;
         if (Math.abs(fxGainLoss) > 0.01) {
-          results.push({
-            type: 'Bill',
-            document_number: bill.bill_number,
-            customer_vendor: bill.vendor_name,
-            currency: bill.currency,
-            balance_foreign: bill.balance_due,
-            original_rate: bill.exchange_rate,
-            current_rate: latestRate.exchange_rate,
-            original_value_base: originalValueBase,
-            current_value_base: currentValueBase,
-            fx_gain_loss: fxGainLoss,
-            is_gain: fxGainLoss > 0
-          });
+          results.push({ type: 'Bill', document_number: bill.bill_number, customer_vendor: bill.vendor_name, currency: bill.currency, balance_foreign: bill.balance_due, original_rate: bill.exchange_rate, current_rate: latestRate.exchange_rate, original_value_base: originalValueBase, current_value_base: currentValueBase, fx_gain_loss: fxGainLoss, is_gain: fxGainLoss > 0 });
         }
       }
     });
 
     setRevaluationResults({
       items: results,
-      total_gain: results.filter(r => r.is_gain).reduce((sum, r) => sum + r.fx_gain_loss, 0),
-      total_loss: results.filter(r => !r.is_gain).reduce((sum, r) => sum + Math.abs(r.fx_gain_loss), 0),
-      net_fx: results.reduce((sum, r) => sum + r.fx_gain_loss, 0)
+      total_gain: results.filter(r => r.is_gain).reduce((s, r) => s + r.fx_gain_loss, 0),
+      total_loss: results.filter(r => !r.is_gain).reduce((s, r) => s + Math.abs(r.fx_gain_loss), 0),
+      net_fx:     results.reduce((s, r) => s + r.fx_gain_loss, 0)
     });
   };
 
   const postRevaluationMutation = useMutation({
     mutationFn: async () => {
-      if (!revaluationResults || revaluationResults.items.length === 0) {
-        throw new Error('No revaluation adjustments to post');
-      }
-
-      // Find or create FX Gain/Loss account
-      let fxAccount = accounts.find(a => 
-        a.account_name?.toLowerCase().includes('foreign exchange') ||
-        a.account_name?.toLowerCase().includes('fx gain') ||
-        a.account_name?.toLowerCase().includes('fx loss')
-      );
-
+      if (!revaluationResults || revaluationResults.items.length === 0) throw new Error('No revaluation adjustments to post');
+      let fxAccount = accounts.find(a => a.account_name?.toLowerCase().includes('foreign exchange') || a.account_name?.toLowerCase().includes('fx gain') || a.account_name?.toLowerCase().includes('fx loss'));
       if (!fxAccount) {
-        fxAccount = await Account.create({
-          company_id: currentCompany.id,
-          account_code: '7000',
-          account_name: 'Foreign Exchange Gain/Loss',
-          account_type: 'expense',
-          account_category: 'other_expense',
-          description: 'Unrealized FX gains and losses',
-          balance: 0,
-          is_active: true
-        });
+        fxAccount = await Account.create({ company_id: currentCompany.id, account_code: '7000', account_name: 'Foreign Exchange Gain/Loss', account_type: 'expense', account_category: 'other_expense', description: 'Unrealized FX gains and losses', balance: 0, is_active: true });
       }
-
-      // Find AR and AP accounts
-      const arAccount = accounts.find(a => 
-        a.account_type === 'asset' && 
-        a.account_name?.toLowerCase().includes('receivable')
-      );
-
-      const apAccount = accounts.find(a => 
-        a.account_type === 'liability' && 
-        a.account_name?.toLowerCase().includes('payable')
-      );
-
+      const arAccount = accounts.find(a => a.account_type === 'asset' && a.account_name?.toLowerCase().includes('receivable'));
+      const apAccount = accounts.find(a => a.account_type === 'liability' && a.account_name?.toLowerCase().includes('payable'));
       const journalLineItems = [];
-
-      // Group by AR and AP
-      const arAdjustment = revaluationResults.items
-        .filter(r => r.type === 'Invoice')
-        .reduce((sum, r) => sum + r.fx_gain_loss, 0);
-
-      const apAdjustment = revaluationResults.items
-        .filter(r => r.type === 'Bill')
-        .reduce((sum, r) => sum + r.fx_gain_loss, 0);
-
-      if (arAdjustment !== 0 && arAccount) {
-        if (arAdjustment > 0) {
-          // AR increases (debit AR, credit FX Gain)
-          journalLineItems.push({
-            account_id: arAccount.id,
-            account_name: arAccount.account_name,
-            account_code: arAccount.account_code,
-            description: 'FX revaluation adjustment - AR',
-            debit: arAdjustment,
-            credit: 0
-          });
-          journalLineItems.push({
-            account_id: fxAccount.id,
-            account_name: fxAccount.account_name,
-            account_code: fxAccount.account_code,
-            description: 'Unrealized FX gain on receivables',
-            debit: 0,
-            credit: arAdjustment
-          });
+      const arAdj = revaluationResults.items.filter(r => r.type === 'Invoice').reduce((s, r) => s + r.fx_gain_loss, 0);
+      const apAdj = revaluationResults.items.filter(r => r.type === 'Bill').reduce((s, r) => s + r.fx_gain_loss, 0);
+      if (arAdj !== 0 && arAccount) {
+        if (arAdj > 0) {
+          journalLineItems.push({ account_id: arAccount.id, account_name: arAccount.account_name, account_code: arAccount.account_code, description: 'FX revaluation adjustment - AR', debit: arAdj, credit: 0 });
+          journalLineItems.push({ account_id: fxAccount.id, account_name: fxAccount.account_name, account_code: fxAccount.account_code, description: 'Unrealized FX gain on receivables', debit: 0, credit: arAdj });
         } else {
-          // AR decreases (credit AR, debit FX Loss)
-          journalLineItems.push({
-            account_id: fxAccount.id,
-            account_name: fxAccount.account_name,
-            account_code: fxAccount.account_code,
-            description: 'Unrealized FX loss on receivables',
-            debit: Math.abs(arAdjustment),
-            credit: 0
-          });
-          journalLineItems.push({
-            account_id: arAccount.id,
-            account_name: arAccount.account_name,
-            account_code: arAccount.account_code,
-            description: 'FX revaluation adjustment - AR',
-            debit: 0,
-            credit: Math.abs(arAdjustment)
-          });
+          journalLineItems.push({ account_id: fxAccount.id, account_name: fxAccount.account_name, account_code: fxAccount.account_code, description: 'Unrealized FX loss on receivables', debit: Math.abs(arAdj), credit: 0 });
+          journalLineItems.push({ account_id: arAccount.id, account_name: arAccount.account_name, account_code: arAccount.account_code, description: 'FX revaluation adjustment - AR', debit: 0, credit: Math.abs(arAdj) });
         }
       }
-
-      if (apAdjustment !== 0 && apAccount) {
-        if (apAdjustment > 0) {
-          // AP decreases (debit AP, credit FX Gain)
-          journalLineItems.push({
-            account_id: apAccount.id,
-            account_name: apAccount.account_name,
-            account_code: apAccount.account_code,
-            description: 'FX revaluation adjustment - AP',
-            debit: apAdjustment,
-            credit: 0
-          });
-          journalLineItems.push({
-            account_id: fxAccount.id,
-            account_name: fxAccount.account_name,
-            account_code: fxAccount.account_code,
-            description: 'Unrealized FX gain on payables',
-            debit: 0,
-            credit: apAdjustment
-          });
+      if (apAdj !== 0 && apAccount) {
+        if (apAdj > 0) {
+          journalLineItems.push({ account_id: apAccount.id, account_name: apAccount.account_name, account_code: apAccount.account_code, description: 'FX revaluation adjustment - AP', debit: apAdj, credit: 0 });
+          journalLineItems.push({ account_id: fxAccount.id, account_name: fxAccount.account_name, account_code: fxAccount.account_code, description: 'Unrealized FX gain on payables', debit: 0, credit: apAdj });
         } else {
-          // AP increases (credit AP, debit FX Loss)
-          journalLineItems.push({
-            account_id: fxAccount.id,
-            account_name: fxAccount.account_name,
-            account_code: fxAccount.account_code,
-            description: 'Unrealized FX loss on payables',
-            debit: Math.abs(apAdjustment),
-            credit: 0
-          });
-          journalLineItems.push({
-            account_id: apAccount.id,
-            account_name: apAccount.account_name,
-            account_code: apAccount.account_code,
-            description: 'FX revaluation adjustment - AP',
-            debit: 0,
-            credit: Math.abs(apAdjustment)
-          });
+          journalLineItems.push({ account_id: fxAccount.id, account_name: fxAccount.account_name, account_code: fxAccount.account_code, description: 'Unrealized FX loss on payables', debit: Math.abs(apAdj), credit: 0 });
+          journalLineItems.push({ account_id: apAccount.id, account_name: apAccount.account_name, account_code: apAccount.account_code, description: 'FX revaluation adjustment - AP', debit: 0, credit: Math.abs(apAdj) });
         }
       }
-
-      const totalDebits = journalLineItems.reduce((sum, l) => sum + l.debit, 0);
-      const totalCredits = journalLineItems.reduce((sum, l) => sum + l.credit, 0);
-
-      const journalEntry = await JournalEntry.create({
-        company_id: currentCompany.id,
-        entry_number: `JE-FX-${Date.now()}`,
-        entry_date: revaluationDate,
-        reference: 'FX Revaluation',
-        source_type: 'manual',
-        description: `FX Revaluation as of ${format(new Date(revaluationDate), 'MMM d, yyyy')}`,
-        status: 'posted',
-        line_items: journalLineItems,
-        total_debits: totalDebits,
-        total_credits: totalCredits,
-        posted_by: user?.email || 'system',
-        posted_date: new Date().toISOString()
-      });
-
-      // Update account balances
+      const totalDebits  = journalLineItems.reduce((s, l) => s + l.debit, 0);
+      const totalCredits = journalLineItems.reduce((s, l) => s + l.credit, 0);
+      await JournalEntry.create({ company_id: currentCompany.id, entry_number: `JE-FX-${Date.now()}`, entry_date: revaluationDate, reference: 'FX Revaluation', source_type: 'manual', description: `FX Revaluation as of ${format(new Date(revaluationDate), 'MMM d, yyyy')}`, status: 'posted', line_items: journalLineItems, total_debits: totalDebits, total_credits: totalCredits, posted_by: user?.email || 'system', posted_date: new Date().toISOString() });
       for (const line of journalLineItems) {
         const account = accounts.find(a => a.id === line.account_id);
         if (account) {
           let newBalance = parseFloat(account.balance) || 0;
-          if (['asset', 'expense'].includes(account.account_type)) {
-            newBalance += (line.debit - line.credit);
-          } else {
-            newBalance += (line.credit - line.debit);
-          }
+          if (['asset', 'expense'].includes(account.account_type)) { newBalance += (line.debit - line.credit); }
+          else { newBalance += (line.credit - line.debit); }
           await Account.update(account.id, { balance: newBalance });
         }
       }
-
-      return journalEntry;
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['accounts']);
@@ -309,152 +135,114 @@ export default function FXRevaluation() {
     }
   });
 
-  const baseCurrency = currentCompany?.base_currency || 'USD';
+  const RESULT_HEADERS = [{ label: 'Type' }, { label: 'Document' }, { label: 'Customer/Vendor' }, { label: 'Currency' }, { label: 'Balance (Foreign)', right: true }, { label: 'Original Rate', right: true }, { label: 'Current Rate', right: true }, { label: 'FX Gain/Loss', right: true }];
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">FX Revaluation</h1>
-        <p className="text-gray-500 mt-1">
-          Revalue foreign currency balances to reflect unrealized gains/losses
-        </p>
+    <PageShell>
+      <PageHeader
+        title="FX Revaluation"
+        subtitle={`Revalue foreign currency balances for ${currentCompany?.company_name} · Base: ${baseCurrency}`}
+        icon={TrendingUp}
+        accentColor="#8B5CF6"
+      />
+
+      <StatBar stats={[
+        { label: 'Exchange Rates',     value: exchangeRates.length, icon: TrendingUp, color: ACCENT },
+        { label: 'Foreign Invoices',   value: invoices.filter(inv => inv.currency !== baseCurrency && (inv.balance_due || 0) > 0).length, color: PRIMARY },
+        { label: 'Foreign Bills',      value: bills.filter(b => b.currency !== baseCurrency && (b.balance_due || 0) > 0).length, color: '#EF4444' },
+        ...(revaluationResults ? [
+          { label: 'Net FX Adj.', value: `${revaluationResults.net_fx >= 0 ? '+' : ''}${revaluationResults.net_fx.toFixed(2)}`, color: revaluationResults.net_fx >= 0 ? ACCENT : '#EF4444' },
+        ] : []),
+      ]} />
+
+      {/* Info Banner */}
+      <div style={{ background: '#EBF4FB', border: '1.5px solid #AED6F1', borderRadius: 12, padding: '14px 20px', marginBottom: 20, display: 'flex', gap: 12 }}>
+        <TrendingUp style={{ width: 18, height: 18, color: PRIMARY, flexShrink: 0, marginTop: 1 }} />
+        <div>
+          <p style={{ fontWeight: 700, color: PRIMARY, fontSize: 13.5 }}>FX Revaluation</p>
+          <p style={{ color: '#2E86C1', fontSize: 13, marginTop: 2 }}>This process calculates unrealized foreign exchange gains or losses on outstanding receivables and payables. These are non-cash adjustments reflecting exchange rate movements.</p>
+        </div>
       </div>
 
-      <Alert className="bg-blue-50 border-blue-200">
-        <TrendingUp className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-blue-900">
-          <strong>FX Revaluation:</strong> This process calculates unrealized foreign exchange gains or losses 
-          on outstanding receivables and payables. It does not affect cash - these are non-cash adjustments 
-          that reflect the change in value due to exchange rate movements.
-        </AlertDescription>
-      </Alert>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Calculate Revaluation</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <Label>Revaluation Date</Label>
-              <Input
-                type="date"
-                value={revaluationDate}
-                onChange={(e) => setRevaluationDate(e.target.value)}
-              />
-            </div>
-            <div className="flex items-end">
-              <Button onClick={calculateRevaluation} className="w-full">
-                <RefreshCw className="w-4 h-4 mr-2" />
-                Calculate FX Adjustments
-              </Button>
-            </div>
+      {/* Calculate section */}
+      <div style={{ background: 'white', borderRadius: 14, border: '1px solid #F1F5F9', boxShadow: '0 2px 8px rgba(15,43,91,0.06)', padding: 24, marginBottom: 24 }}>
+        <p style={{ fontSize: 15, fontWeight: 700, color: '#0F172A', marginBottom: 16 }}>Calculate Revaluation</p>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <label style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#64748B', display: 'block', marginBottom: 6 }}>Revaluation Date</label>
+            <input type="date" style={inputStyle} value={revaluationDate} onChange={e => setRevaluationDate(e.target.value)} />
           </div>
+          <button
+            onClick={calculateRevaluation}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 20px', background: PRIMARY, color: 'white', border: 'none', borderRadius: 9, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            <RefreshCw style={{ width: 15, height: 15 }} />
+            Calculate FX Adjustments
+          </button>
+        </div>
+        <div style={{ marginTop: 16, padding: '12px 16px', background: '#F8FAFC', borderRadius: 8, fontSize: 13, color: '#64748B' }}>
+          <strong>Base Currency:</strong> {baseCurrency} · The system compares current rates with transaction rates.
+        </div>
+      </div>
 
-          <div className="bg-gray-50 border rounded-lg p-4 text-sm">
-            <p><strong>Base Currency:</strong> {baseCurrency}</p>
-            <p className="mt-1">
-              The system will compare current exchange rates with the rates at which transactions were recorded.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
+      {/* Results */}
       {revaluationResults && (
         <>
-          <Card>
-            <CardHeader>
-              <CardTitle>Revaluation Summary</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                  <p className="text-sm text-green-900 font-semibold">Total Gains</p>
-                  <p className="text-2xl font-bold text-green-700 mt-2">
-                    {baseCurrency} {revaluationResults.total_gain.toFixed(2)}
-                  </p>
-                </div>
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-sm text-red-900 font-semibold">Total Losses</p>
-                  <p className="text-2xl font-bold text-red-700 mt-2">
-                    {baseCurrency} {revaluationResults.total_loss.toFixed(2)}
-                  </p>
-                </div>
-                <div className={`border rounded-lg p-4 ${
-                  revaluationResults.net_fx >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-                }`}>
-                  <p className="text-sm font-semibold">Net FX Adjustment</p>
-                  <p className={`text-2xl font-bold mt-2 ${
-                    revaluationResults.net_fx >= 0 ? 'text-green-700' : 'text-red-700'
-                  }`}>
-                    {baseCurrency} {revaluationResults.net_fx.toFixed(2)}
-                  </p>
-                </div>
+          {/* Summary cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+            {[
+              { label: 'Total Gains',    value: revaluationResults.total_gain,  color: ACCENT,    bg: '#F0FDF4', border: '#BBF7D0' },
+              { label: 'Total Losses',   value: revaluationResults.total_loss,  color: '#EF4444', bg: '#FEF2F2', border: '#FECACA' },
+              { label: 'Net FX Adjust.', value: revaluationResults.net_fx,      color: revaluationResults.net_fx >= 0 ? ACCENT : '#EF4444', bg: revaluationResults.net_fx >= 0 ? '#F0FDF4' : '#FEF2F2', border: revaluationResults.net_fx >= 0 ? '#BBF7D0' : '#FECACA' },
+            ].map(({ label, value, color, bg, border }) => (
+              <div key={label} style={{ background: bg, border: `1.5px solid ${border}`, borderRadius: 12, padding: '18px 22px' }}>
+                <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color, marginBottom: 6 }}>{label}</p>
+                <p style={{ fontSize: 24, fontWeight: 800, color, fontFamily: 'monospace' }}>{baseCurrency} {Math.abs(value).toFixed(2)}</p>
               </div>
+            ))}
+          </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Document</TableHead>
-                    <TableHead>Customer/Vendor</TableHead>
-                    <TableHead>Currency</TableHead>
-                    <TableHead>Balance</TableHead>
-                    <TableHead>Original Rate</TableHead>
-                    <TableHead>Current Rate</TableHead>
-                    <TableHead>FX Gain/Loss</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {revaluationResults.items.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{item.type}</TableCell>
-                      <TableCell className="font-medium">{item.document_number}</TableCell>
-                      <TableCell>{item.customer_vendor}</TableCell>
-                      <TableCell>{item.currency}</TableCell>
-                      <TableCell className="font-mono">
-                        {item.currency} {item.balance_foreign.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="font-mono">{item.original_rate.toFixed(4)}</TableCell>
-                      <TableCell className="font-mono">{item.current_rate.toFixed(4)}</TableCell>
-                      <TableCell>
-                        <div className={`flex items-center gap-1 ${
-                          item.is_gain ? 'text-green-700' : 'text-red-700'
-                        }`}>
-                          {item.is_gain ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                          <span className="font-mono font-semibold">
-                            {baseCurrency} {Math.abs(item.fx_gain_loss).toFixed(2)}
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+          {/* Detail table */}
+          <ERPTable headers={RESULT_HEADERS} emptyIcon={TrendingUp} emptyTitle="No FX adjustments" emptyDesc="No open foreign currency transactions found for this date.">
+            {revaluationResults.items.map((item, idx) => (
+              <ERPTableRow key={idx}>
+                <ERPTableCell>
+                  <span style={{ padding: '3px 9px', background: item.type === 'Invoice' ? '#EBF4FB' : '#FEF3C7', color: item.type === 'Invoice' ? PRIMARY : '#92400E', borderRadius: 99, fontSize: 11.5, fontWeight: 600 }}>{item.type}</span>
+                </ERPTableCell>
+                <ERPTableCell bold style={{ fontFamily: 'monospace', fontSize: 12.5 }}>{item.document_number}</ERPTableCell>
+                <ERPTableCell>{item.customer_vendor}</ERPTableCell>
+                <ERPTableCell muted>{item.currency}</ERPTableCell>
+                <ERPTableCell right style={{ fontFamily: 'monospace' }}>{item.currency} {item.balance_foreign.toFixed(2)}</ERPTableCell>
+                <ERPTableCell right muted style={{ fontFamily: 'monospace' }}>{item.original_rate?.toFixed(4) || '—'}</ERPTableCell>
+                <ERPTableCell right muted style={{ fontFamily: 'monospace' }}>{item.current_rate.toFixed(4)}</ERPTableCell>
+                <ERPTableCell right>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 5, color: item.is_gain ? ACCENT : '#EF4444', fontWeight: 700, fontFamily: 'monospace' }}>
+                    {item.is_gain ? <TrendingUp style={{ width: 13, height: 13 }} /> : <TrendingDown style={{ width: 13, height: 13 }} />}
+                    {baseCurrency} {Math.abs(item.fx_gain_loss).toFixed(2)}
+                  </div>
+                </ERPTableCell>
+              </ERPTableRow>
+            ))}
+          </ERPTable>
 
-              <div className="mt-6 flex justify-end">
-                <Button
-                  onClick={() => postRevaluationMutation.mutate()}
-                  disabled={postRevaluationMutation.isPending}
-                  className="bg-blue-600 hover:bg-blue-700"
-                >
-                  <Save className="w-4 h-4 mr-2" />
-                  {postRevaluationMutation.isPending ? 'Posting...' : 'Post Revaluation to GL'}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Warning and Post button */}
+          <div style={{ background: '#FFFBEB', border: '1.5px solid #FDE68A', borderRadius: 12, padding: '14px 20px', marginTop: 20, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <AlertCircle style={{ width: 18, height: 18, color: '#F59E0B', flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 13, color: '#92400E' }}><strong>Important:</strong> Posting will create a journal entry to adjust AR/AP balances and record unrealized FX gains/losses. Review carefully before posting.</p>
+          </div>
 
-          <Alert className="bg-yellow-50 border-yellow-200">
-            <AlertCircle className="h-4 w-4 text-yellow-600" />
-            <AlertDescription className="text-yellow-900">
-              <strong>Important:</strong> Posting this revaluation will create a journal entry to adjust AR/AP 
-              balances and record unrealized FX gains/losses. This is a period-end adjustment and should be 
-              reviewed carefully before posting.
-            </AlertDescription>
-          </Alert>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
+            <button
+              onClick={() => postRevaluationMutation.mutate()}
+              disabled={postRevaluationMutation.isPending}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '10px 22px', background: postRevaluationMutation.isPending ? '#94A3B8' : PRIMARY, color: 'white', border: 'none', borderRadius: 9, fontSize: 13.5, fontWeight: 700, cursor: postRevaluationMutation.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}
+            >
+              <Save style={{ width: 15, height: 15 }} />
+              {postRevaluationMutation.isPending ? 'Posting…' : 'Post Revaluation to GL'}
+            </button>
+          </div>
         </>
       )}
-    </div>
+    </PageShell>
   );
 }

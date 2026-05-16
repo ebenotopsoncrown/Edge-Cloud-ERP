@@ -1,244 +1,119 @@
-
 import React, { useState } from "react";
 import { Customer, Invoice } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Plus, Search, Users, Pencil, Trash2 } from "lucide-react";
+import { Users, Pencil, Trash2, DollarSign, UserCheck, UserX } from "lucide-react";
 import CustomerForm from "../components/customers/CustomerForm";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn } from "../components/shared/PageShell";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const currencySymbol = code => ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
 export default function Customers() {
-  const [showForm, setShowForm] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [customerToDelete, setCustomerToDelete] = useState(null);
-
+  const [showForm, setShowForm]       = useState(false);
+  const [editing, setEditing]         = useState(null);
+  const [search, setSearch]           = useState("");
+  const [deleteOpen, setDeleteOpen]   = useState(false);
+  const [toDelete, setToDelete]       = useState(null);
   const queryClient = useQueryClient();
   const { currentCompany } = useCompany();
+  const sym = currencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers', currentCompany?.id],
-    queryFn: () => currentCompany
-      ? Customer.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_date', ascending: false })
-      : Promise.resolve([]),
-    enabled: !!currentCompany
+    queryFn: () => currentCompany ? Customer.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_date', ascending: false }) : [],
+    enabled: !!currentCompany,
   });
-
-  // CRITICAL FIX: Fetch invoices to calculate outstanding amounts
   const { data: invoices = [] } = useQuery({
     queryKey: ['invoices', currentCompany?.id],
-    queryFn: () => currentCompany
-      ? Invoice.list({ filters: { company_id: currentCompany.id } })
-      : Promise.resolve([]),
-    enabled: !!currentCompany
-  });
-
-  // Calculate outstanding amounts for each customer
-  const customersWithOutstanding = customers.map(customer => {
-    const customerInvoices = invoices.filter(inv =>
-      inv.customer_id === customer.id &&
-      ['sent', 'viewed', 'partial', 'overdue'].includes(inv.status)
-    );
-
-    const totalOutstanding = customerInvoices.reduce((sum, inv) =>
-      sum + (inv.balance_due || (inv.total_amount || 0) - (inv.amount_paid || 0)), 0
-    );
-
-    return {
-      ...customer,
-      total_outstanding: totalOutstanding
-    };
+    queryFn: () => currentCompany ? Invoice.list({ filters: { company_id: currentCompany.id } }) : [],
+    enabled: !!currentCompany,
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => Customer.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['customers', currentCompany?.id]);
-      setDeleteDialogOpen(false);
-      setCustomerToDelete(null);
-    }
+    mutationFn: id => Customer.delete(id),
+    onSuccess: () => { queryClient.invalidateQueries(['customers']); setDeleteOpen(false); setToDelete(null); },
   });
 
-  const filteredCustomers = customersWithOutstanding.filter(customer =>
-    customer.company_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  const enriched = customers.map(c => {
+    const outstanding = invoices
+      .filter(i => i.customer_id === c.id && ['sent','viewed','partial','overdue'].includes(i.status))
+      .reduce((s, i) => s + (i.balance_due || 0), 0);
+    return { ...c, outstanding };
+  });
+
+  const filtered = enriched.filter(c =>
+    !search || c.company_name?.toLowerCase().includes(search.toLowerCase()) || c.email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleEdit = (customer) => {
-    setEditingCustomer(customer);
-    setShowForm(true);
-  };
+  const activeCount   = customers.filter(c => c.is_active).length;
+  const totalCredit   = customers.reduce((s, c) => s + (c.credit_limit || 0), 0);
+  const totalOutstand = enriched.reduce((s, c) => s + c.outstanding, 0);
 
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingCustomer(null);
-  };
-
-  const handleDelete = (customer) => {
-    setCustomerToDelete(customer);
-    setDeleteDialogOpen(true);
-  };
-
-  const confirmDelete = () => {
-    if (customerToDelete) {
-      deleteMutation.mutate(customerToDelete.id);
-    }
-  };
+  const TABLE_HEADERS = [
+    { label: 'Customer' }, { label: 'Contact' }, { label: 'Email' }, { label: 'Phone' },
+    { label: 'Credit Limit', right: true }, { label: 'Outstanding', right: true },
+    { label: 'Status' }, { label: 'Actions' },
+  ];
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
-          <p className="text-gray-500 mt-1">Manage your customer relationships</p>
-        </div>
-        <Button
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Customer
-        </Button>
-      </div>
+    <PageShell>
+      {showForm && <CustomerForm customer={editing} onClose={() => { setShowForm(false); setEditing(null); }} companyId={currentCompany?.id} />}
 
-      {showForm && (
-        <CustomerForm
-          customer={editingCustomer}
-          onClose={handleFormClose}
-          companyId={currentCompany?.id}
-        />
-      )}
-
-      <Card className="p-6">
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search customers..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Company Name</TableHead>
-                <TableHead>Contact Person</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-                <TableHead>Credit Limit</TableHead>
-                <TableHead>Outstanding</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                    Loading customers...
-                  </TableCell>
-                </TableRow>
-              ) : filteredCustomers.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
-                    <Users className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p className="text-gray-500">No customers found</p>
-                    <Button
-                      onClick={() => setShowForm(true)}
-                      variant="outline"
-                      className="mt-3"
-                    >
-                      Add your first customer
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredCustomers.map((customer) => (
-                  <TableRow key={customer.id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">{customer.company_name}</TableCell>
-                    <TableCell>{customer.contact_person}</TableCell>
-                    <TableCell>{customer.email}</TableCell>
-                    <TableCell>{customer.phone}</TableCell>
-                    <TableCell>${customer.credit_limit?.toFixed(2)}</TableCell>
-                    <TableCell className="font-semibold text-orange-600">
-                      ${customer.total_outstanding?.toFixed(2)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={customer.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                        {customer.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(customer)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDelete(customer)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Customer</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{customerToDelete?.company_name}"?
-              This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Delete Customer?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently delete <strong>{toDelete?.company_name}</strong>. This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => deleteMutation.mutate(toDelete?.id)} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+
+      <PageHeader
+        title="Customers"
+        subtitle={`${customers.length} customers · ${activeCount} active`}
+        icon={Users}
+        actions={<NewBtn onClick={() => { setEditing(null); setShowForm(true); }} label="New Customer" />}
+      />
+
+      <StatBar stats={[
+        { label: 'Total Customers', value: customers.length, icon: Users,     color: '#1B4F8A' },
+        { label: 'Active',          value: activeCount,       icon: UserCheck, color: '#00A86B' },
+        { label: 'Credit Extended', value: fmt(totalCredit, sym), icon: DollarSign, color: '#F59E0B' },
+        { label: 'AR Outstanding',  value: fmt(totalOutstand, sym), icon: DollarSign, color: '#EF4444' },
+      ]} />
+
+      <SearchBar value={search} onChange={setSearch} placeholder="Search by name or email…" />
+
+      <ERPTable headers={TABLE_HEADERS} emptyIcon={Users} emptyTitle="No customers yet" emptyDesc="Add your first customer to get started.">
+        {filtered.map(c => (
+          <ERPTableRow key={c.id}>
+            <ERPTableCell bold>{c.company_name}</ERPTableCell>
+            <ERPTableCell>{c.contact_person}</ERPTableCell>
+            <ERPTableCell muted>{c.email}</ERPTableCell>
+            <ERPTableCell muted>{c.phone}</ERPTableCell>
+            <ERPTableCell right>{fmt(c.credit_limit, sym)}</ERPTableCell>
+            <ERPTableCell right style={{ color: c.outstanding > 0 ? '#EF4444' : '#00875A', fontWeight: 700 }}>
+              {fmt(c.outstanding, sym)}
+            </ERPTableCell>
+            <ERPTableCell><StatusBadge status={c.is_active ? 'active' : 'inactive'} /></ERPTableCell>
+            <ERPTableCell>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <ActionBtn onClick={() => { setEditing(c); setShowForm(true); }} icon={Pencil} variant="outline" />
+                <ActionBtn onClick={() => { setToDelete(c); setDeleteOpen(true); }} icon={Trash2} danger />
+              </div>
+            </ERPTableCell>
+          </ERPTableRow>
+        ))}
+      </ERPTable>
+    </PageShell>
   );
 }

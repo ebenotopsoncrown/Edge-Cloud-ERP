@@ -1,406 +1,197 @@
 import React, { useState, useEffect } from "react";
 import { Company, createEntity } from "@/api/entities";
 const UserRecord = createEntity('users');
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Save, Building2, DollarSign, CheckCircle } from "lucide-react";
+import { Save, Building2, DollarSign, User, CheckCircle, Globe, Clock } from "lucide-react";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, { PageHeader, NewBtn, ActionBtn } from "../components/shared/PageShell";
+
+const PRIMARY = '#1B4F8A';
+const ACCENT  = '#00A86B';
+
+function SettingsSection({ title, icon: Icon, accentColor = PRIMARY, children, onSave, saving, saveLabel = "Save Changes" }) {
+  return (
+    <div style={{ background: 'white', borderRadius: 14, border: '1px solid #F1F5F9', boxShadow: '0 2px 8px rgba(15,43,91,0.06)', overflow: 'hidden', marginBottom: 24 }}>
+      <div style={{ padding: '18px 24px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 12, background: `${accentColor}06` }}>
+        <div style={{ width: 36, height: 36, borderRadius: 10, background: `${accentColor}15`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon style={{ width: 18, height: 18, color: accentColor }} />
+        </div>
+        <h2 style={{ fontSize: 15.5, fontWeight: 700, color: '#0F172A' }}>{title}</h2>
+      </div>
+      <div style={{ padding: '24px' }}>
+        {children}
+        {onSave && (
+          <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={onSave}
+              disabled={saving}
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 7,
+                padding: '9px 20px', background: saving ? '#94A3B8' : accentColor,
+                color: 'white', border: 'none', borderRadius: 9,
+                fontSize: 13.5, fontWeight: 700, cursor: saving ? 'not-allowed' : 'pointer',
+                fontFamily: 'inherit',
+              }}
+            >
+              <Save style={{ width: 14, height: 14 }} />
+              {saving ? 'Saving…' : saveLabel}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FormField({ label, children, hint }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <label style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#64748B' }}>{label}</label>
+      {children}
+      {hint && <p style={{ fontSize: 11.5, color: '#94A3B8' }}>{hint}</p>}
+    </div>
+  );
+}
+
+const inputStyle = {
+  width: '100%', padding: '9px 12px', border: '1.5px solid #E2E8F0', borderRadius: 8,
+  fontSize: 13.5, color: '#0F172A', background: 'white', outline: 'none',
+  fontFamily: 'inherit', transition: 'border-color 150ms',
+};
 
 export default function Settings() {
   const { currentCompany, user, switchCompany } = useCompany();
   const queryClient = useQueryClient();
-  const [companySettings, setCompanySettings] = useState({
-    company_name: '',
-    base_currency: 'USD',
-    fiscal_year_end: '12-31',
-    time_zone: 'UTC',
-    address: {
-      street: '',
-      city: '',
-      state: '',
-      postal_code: '',
-      country: ''
-    }
+
+  const [company, setCompany] = useState({
+    company_name: '', base_currency: 'USD', fiscal_year_end: '12-31', time_zone: 'UTC',
+    address: { street: '', city: '', state: '', postal_code: '', country: '' },
   });
 
-  const [userSettings, setUserSettings] = useState({
-    full_name: '',
-    email: '',
-    phone: '',
-    job_title: '',
-    department: ''
+  const [profile, setProfile] = useState({
+    full_name: '', email: '', phone: '', job_title: '', department: '',
   });
 
-  // Load company settings
   useEffect(() => {
-    if (currentCompany) {
-      setCompanySettings({
-        company_name: currentCompany.company_name || '',
-        base_currency: currentCompany.base_currency || 'USD',
-        fiscal_year_end: currentCompany.fiscal_year_end || '12-31',
-        time_zone: currentCompany.time_zone || 'UTC',
-        address: currentCompany.address || {
-          street: '',
-          city: '',
-          state: '',
-          postal_code: '',
-          country: ''
-        }
-      });
-    }
+    if (currentCompany) setCompany({ company_name: currentCompany.company_name || '', base_currency: currentCompany.base_currency || 'USD', fiscal_year_end: currentCompany.fiscal_year_end || '12-31', time_zone: currentCompany.time_zone || 'UTC', address: currentCompany.address || { street: '', city: '', state: '', postal_code: '', country: '' } });
   }, [currentCompany]);
 
-  // Load user settings
   useEffect(() => {
-    if (user) {
-      setUserSettings({
-        full_name: user.full_name || '',
-        email: user.email || '',
-        phone: user.phone || '',
-        job_title: user.job_title || '',
-        department: user.department || ''
-      });
-    }
+    if (user) setProfile({ full_name: user.full_name || '', email: user.email || '', phone: user.phone || '', job_title: user.job_title || '', department: user.department || '' });
   }, [user]);
 
   const updateCompanyMutation = useMutation({
-    mutationFn: async (data) => {
-      return await Company.update(currentCompany.id, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['companies']);
-      // Refresh the current company context
-      window.location.reload();
-    }
+    mutationFn: data => Company.update(currentCompany.id, data),
+    onSuccess: () => { queryClient.invalidateQueries(['companies']); window.location.reload(); },
   });
 
   const updateUserMutation = useMutation({
-    mutationFn: async (data) => {
-      if (user?.id) {
-        return await UserRecord.update(user.id, data);
-      }
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['current-user']);
-      alert('Profile updated successfully!');
-    }
+    mutationFn: data => user?.id ? UserRecord.update(user.id, data) : null,
+    onSuccess: () => { queryClient.invalidateQueries(['current-user']); alert('Profile updated successfully!'); },
   });
 
-  const handleSaveCompany = () => {
-    updateCompanyMutation.mutate(companySettings);
-  };
-
-  const handleSaveUser = () => {
-    updateUserMutation.mutate(userSettings);
-  };
-
   if (!currentCompany || !user) {
-    return (
-      <div className="p-6">
-        <p className="text-gray-500">Loading settings...</p>
-      </div>
-    );
+    return <PageShell><div style={{ textAlign: 'center', padding: 40, color: '#94A3B8' }}>Loading settings…</div></PageShell>;
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500 mt-1">Manage your company and user preferences</p>
+    <PageShell>
+      <PageHeader
+        title="Settings"
+        subtitle="Manage company configuration and user preferences"
+        icon={Building2}
+      />
+
+      {/* Currency notice */}
+      <div style={{ background: '#EBF4FB', border: '1.5px solid #AED6F1', borderRadius: 12, padding: '14px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+        <DollarSign style={{ width: 18, height: 18, color: PRIMARY, flexShrink: 0, marginTop: 1 }} />
+        <div>
+          <p style={{ fontWeight: 700, color: PRIMARY, fontSize: 13.5 }}>Base Currency: <strong>{company.base_currency}</strong></p>
+          <p style={{ color: '#2E86C1', fontSize: 13, marginTop: 3 }}>All financial reports and dashboards display amounts in {company.base_currency}. Foreign currency transactions are auto-converted.</p>
+        </div>
       </div>
 
-      {/* CRITICAL: Base Currency Configuration */}
-      <Alert className="bg-blue-50 border-2 border-blue-300">
-        <DollarSign className="h-5 w-5 text-blue-600" />
-        <AlertDescription className="text-blue-900">
-          <strong className="text-lg">Base Currency Configuration</strong>
-          <p className="mt-2">
-            Your base currency is <strong className="text-xl">{companySettings.base_currency}</strong>. 
-            This is the currency used for all financial reports and statements. 
-            Foreign currency transactions will be automatically converted to {companySettings.base_currency} for reporting purposes.
-          </p>
-        </AlertDescription>
-      </Alert>
-
       {/* Company Settings */}
-      <Card>
-        <CardHeader className="bg-gradient-to-r from-blue-50 to-indigo-50">
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-blue-600" />
-            Company Settings
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Company Name</Label>
-              <Input
-                value={companySettings.company_name}
-                onChange={(e) => setCompanySettings({...companySettings, company_name: e.target.value})}
-              />
-            </div>
+      <SettingsSection title="Company Settings" icon={Building2} accentColor={PRIMARY} onSave={() => updateCompanyMutation.mutate(company)} saving={updateCompanyMutation.isPending} saveLabel="Save Company Settings">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
+          <FormField label="Company Name">
+            <input style={inputStyle} value={company.company_name} onChange={e => setCompany({ ...company, company_name: e.target.value })} onFocus={e => e.target.style.borderColor = PRIMARY} onBlur={e => e.target.style.borderColor = '#E2E8F0'} />
+          </FormField>
 
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-green-600" />
-                Base Currency (Reporting Currency) *
-              </Label>
-              <Select
-                value={companySettings.base_currency}
-                onValueChange={(value) => setCompanySettings({...companySettings, base_currency: value})}
-              >
-                <SelectTrigger className="border-2 border-green-200">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="USD">USD - US Dollar ($)</SelectItem>
-                  <SelectItem value="EUR">EUR - Euro (€)</SelectItem>
-                  <SelectItem value="GBP">GBP - British Pound (£)</SelectItem>
-                  <SelectItem value="NGN">NGN - Nigerian Naira (₦)</SelectItem>
-                  <SelectItem value="ZAR">ZAR - South African Rand (R)</SelectItem>
-                  <SelectItem value="KES">KES - Kenyan Shilling (KSh)</SelectItem>
-                  <SelectItem value="GHS">GHS - Ghanaian Cedi (₵)</SelectItem>
-                  <SelectItem value="CAD">CAD - Canadian Dollar (C$)</SelectItem>
-                  <SelectItem value="AUD">AUD - Australian Dollar (A$)</SelectItem>
-                  <SelectItem value="INR">INR - Indian Rupee (₹)</SelectItem>
-                  <SelectItem value="JPY">JPY - Japanese Yen (¥)</SelectItem>
-                  <SelectItem value="CNY">CNY - Chinese Yuan (¥)</SelectItem>
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-gray-600 bg-yellow-50 p-2 rounded border border-yellow-200">
-                ⚠️ <strong>Important:</strong> This is your reporting currency. All financial statements, 
-                dashboards, and reports will show amounts in {companySettings.base_currency}. 
-                Foreign currency transactions will be automatically converted.
-              </p>
-            </div>
+          <FormField label="Base Currency (Reporting Currency)" hint="⚠️ This affects all financial reports. Foreign transactions are auto-converted.">
+            <Select value={company.base_currency} onValueChange={v => setCompany({ ...company, base_currency: v })}>
+              <SelectTrigger style={{ border: '1.5px solid #00A86B30', borderRadius: 8, fontSize: 13.5 }}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[['USD','USD - US Dollar ($)'],['EUR','EUR - Euro (€)'],['GBP','GBP - British Pound (£)'],['NGN','NGN - Nigerian Naira (₦)'],['ZAR','ZAR - South African Rand (R)'],['KES','KES - Kenyan Shilling (KSh)'],['GHS','GHS - Ghanaian Cedi (₵)'],['CAD','CAD - Canadian Dollar (C$)'],['AUD','AUD - Australian Dollar (A$)'],['INR','INR - Indian Rupee (₹)'],['JPY','JPY - Japanese Yen (¥)'],['CNY','CNY - Chinese Yuan (¥)']].map(([v,l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </FormField>
 
-            <div className="space-y-2">
-              <Label>Fiscal Year End (MM-DD)</Label>
-              <Input
-                value={companySettings.fiscal_year_end}
-                onChange={(e) => setCompanySettings({...companySettings, fiscal_year_end: e.target.value})}
-                placeholder="12-31"
-              />
-            </div>
+          <FormField label="Fiscal Year End (MM-DD)">
+            <input style={inputStyle} value={company.fiscal_year_end} onChange={e => setCompany({ ...company, fiscal_year_end: e.target.value })} placeholder="12-31" onFocus={e => e.target.style.borderColor = PRIMARY} onBlur={e => e.target.style.borderColor = '#E2E8F0'} />
+          </FormField>
 
-            <div className="space-y-2">
-              <Label>Time Zone</Label>
-              <Select
-                value={companySettings.time_zone}
-                onValueChange={(value) => setCompanySettings({...companySettings, time_zone: value})}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="UTC">UTC (GMT+0)</SelectItem>
-                  <SelectItem value="Africa/Lagos">West Africa Time (WAT) - Lagos</SelectItem>
-                  <SelectItem value="Africa/Nairobi">East Africa Time (EAT) - Nairobi</SelectItem>
-                  <SelectItem value="Africa/Johannesburg">South Africa Time (SAST)</SelectItem>
-                  <SelectItem value="America/New_York">Eastern Time (ET)</SelectItem>
-                  <SelectItem value="America/Chicago">Central Time (CT)</SelectItem>
-                  <SelectItem value="America/Los_Angeles">Pacific Time (PT)</SelectItem>
-                  <SelectItem value="Europe/London">London (GMT/BST)</SelectItem>
-                  <SelectItem value="Asia/Dubai">Dubai (GST)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+          <FormField label="Time Zone">
+            <Select value={company.time_zone} onValueChange={v => setCompany({ ...company, time_zone: v })}>
+              <SelectTrigger style={{ borderRadius: 8, fontSize: 13.5 }}><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {[['UTC','UTC (GMT+0)'],['Africa/Lagos','West Africa Time (WAT)'],['Africa/Nairobi','East Africa Time (EAT)'],['Africa/Johannesburg','South Africa Time (SAST)'],['America/New_York','Eastern Time (ET)'],['America/Chicago','Central Time (CT)'],['America/Los_Angeles','Pacific Time (PT)'],['Europe/London','London (GMT/BST)'],['Asia/Dubai','Dubai (GST)']].map(([v,l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </FormField>
+        </div>
+
+        <div style={{ borderTop: '1px solid #F1F5F9', paddingTop: 20 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#64748B', marginBottom: 16, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Company Address</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <FormField label="Street Address" style={{ gridColumn: '1 / -1' }}>
+              <input style={inputStyle} value={company.address.street} onChange={e => setCompany({ ...company, address: { ...company.address, street: e.target.value } })} onFocus={e => e.target.style.borderColor = PRIMARY} onBlur={e => e.target.style.borderColor = '#E2E8F0'} />
+            </FormField>
+            <FormField label="City"><input style={inputStyle} value={company.address.city} onChange={e => setCompany({ ...company, address: { ...company.address, city: e.target.value } })} onFocus={e => e.target.style.borderColor = PRIMARY} onBlur={e => e.target.style.borderColor = '#E2E8F0'} /></FormField>
+            <FormField label="State / Province"><input style={inputStyle} value={company.address.state} onChange={e => setCompany({ ...company, address: { ...company.address, state: e.target.value } })} onFocus={e => e.target.style.borderColor = PRIMARY} onBlur={e => e.target.style.borderColor = '#E2E8F0'} /></FormField>
+            <FormField label="Postal Code"><input style={inputStyle} value={company.address.postal_code} onChange={e => setCompany({ ...company, address: { ...company.address, postal_code: e.target.value } })} onFocus={e => e.target.style.borderColor = PRIMARY} onBlur={e => e.target.style.borderColor = '#E2E8F0'} /></FormField>
+            <FormField label="Country"><input style={inputStyle} value={company.address.country} onChange={e => setCompany({ ...company, address: { ...company.address, country: e.target.value } })} onFocus={e => e.target.style.borderColor = PRIMARY} onBlur={e => e.target.style.borderColor = '#E2E8F0'} /></FormField>
           </div>
+        </div>
+      </SettingsSection>
 
-          <div className="space-y-4 border-t pt-6">
-            <h3 className="font-semibold text-lg">Company Address</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 md:col-span-2">
-                <Label>Street Address</Label>
-                <Input
-                  value={companySettings.address.street}
-                  onChange={(e) => setCompanySettings({
-                    ...companySettings, 
-                    address: {...companySettings.address, street: e.target.value}
-                  })}
-                />
-              </div>
+      {/* User Profile */}
+      <SettingsSection title="My Profile" icon={User} accentColor={ACCENT} onSave={() => updateUserMutation.mutate(profile)} saving={updateUserMutation.isPending} saveLabel="Save Profile">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <FormField label="Full Name"><input style={inputStyle} value={profile.full_name} onChange={e => setProfile({ ...profile, full_name: e.target.value })} onFocus={e => e.target.style.borderColor = ACCENT} onBlur={e => e.target.style.borderColor = '#E2E8F0'} /></FormField>
+          <FormField label="Email" hint="Email cannot be changed."><input style={{ ...inputStyle, background: '#F8FAFC', color: '#94A3B8', cursor: 'not-allowed' }} value={profile.email} disabled /></FormField>
+          <FormField label="Phone"><input style={inputStyle} value={profile.phone} onChange={e => setProfile({ ...profile, phone: e.target.value })} onFocus={e => e.target.style.borderColor = ACCENT} onBlur={e => e.target.style.borderColor = '#E2E8F0'} /></FormField>
+          <FormField label="Job Title"><input style={inputStyle} value={profile.job_title} onChange={e => setProfile({ ...profile, job_title: e.target.value })} onFocus={e => e.target.style.borderColor = ACCENT} onBlur={e => e.target.style.borderColor = '#E2E8F0'} /></FormField>
+          <FormField label="Department"><input style={inputStyle} value={profile.department} onChange={e => setProfile({ ...profile, department: e.target.value })} onFocus={e => e.target.style.borderColor = ACCENT} onBlur={e => e.target.style.borderColor = '#E2E8F0'} /></FormField>
+        </div>
+      </SettingsSection>
 
-              <div className="space-y-2">
-                <Label>City</Label>
-                <Input
-                  value={companySettings.address.city}
-                  onChange={(e) => setCompanySettings({
-                    ...companySettings, 
-                    address: {...companySettings.address, city: e.target.value}
-                  })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>State/Province</Label>
-                <Input
-                  value={companySettings.address.state}
-                  onChange={(e) => setCompanySettings({
-                    ...companySettings, 
-                    address: {...companySettings.address, state: e.target.value}
-                  })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Postal Code</Label>
-                <Input
-                  value={companySettings.address.postal_code}
-                  onChange={(e) => setCompanySettings({
-                    ...companySettings, 
-                    address: {...companySettings.address, postal_code: e.target.value}
-                  })}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>Country</Label>
-                <Input
-                  value={companySettings.address.country}
-                  onChange={(e) => setCompanySettings({
-                    ...companySettings, 
-                    address: {...companySettings.address, country: e.target.value}
-                  })}
-                />
+      {/* Currency Guide */}
+      <div style={{ background: 'white', borderRadius: 14, border: '1px solid #F1F5F9', boxShadow: '0 2px 8px rgba(15,43,91,0.06)', overflow: 'hidden' }}>
+        <div style={{ padding: '18px 24px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 12, background: '#EBF4FB' }}>
+          <CheckCircle style={{ width: 18, height: 18, color: PRIMARY }} />
+          <h2 style={{ fontSize: 15, fontWeight: 700, color: PRIMARY }}>Base Currency Guide</h2>
+        </div>
+        <div style={{ padding: 24 }}>
+          {[
+            ['Set Your Base Currency', `Choose the currency for all financial reports (e.g., NGN for Nigerian companies). Currently: ${company.base_currency}`],
+            ['Dashboards Show Base Currency', 'All dashboards — Sales, Purchases, Accounting — display amounts in your base currency.'],
+            ['Foreign Currency Transactions', 'Record invoices/bills in any currency. The system converts to your base currency using exchange rates you set.'],
+            ['Chart of Accounts', 'Account balances are maintained in your base currency. Enable Multi-Currency in Settings to track foreign currency accounts separately.'],
+          ].map(([title, desc], i) => (
+            <div key={i} style={{ display: 'flex', gap: 14, marginBottom: i < 3 ? 16 : 0 }}>
+              <div style={{ width: 24, height: 24, borderRadius: '50%', background: PRIMARY, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>{i + 1}</div>
+              <div>
+                <p style={{ fontSize: 13.5, fontWeight: 700, color: '#0F172A', marginBottom: 3 }}>{title}</p>
+                <p style={{ fontSize: 13, color: '#64748B', lineHeight: 1.5 }}>{desc}</p>
               </div>
             </div>
-          </div>
-
-          <div className="flex justify-end pt-4 border-t">
-            <Button 
-              onClick={handleSaveCompany}
-              disabled={updateCompanyMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {updateCompanyMutation.isPending ? 'Saving...' : 'Save Company Settings'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* User Settings */}
-      <Card>
-        <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50">
-          <CardTitle>User Profile</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input
-                value={userSettings.full_name}
-                onChange={(e) => setUserSettings({...userSettings, full_name: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Email</Label>
-              <Input
-                value={userSettings.email}
-                disabled
-                className="bg-gray-100"
-              />
-              <p className="text-xs text-gray-500">Email cannot be changed</p>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Phone</Label>
-              <Input
-                value={userSettings.phone}
-                onChange={(e) => setUserSettings({...userSettings, phone: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Job Title</Label>
-              <Input
-                value={userSettings.job_title}
-                onChange={(e) => setUserSettings({...userSettings, job_title: e.target.value})}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Department</Label>
-              <Input
-                value={userSettings.department}
-                onChange={(e) => setUserSettings({...userSettings, department: e.target.value})}
-              />
-            </div>
-          </div>
-
-          <div className="flex justify-end pt-4 border-t">
-            <Button 
-              onClick={handleSaveUser}
-              disabled={updateUserMutation.isPending}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              <Save className="w-4 h-4 mr-2" />
-              {updateUserMutation.isPending ? 'Saving...' : 'Save Profile'}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Currency Configuration Guide */}
-      <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-blue-200">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <CheckCircle className="w-5 h-5 text-blue-600" />
-            Base Currency Guide
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <div className="flex gap-3">
-            <span className="font-bold text-blue-600">1.</span>
-            <div>
-              <p className="font-semibold">Set Your Base Currency Above</p>
-              <p className="text-gray-700">Choose the currency you want for all financial reports (e.g., NGN for Nigerian companies)</p>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <span className="font-bold text-blue-600">2.</span>
-            <div>
-              <p className="font-semibold">Dashboards Show Base Currency</p>
-              <p className="text-gray-700">All dashboards (Sales, Purchases, Accounting) will display amounts in your base currency</p>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <span className="font-bold text-blue-600">3.</span>
-            <div>
-              <p className="font-semibold">Foreign Currency Transactions</p>
-              <p className="text-gray-700">When you create invoices/bills in foreign currencies (e.g., USD), the system automatically converts to your base currency using exchange rates</p>
-            </div>
-          </div>
-
-          <div className="flex gap-3">
-            <span className="font-bold text-blue-600">4.</span>
-            <div>
-              <p className="font-semibold">Exchange Rates</p>
-              <p className="text-gray-700">Set up exchange rates in Settings → Exchange Rates for accurate multi-currency conversions</p>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-4 border border-blue-300">
-            <p className="font-semibold text-blue-900 mb-2">Example:</p>
-            <ul className="space-y-1 text-gray-700">
-              <li>• Base Currency: <strong>NGN (Nigerian Naira)</strong></li>
-              <li>• Invoice Currency: <strong>USD (US Dollar)</strong></li>
-              <li>• Invoice Amount: <strong>$100</strong></li>
-              <li>• Exchange Rate: <strong>1 USD = 1,500 NGN</strong></li>
-              <li>• Dashboard Shows: <strong>₦150,000</strong> (automatically converted)</li>
-            </ul>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+          ))}
+        </div>
+      </div>
+    </PageShell>
   );
 }

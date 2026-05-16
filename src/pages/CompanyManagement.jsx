@@ -1,87 +1,62 @@
-
 import React, { useState } from "react";
 import { Company, createEntity } from "@/api/entities";
-
 const UserRecord = createEntity('users');
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Switch } from "@/components/ui/switch";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Building2, CheckCircle, AlertCircle, Users, Pencil, Shield } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, ActionBtn, NewBtn } from "../components/shared/PageShell";
+
+const PRIMARY = '#1B4F8A';
+const ACCENT  = '#00A86B';
+
+const inputStyle = {
+  width: '100%', padding: '9px 12px', border: '1.5px solid #E2E8F0', borderRadius: 8,
+  fontSize: 13.5, color: '#0F172A', background: 'white', outline: 'none', fontFamily: 'inherit',
+};
+
+const fieldLabel = (text) => (
+  <label style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.07em', color: '#64748B', display: 'block', marginBottom: 6 }}>{text}</label>
+);
+
+const MODULE_LIST = [
+  { key: 'sales',          label: 'Sales',            desc: 'Invoices, Customers' },
+  { key: 'purchases',      label: 'Purchases',         desc: 'Bills, Vendors, POs' },
+  { key: 'inventory',      label: 'Inventory',         desc: 'Products, Stock' },
+  { key: 'accounting',     label: 'Accounting',        desc: 'General Ledger, Reports' },
+  { key: 'pos',            label: 'Point of Sale',     desc: 'Retail Sales Terminal' },
+  { key: 'manufacturing',  label: 'Manufacturing',     desc: 'Work Orders, BOM' },
+  { key: 'job_costing',    label: 'Job Costing',       desc: 'Projects, Cost Tracking' },
+  { key: 'fixed_assets',   label: 'Fixed Assets',      desc: 'Asset Management' },
+  { key: 'payroll',        label: 'Payroll',           desc: 'Employee Payroll' },
+  { key: 'non_profit',     label: 'Non-Profit',        desc: 'Donations, Grants' },
+  { key: 'multi_currency', label: 'Multi-Currency',    desc: 'Foreign Currency Support' },
+];
+
+const defaultModules = { sales: true, purchases: true, inventory: true, accounting: true, manufacturing: false, job_costing: false, fixed_assets: false, payroll: false, non_profit: false, multi_currency: false, pos: false };
 
 export default function CompanyManagement() {
   const { user } = useCompany();
+  const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingCompany, setEditingCompany] = useState(null);
+
   const [formData, setFormData] = useState({
-    company_code: '',
-    company_name: '',
-    trading_name: '',
-    registration_number: '',
-    tax_number: '',
-    industry: '',
-    company_type: 'trading',
-    address: {
-      street: '',
-      city: '',
-      state: '',
-      postal_code: '',
-      country: ''
-    },
-    contact_email: '',
-    contact_phone: '',
-    website: '',
-    fiscal_year_end: '12-31',
-    base_currency: 'USD',
-    is_active: true,
-    onboarding_completed: false,
-    modules_enabled: {
-      sales: true,
-      purchases: true,
-      inventory: true,
-      accounting: true,
-      manufacturing: false,
-      job_costing: false,
-      fixed_assets: false,
-      payroll: false,
-      non_profit: false,
-      multi_currency: false,
-      pos: false
-    }
+    company_code: '', company_name: '', trading_name: '', registration_number: '', tax_number: '',
+    industry: '', company_type: 'trading', contact_email: '', contact_phone: '', website: '',
+    fiscal_year_end: '12-31', base_currency: 'USD', is_active: true, onboarding_completed: false,
+    address: { street: '', city: '', state: '', postal_code: '', country: '' },
+    modules_enabled: { ...defaultModules }
   });
 
-  const queryClient = useQueryClient();
-
-  // CRITICAL: Only super admins can access this page
   const isSuperAdmin = user?.is_super_admin === true;
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ['companies'],
     queryFn: () => Company.list({ orderBy: 'created_date', ascending: false }),
-    enabled: isSuperAdmin // Only fetch if super admin
+    enabled: isSuperAdmin
   });
 
   const { data: users = [] } = useQuery({
@@ -91,670 +66,194 @@ export default function CompanyManagement() {
   });
 
   const saveMutation = useMutation({
-    mutationFn: (data) => {
-      if (editingCompany) {
-        return Company.update(editingCompany.id, data);
-      }
-      return Company.create(data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['companies']);
-      setShowForm(false);
-      resetForm();
-    }
+    mutationFn: (data) => editingCompany ? Company.update(editingCompany.id, data) : Company.create(data),
+    onSuccess: () => { queryClient.invalidateQueries(['companies']); setShowForm(false); resetForm(); }
   });
 
-  // If not super admin, show access denied
   if (!isSuperAdmin) {
     return (
-      <div className="p-6">
-        <Alert className="bg-red-50 border-red-200">
-          <Shield className="h-5 w-5 text-red-600" />
-          <AlertDescription className="text-red-900">
-            <strong className="text-lg">Access Denied</strong>
-            <p className="mt-2">This page is only accessible to system administrators. Please contact your administrator if you need access.</p>
-          </AlertDescription>
-        </Alert>
-      </div>
+      <PageShell>
+        <div style={{ background: '#FEF2F2', border: '1.5px solid #FECACA', borderRadius: 12, padding: '24px', display: 'flex', gap: 14 }}>
+          <Shield style={{ width: 24, height: 24, color: '#EF4444', flexShrink: 0, marginTop: 2 }} />
+          <div>
+            <p style={{ fontSize: 16, fontWeight: 700, color: '#DC2626', marginBottom: 6 }}>Access Denied</p>
+            <p style={{ fontSize: 13.5, color: '#7F1D1D' }}>This page is only accessible to system administrators. Contact your administrator if you need access.</p>
+          </div>
+        </div>
+      </PageShell>
     );
   }
 
   const handleEdit = (company) => {
     setEditingCompany(company);
-    setFormData({
-      ...company,
-      address: company.address || {
-        street: '',
-        city: '',
-        state: '',
-        postal_code: '',
-        country: ''
-      },
-      modules_enabled: company.modules_enabled || {
-        sales: true,
-        purchases: true,
-        inventory: true,
-        accounting: true,
-        manufacturing: false,
-        job_costing: false,
-        fixed_assets: false,
-        payroll: false,
-        non_profit: false,
-        multi_currency: false,
-        pos: false
-      }
-    });
+    setFormData({ ...company, address: company.address || { street: '', city: '', state: '', postal_code: '', country: '' }, modules_enabled: company.modules_enabled || { ...defaultModules } });
     setShowForm(true);
   };
 
   const handleSave = () => {
-    if (!formData.company_name || !formData.contact_email) {
-      alert('Please fill in required fields: Company Name and Contact Email');
-      return;
-    }
+    if (!formData.company_name || !formData.contact_email) { alert('Company Name and Contact Email are required.'); return; }
     saveMutation.mutate(formData);
-  };
-
-  const handleModuleToggle = (module) => {
-    setFormData(prev => ({
-      ...prev,
-      modules_enabled: {
-        ...prev.modules_enabled,
-        [module]: !prev.modules_enabled[module]
-      }
-    }));
   };
 
   const resetForm = () => {
     setEditingCompany(null);
-    setFormData({
-      company_code: '',
-      company_name: '',
-      trading_name: '',
-      registration_number: '',
-      tax_number: '',
-      industry: '',
-      company_type: 'trading',
-      address: {
-        street: '',
-        city: '',
-        state: '',
-        postal_code: '',
-        country: ''
-      },
-      contact_email: '',
-      contact_phone: '',
-      website: '',
-      fiscal_year_end: '12-31',
-      base_currency: 'USD',
-      is_active: true,
-      onboarding_completed: false,
-      modules_enabled: {
-        sales: true,
-        purchases: true,
-        inventory: true,
-        accounting: true,
-        manufacturing: false,
-        job_costing: false,
-        fixed_assets: false,
-        payroll: false,
-        non_profit: false,
-        multi_currency: false,
-        pos: false
-      }
-    });
+    setFormData({ company_code: '', company_name: '', trading_name: '', registration_number: '', tax_number: '', industry: '', company_type: 'trading', contact_email: '', contact_phone: '', website: '', fiscal_year_end: '12-31', base_currency: 'USD', is_active: true, onboarding_completed: false, address: { street: '', city: '', state: '', postal_code: '', country: '' }, modules_enabled: { ...defaultModules } });
   };
 
-  const licenseTypeColors = {
-    trial: "bg-yellow-100 text-yellow-800",
-    basic: "bg-blue-100 text-blue-800",
-    professional: "bg-purple-100 text-purple-800",
-    enterprise: "bg-green-100 text-green-800",
-    custom: "bg-indigo-100 text-indigo-800"
-  };
+  const toggleModule = (key) => setFormData(p => ({ ...p, modules_enabled: { ...p.modules_enabled, [key]: !p.modules_enabled[key] } }));
+  const set = (field) => (e) => setFormData(p => ({ ...p, [field]: e.target.value }));
+  const setAddr = (field) => (e) => setFormData(p => ({ ...p, address: { ...p.address, [field]: e.target.value } }));
 
-  const statusColors = {
-    active: "bg-green-100 text-green-800",
-    trial: "bg-blue-100 text-blue-800",
-    expired: "bg-red-100 text-red-800",
-    suspended: "bg-orange-100 text-orange-800",
-    cancelled: "bg-gray-100 text-gray-800"
-  };
+  const activeCount = companies.filter(c => c.is_active && c.subscription_status === 'active').length;
+
+  const LICENSE_COLORS = { trial: { bg: '#FEF3C7', color: '#92400E' }, basic: { bg: '#EBF4FB', color: PRIMARY }, professional: { bg: '#F3E8FF', color: '#7C3AED' }, enterprise: { bg: '#E6F9F2', color: '#00875A' }, custom: { bg: '#EEF2FF', color: '#4338CA' } };
+  const TABLE_HEADERS = [{ label: 'Company Name' }, { label: 'Industry' }, { label: 'License' }, { label: 'Status' }, { label: 'Expiry' }, { label: 'Users' }, { label: 'Modules' }, { label: '' }];
 
   return (
-    <div className="p-6 space-y-6">
-      <Alert className="bg-blue-50 border-blue-200">
-        <AlertCircle className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-blue-900">
-          <strong>Admin Panel:</strong> You are viewing this page as a <strong>Super Administrator</strong>. 
-          Regular users do not have access to this page and cannot see this information.
-        </AlertDescription>
-      </Alert>
+    <PageShell>
+      <PageHeader
+        title="Company Management"
+        subtitle="System administrator panel — manage all companies and modules"
+        icon={Building2}
+        accentColor={PRIMARY}
+        actions={<NewBtn onClick={() => { resetForm(); setShowForm(true); }} label="New Company" />}
+      />
 
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Company Management</h1>
-          <p className="text-gray-500 mt-1">View and manage your company information</p>
-        </div>
-        <Dialog open={showForm} onOpenChange={(open) => {
-          setShowForm(open);
-          if (!open) resetForm();
-        }}>
-          <DialogTrigger asChild>
-            <Button className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="w-4 h-4 mr-2" />
-              New Company
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>{editingCompany ? 'Edit Company' : 'Create New Company'}</DialogTitle>
-            </DialogHeader>
-            
-            <div className="space-y-6 pt-4">
-              {/* Company Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Company Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Company Code</Label>
-                      <Input
-                        value={formData.company_code}
-                        onChange={(e) => setFormData(prev => ({ ...prev, company_code: e.target.value }))}
-                        placeholder="e.g., ABC001"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Company Name *</Label>
-                      <Input
-                        value={formData.company_name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, company_name: e.target.value }))}
-                        placeholder="ABC Manufacturing Ltd"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Trading Name</Label>
-                      <Input
-                        value={formData.trading_name}
-                        onChange={(e) => setFormData(prev => ({ ...prev, trading_name: e.target.value }))}
-                        placeholder="ABC Manufacturing"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Industry</Label>
-                      <Input
-                        value={formData.industry}
-                        onChange={(e) => setFormData(prev => ({ ...prev, industry: e.target.value }))}
-                        placeholder="Manufacturing, Retail, etc."
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Company Type</Label>
-                      <Select
-                        value={formData.company_type}
-                        onValueChange={(value) => setFormData(prev => ({ ...prev, company_type: value }))}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                          <SelectItem value="trading">Trading</SelectItem>
-                          <SelectItem value="service">Service</SelectItem>
-                          <SelectItem value="non_profit">Non-Profit</SelectItem>
-                          <SelectItem value="construction">Construction</SelectItem>
-                          <SelectItem value="retail">Retail</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Registration Number</Label>
-                      <Input
-                        value={formData.registration_number}
-                        onChange={(e) => setFormData(prev => ({ ...prev, registration_number: e.target.value }))}
-                        placeholder="Business registration number"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Tax Number</Label>
-                      <Input
-                        value={formData.tax_number}
-                        onChange={(e) => setFormData(prev => ({ ...prev, tax_number: e.target.value }))}
-                        placeholder="Tax ID / VAT number"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Base Currency</Label>
-                      <Input
-                        value={formData.base_currency}
-                        onChange={(e) => setFormData(prev => ({ ...prev, base_currency: e.target.value }))}
-                        placeholder="USD, EUR, GBP, etc."
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Contact Information */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Contact Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Contact Email *</Label>
-                      <Input
-                        type="email"
-                        value={formData.contact_email}
-                        onChange={(e) => setFormData(prev => ({ ...prev, contact_email: e.target.value }))}
-                        placeholder="contact@company.com"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Contact Phone</Label>
-                      <Input
-                        value={formData.contact_phone}
-                        onChange={(e) => setFormData(prev => ({ ...prev, contact_phone: e.target.value }))}
-                        placeholder="+1 234 567 8900"
-                      />
-                    </div>
-
-                    <div className="space-y-2 md:col-span-2">
-                      <Label>Website</Label>
-                      <Input
-                        value={formData.website}
-                        onChange={(e) => setFormData(prev => ({ ...prev, website: e.target.value }))}
-                        placeholder="https://www.company.com"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Street Address</Label>
-                      <Input
-                        value={formData.address.street}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          address: { ...prev.address, street: e.target.value }
-                        }))}
-                        placeholder="123 Main Street"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>City</Label>
-                      <Input
-                        value={formData.address.city}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          address: { ...prev.address, city: e.target.value }
-                        }))}
-                        placeholder="New York"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>State/Province</Label>
-                      <Input
-                        value={formData.address.state}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          address: { ...prev.address, state: e.target.value }
-                        }))}
-                        placeholder="NY"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Postal Code</Label>
-                      <Input
-                        value={formData.address.postal_code}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          address: { ...prev.address, postal_code: e.target.value }
-                        }))}
-                        placeholder="10001"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Country</Label>
-                      <Input
-                        value={formData.address.country}
-                        onChange={(e) => setFormData(prev => ({ 
-                          ...prev, 
-                          address: { ...prev.address, country: e.target.value }
-                        }))}
-                        placeholder="United States"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* MODULE PREFERENCES - THIS IS WHAT YOU'RE LOOKING FOR! */}
-              <Card className="border-2 border-blue-300 bg-blue-50">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <CheckCircle className="w-5 h-5 text-blue-600" />
-                    Module Preferences
-                  </CardTitle>
-                  <p className="text-sm text-gray-600">Enable or disable modules for this company</p>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <Label className="font-semibold">Sales</Label>
-                        <p className="text-xs text-gray-500">Invoices, Customers, Sales Reports</p>
-                      </div>
-                      <Switch
-                        checked={formData.modules_enabled.sales}
-                        onCheckedChange={() => handleModuleToggle('sales')}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <Label className="font-semibold">Purchases</Label>
-                        <p className="text-xs text-gray-500">Bills, Vendors, Purchase Orders</p>
-                      </div>
-                      <Switch
-                        checked={formData.modules_enabled.purchases}
-                        onCheckedChange={() => handleModuleToggle('purchases')}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <Label className="font-semibold">Inventory</Label>
-                        <p className="text-xs text-gray-500">Products, Stock Management</p>
-                      </div>
-                      <Switch
-                        checked={formData.modules_enabled.inventory}
-                        onCheckedChange={() => handleModuleToggle('inventory')}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <Label className="font-semibold">Accounting</Label>
-                        <p className="text-xs text-gray-500">General Ledger, Reports</p>
-                      </div>
-                      <Switch
-                        checked={formData.modules_enabled.accounting}
-                        onCheckedChange={() => handleModuleToggle('accounting')}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <Label className="font-semibold">Point of Sale (POS)</Label>
-                        <p className="text-xs text-gray-500">Retail Sales Terminal</p>
-                      </div>
-                      <Switch
-                        checked={formData.modules_enabled.pos}
-                        onCheckedChange={() => handleModuleToggle('pos')}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <Label className="font-semibold">Manufacturing</Label>
-                        <p className="text-xs text-gray-500">Production, Work Orders, BOM</p>
-                      </div>
-                      <Switch
-                        checked={formData.modules_enabled.manufacturing}
-                        onCheckedChange={() => handleModuleToggle('manufacturing')}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <Label className="font-semibold">Job Costing</Label>
-                        <p className="text-xs text-gray-500">Project Tracking, Job Costs</p>
-                      </div>
-                      <Switch
-                        checked={formData.modules_enabled.job_costing}
-                        onCheckedChange={() => handleModuleToggle('job_costing')}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <Label className="font-semibold">Fixed Assets</Label>
-                        <p className="text-xs text-gray-500">Asset Management, Depreciation</p>
-                      </div>
-                      <Switch
-                        checked={formData.modules_enabled.fixed_assets}
-                        onCheckedChange={() => handleModuleToggle('fixed_assets')}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <Label className="font-semibold">Payroll</Label>
-                        <p className="text-xs text-gray-500">Employee Payroll Processing</p>
-                      </div>
-                      <Switch
-                        checked={formData.modules_enabled.payroll}
-                        onCheckedChange={() => handleModuleToggle('payroll')}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <Label className="font-semibold">Non-Profit</Label>
-                        <p className="text-xs text-gray-500">Donations, Grants, Programs</p>
-                      </div>
-                      <Switch
-                        checked={formData.modules_enabled.non_profit}
-                        onCheckedChange={() => handleModuleToggle('non_profit')}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-gray-200">
-                      <div>
-                        <Label className="font-semibold">Multi-Currency</Label>
-                        <p className="text-xs text-gray-500">Foreign Currency Support</p>
-                      </div>
-                      <Switch
-                        checked={formData.modules_enabled.multi_currency}
-                        onCheckedChange={() => handleModuleToggle('multi_currency')}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Actions */}
-              <div className="flex justify-end gap-3 pt-4 border-t">
-                <Button variant="outline" onClick={() => {
-                  setShowForm(false);
-                  resetForm();
-                }}>
-                  Cancel
-                </Button>
-                <Button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700">
-                  {editingCompany ? 'Update Company' : 'Create Company'}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+      {/* Admin notice */}
+      <div style={{ background: '#EBF4FB', border: '1.5px solid #AED6F1', borderRadius: 12, padding: '14px 20px', marginBottom: 20, display: 'flex', gap: 12 }}>
+        <AlertCircle style={{ width: 18, height: 18, color: PRIMARY, flexShrink: 0, marginTop: 1 }} />
+        <p style={{ fontSize: 13.5, color: '#1B4F8A' }}><strong>Admin Panel:</strong> You are viewing this as a Super Administrator. Regular users cannot access this page.</p>
       </div>
 
-      {/* Info Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Companies</p>
-                <p className="text-3xl font-bold text-blue-900 mt-1">{companies.length}</p>
-              </div>
-              <Building2 className="w-12 h-12 text-blue-600 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
+      <StatBar stats={[
+        { label: 'Total Companies', value: companies.length, icon: Building2, color: PRIMARY },
+        { label: 'Active Companies', value: activeCount, icon: CheckCircle, color: ACCENT },
+        { label: 'Total Users', value: users.length, icon: Users, color: '#8B5CF6' },
+      ]} />
 
-        <Card className="bg-gradient-to-br from-green-50 to-green-100">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Active Companies</p>
-                <p className="text-3xl font-bold text-green-900 mt-1">
-                  {companies.filter(c => c.is_active && c.subscription_status === 'active').length}
-                </p>
-              </div>
-              <CheckCircle className="w-12 h-12 text-green-600 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
+      <ERPTable headers={TABLE_HEADERS} isLoading={isLoading} emptyIcon={Building2} emptyTitle="No companies yet" emptyDesc="Create your first company to get started.">
+        {companies.map(company => {
+          const lic    = LICENSE_COLORS[company.license_type] || { bg: '#F1F5F9', color: '#64748B' };
+          const mods   = company.modules_enabled ? Object.entries(company.modules_enabled).filter(([_, v]) => v).map(([k]) => k) : [];
+          const usersC = users.filter(u => u.company_id === company.id || u.accessible_companies?.includes(company.id)).length;
+          return (
+            <ERPTableRow key={company.id}>
+              <ERPTableCell>
+                <div>
+                  <p style={{ fontWeight: 700, color: '#0F172A', fontSize: 13.5 }}>{company.company_name}</p>
+                  {company.trading_name && company.trading_name !== company.company_name && (
+                    <p style={{ fontSize: 11.5, color: '#94A3B8' }}>Trading as: {company.trading_name}</p>
+                  )}
+                </div>
+              </ERPTableCell>
+              <ERPTableCell muted>{company.industry || '—'}</ERPTableCell>
+              <ERPTableCell>
+                <span style={{ padding: '3px 9px', background: lic.bg, color: lic.color, borderRadius: 99, fontSize: 11.5, fontWeight: 600, textTransform: 'capitalize' }}>{company.license_type}</span>
+              </ERPTableCell>
+              <ERPTableCell><StatusBadge status={company.subscription_status || 'trial'} /></ERPTableCell>
+              <ERPTableCell muted style={{ fontSize: 12.5 }}>{company.license_expiry_date ? format(new Date(company.license_expiry_date), 'MMM d, yyyy') : '—'}</ERPTableCell>
+              <ERPTableCell muted>{usersC} / {company.user_limit || '∞'}</ERPTableCell>
+              <ERPTableCell>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                  {mods.slice(0, 3).map(m => <span key={m} style={{ padding: '2px 7px', background: '#EBF4FB', color: PRIMARY, borderRadius: 99, fontSize: 10.5, fontWeight: 600 }}>{m}</span>)}
+                  {mods.length > 3 && <span style={{ padding: '2px 7px', background: '#F1F5F9', color: '#64748B', borderRadius: 99, fontSize: 10.5 }}>+{mods.length - 3}</span>}
+                </div>
+              </ERPTableCell>
+              <ERPTableCell>
+                <ActionBtn onClick={() => handleEdit(company)} icon={Pencil} variant="ghost" />
+              </ERPTableCell>
+            </ERPTableRow>
+          );
+        })}
+      </ERPTable>
 
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Total Users</p>
-                <p className="text-3xl font-bold text-purple-900 mt-1">{users.length}</p>
-              </div>
-              <Users className="w-12 h-12 text-purple-600 opacity-50" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Company Form Dialog */}
+      <Dialog open={showForm} onOpenChange={(open) => { setShowForm(open); if (!open) resetForm(); }}>
+        <DialogContent style={{ maxWidth: 720, maxHeight: '90vh', overflowY: 'auto' }}>
+          <DialogHeader>
+            <DialogTitle>{editingCompany ? 'Edit Company' : 'Create New Company'}</DialogTitle>
+          </DialogHeader>
 
-      {/* Companies Table */}
-      <Card>
-        <CardContent className="pt-6">
-          {isLoading ? (
-            <div className="text-center py-12">
-              <div className="animate-spin w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full mx-auto mb-4"></div>
-              <p className="text-gray-600">Loading companies...</p>
-            </div>
-          ) : companies.length === 0 ? (
-            <div className="text-center py-12">
-              <Building2 className="w-16 h-16 mx-auto text-gray-300 mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Companies Yet</h3>
-              <p className="text-gray-600 mb-4">Create your first company to get started</p>
-              <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Company
-              </Button>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Company Name</TableHead>
-                  <TableHead>Industry</TableHead>
-                  <TableHead>License Type</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Expiry Date</TableHead>
-                  <TableHead>Users</TableHead>
-                  <TableHead>Enabled Modules</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {companies.map((company) => (
-                  <TableRow key={company.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{company.company_name}</p>
-                        {company.trading_name && company.trading_name !== company.company_name && (
-                          <p className="text-xs text-gray-500">Trading as: {company.trading_name}</p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>{company.industry || '-'}</TableCell>
-                    <TableCell>
-                      <Badge className={licenseTypeColors[company.license_type]}>
-                        {company.license_type}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={statusColors[company.subscription_status]}>
-                        {company.subscription_status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {company.license_expiry_date ? format(new Date(company.license_expiry_date), 'MMM d, yyyy') : '-'}
-                    </TableCell>
-                    <TableCell>
-                      {users.filter(u => u.company_id === company.id || u.accessible_companies?.includes(company.id)).length} / {company.user_limit}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {company.modules_enabled && Object.entries(company.modules_enabled)
-                          .filter(([_, enabled]) => enabled)
-                          .slice(0, 3)
-                          .map(([module]) => (
-                            <Badge key={module} variant="outline" className="text-xs">
-                              {module}
-                            </Badge>
-                          ))}
-                        {company.modules_enabled && Object.values(company.modules_enabled).filter(Boolean).length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{Object.values(company.modules_enabled).filter(Boolean).length - 3}
-                          </Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleEdit(company)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20, paddingTop: 8 }}>
+            {/* Company Info */}
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748B', marginBottom: 12 }}>Company Information</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                {[['Company Code', 'company_code', 'e.g., ABC001'], ['Company Name *', 'company_name', 'ABC Ltd'], ['Trading Name', 'trading_name', ''], ['Industry', 'industry', 'Manufacturing, Retail…'], ['Registration #', 'registration_number', ''], ['Tax / VAT #', 'tax_number', ''], ['Base Currency', 'base_currency', 'USD, EUR, NGN…']].map(([label, field, placeholder]) => (
+                  <div key={field}>
+                    {fieldLabel(label)}
+                    <input style={inputStyle} value={formData[field]} onChange={set(field)} placeholder={placeholder} />
+                  </div>
                 ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                <div>
+                  {fieldLabel('Company Type')}
+                  <Select value={formData.company_type} onValueChange={v => setFormData(p => ({ ...p, company_type: v }))}>
+                    <SelectTrigger style={{ borderRadius: 8, fontSize: 13.5 }}><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {['manufacturing','trading','service','non_profit','construction','retail','other'].map(t => <SelectItem key={t} value={t}>{t.replace(/_/g, ' ').replace(/\b\w/g, x => x.toUpperCase())}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
 
-      {/* Instructions */}
-      <Card className="bg-blue-50 border-blue-200">
-        <CardContent className="pt-6">
-          <h3 className="font-semibold text-lg mb-3">📘 Company Management</h3>
-          <div className="space-y-3 text-sm text-gray-700">
-            <div className="flex gap-3">
-              <span className="font-bold text-blue-600">•</span>
-              <p><strong>View Company Details:</strong> All users can view their company information and see which modules are enabled.</p>
+            {/* Contact */}
+            <div>
+              <p style={{ fontSize: 13, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#64748B', marginBottom: 12 }}>Contact Information</p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+                {[['Contact Email *', 'contact_email', 'contact@company.com'], ['Phone', 'contact_phone', '+1 234 567 8900']].map(([label, field, placeholder]) => (
+                  <div key={field}>
+                    {fieldLabel(label)}
+                    <input style={inputStyle} value={formData[field]} onChange={set(field)} placeholder={placeholder} />
+                  </div>
+                ))}
+                <div style={{ gridColumn: '1 / -1' }}>
+                  {fieldLabel('Website')}
+                  <input style={inputStyle} value={formData.website} onChange={set('website')} placeholder="https://www.company.com" />
+                </div>
+                {[['Street', 'street', '123 Main St'], ['City', 'city', ''], ['State', 'state', ''], ['Postal Code', 'postal_code', ''], ['Country', 'country', '']].map(([label, field, placeholder]) => (
+                  <div key={field}>
+                    {fieldLabel(label)}
+                    <input style={inputStyle} value={formData.address[field]} onChange={setAddr(field)} placeholder={placeholder} />
+                  </div>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-3">
-              <span className="font-bold text-blue-600">•</span>
-              <p><strong>Edit Company & Enable/Disable Modules:</strong> Click the Edit (pencil) button on any company to modify details and toggle modules on/off.</p>
+
+            {/* Modules */}
+            <div>
+              <div style={{ padding: '14px 16px', background: '#EBF4FB', borderRadius: '10px 10px 0 0', border: '1.5px solid #AED6F1', borderBottom: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <CheckCircle style={{ width: 16, height: 16, color: PRIMARY }} />
+                <p style={{ fontSize: 13.5, fontWeight: 700, color: PRIMARY }}>Module Preferences</p>
+                <p style={{ fontSize: 12, color: '#64748B', marginLeft: 4 }}>Enable or disable modules for this company</p>
+              </div>
+              <div style={{ border: '1.5px solid #AED6F1', borderRadius: '0 0 10px 10px', padding: 16, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 10 }}>
+                {MODULE_LIST.map(({ key, label, desc }) => (
+                  <label key={key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'white', borderRadius: 8, border: '1px solid #F1F5F9', cursor: 'pointer' }}>
+                    <div>
+                      <p style={{ fontSize: 13, fontWeight: 700, color: '#0F172A' }}>{label}</p>
+                      <p style={{ fontSize: 11.5, color: '#94A3B8' }}>{desc}</p>
+                    </div>
+                    <div
+                      onClick={() => toggleModule(key)}
+                      style={{ width: 40, height: 22, borderRadius: 11, background: formData.modules_enabled[key] ? ACCENT : '#CBD5E1', position: 'relative', cursor: 'pointer', transition: 'background 150ms', flexShrink: 0 }}
+                    >
+                      <div style={{ position: 'absolute', top: 3, left: formData.modules_enabled[key] ? 20 : 3, width: 16, height: 16, borderRadius: '50%', background: 'white', transition: 'left 150ms', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                    </div>
+                  </label>
+                ))}
+              </div>
             </div>
-            <div className="flex gap-3">
-              <span className="font-bold text-blue-600">•</span>
-              <p><strong>Module Access:</strong> Enabled modules determine which features appear in the sidebar. Disabled modules are hidden.</p>
-            </div>
-            <div className="flex gap-3">
-              <span className="font-bold text-blue-600">•</span>
-              <p><strong>User Management:</strong> Go to User Management to invite new users and assign roles.</p>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 16, borderTop: '1px solid #F1F5F9' }}>
+              <button onClick={() => { setShowForm(false); resetForm(); }} style={{ padding: '9px 18px', border: '1.5px solid #E2E8F0', borderRadius: 9, background: 'white', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', color: '#475569' }}>Cancel</button>
+              <button onClick={handleSave} disabled={saveMutation.isPending} style={{ padding: '9px 18px', border: 'none', borderRadius: 9, background: PRIMARY, color: 'white', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {editingCompany ? 'Update Company' : 'Create Company'}
+              </button>
             </div>
           </div>
-        </CardContent>
-      </Card>
-    </div>
+        </DialogContent>
+      </Dialog>
+    </PageShell>
   );
 }

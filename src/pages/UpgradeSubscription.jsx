@@ -2,171 +2,58 @@ import React, { useState } from "react";
 import { Company } from "@/api/entities";
 import { SendEmail } from "@/api/integrations";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { CheckCircle, Rocket, Star, Building2, Crown, Zap, AlertCircle } from "lucide-react";
+import { CheckCircle, Rocket, Star, Building2, Crown, Zap, AlertCircle, CreditCard } from "lucide-react";
 import { useCompany } from "../components/auth/CompanyContext";
-import { format } from "date-fns";
+import PageShell, { PageHeader } from "../components/shared/PageShell";
+
+const PLAN_COLORS = {
+  basic:        { primary: '#1B4F8A', light: '#EBF4FB', dark: '#1B4F8A' },
+  professional: { primary: '#7C3AED', light: '#F3E8FF', dark: '#6D28D9' },
+  enterprise:   { primary: '#00A86B', light: '#D1FAE5', dark: '#059669' },
+};
 
 export default function UpgradeSubscription() {
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [selectedPlan, setSelectedPlan] = useState(null);
-  const [showContactForm, setShowContactForm] = useState(false);
 
   const plans = [
     {
-      id: 'basic',
-      name: 'Basic',
-      icon: Rocket,
-      price: 49,
-      period: 'month',
-      color: 'blue',
+      id: 'basic', name: 'Basic', icon: Rocket, price: 49, period: 'month',
       description: 'Perfect for small businesses just getting started',
-      features: [
-        '1 Company',
-        'Up to 3 Users',
-        'Core Accounting',
-        'Sales & Purchases',
-        'Basic Inventory',
-        'Standard Reports',
-        '5GB Storage',
-        'Email Support'
-      ],
-      modules: {
-        sales: true,
-        purchases: true,
-        inventory: true,
-        accounting: true,
-        manufacturing: false,
-        job_costing: false,
-        fixed_assets: false,
-        payroll: false,
-        non_profit: false,
-        multi_currency: false,
-        pos: false
-      }
+      features: ['1 Company','Up to 3 Users','Core Accounting','Sales & Purchases','Basic Inventory','Standard Reports','5GB Storage','Email Support'],
+      modules: { sales:true, purchases:true, inventory:true, accounting:true, manufacturing:false, job_costing:false, fixed_assets:false, payroll:false, non_profit:false, multi_currency:false, pos:false }
     },
     {
-      id: 'professional',
-      name: 'Professional',
-      icon: Star,
-      price: 99,
-      period: 'month',
-      color: 'purple',
-      popular: true,
+      id: 'professional', name: 'Professional', icon: Star, price: 99, period: 'month', popular: true,
       description: 'Most popular for growing businesses',
-      features: [
-        '3 Companies',
-        'Up to 10 Users',
-        'All Basic Features',
-        'Manufacturing Module',
-        'Job Costing',
-        'Fixed Assets',
-        'POS System',
-        'Advanced Reports',
-        '25GB Storage',
-        'Priority Email Support'
-      ],
-      modules: {
-        sales: true,
-        purchases: true,
-        inventory: true,
-        accounting: true,
-        manufacturing: true,
-        job_costing: true,
-        fixed_assets: true,
-        payroll: false,
-        non_profit: false,
-        multi_currency: true,
-        pos: true
-      }
+      features: ['3 Companies','Up to 10 Users','All Basic Features','Manufacturing Module','Job Costing','Fixed Assets','POS System','Advanced Reports','25GB Storage','Priority Email Support'],
+      modules: { sales:true, purchases:true, inventory:true, accounting:true, manufacturing:true, job_costing:true, fixed_assets:true, payroll:false, non_profit:false, multi_currency:true, pos:true }
     },
     {
-      id: 'enterprise',
-      name: 'Enterprise',
-      icon: Crown,
-      price: 199,
-      period: 'month',
-      color: 'green',
+      id: 'enterprise', name: 'Enterprise', icon: Crown, price: 199, period: 'month',
       description: 'Complete solution for large organizations',
-      features: [
-        'Unlimited Companies',
-        'Unlimited Users',
-        'All Professional Features',
-        'Payroll Module',
-        'Non-Profit Features',
-        'Multi-Currency',
-        'Custom Reports',
-        'API Access',
-        'Unlimited Storage',
-        'Dedicated Account Manager',
-        '24/7 Phone Support'
-      ],
-      modules: {
-        sales: true,
-        purchases: true,
-        inventory: true,
-        accounting: true,
-        manufacturing: true,
-        job_costing: true,
-        fixed_assets: true,
-        payroll: true,
-        non_profit: true,
-        multi_currency: true,
-        pos: true
-      }
+      features: ['Unlimited Companies','Unlimited Users','All Professional Features','Payroll Module','Non-Profit Features','Multi-Currency','Custom Reports','API Access','Unlimited Storage','Dedicated Account Manager','24/7 Phone Support'],
+      modules: { sales:true, purchases:true, inventory:true, accounting:true, manufacturing:true, job_costing:true, fixed_assets:true, payroll:true, non_profit:true, multi_currency:true, pos:true }
     }
   ];
 
   const upgradeMutation = useMutation({
     mutationFn: async (planId) => {
       const plan = plans.find(p => p.id === planId);
-      
-      // Update company to paid subscription
       await Company.update(currentCompany.id, {
-        license_type: planId,
-        subscription_status: 'active',
-        is_evaluation: false,
-        evaluation_days_remaining: 0,
-        modules_enabled: plan.modules,
+        license_type: planId, subscription_status: 'active', is_evaluation: false,
+        evaluation_days_remaining: 0, modules_enabled: plan.modules,
         user_limit: planId === 'basic' ? 3 : planId === 'professional' ? 10 : 999
       });
-
-      // Send confirmation email
       await SendEmail({
         to: currentCompany.contact_email,
         subject: `Welcome to Edge Cloud ERP ${plan.name} Plan!`,
-        body: `
-          Dear ${currentCompany.company_name} Team,
-
-          Congratulations! Your subscription to Edge Cloud ERP ${plan.name} plan has been activated.
-
-          Plan Details:
-          - Plan: ${plan.name}
-          - Price: $${plan.price}/month
-          - Users: ${planId === 'basic' ? 'Up to 3' : planId === 'professional' ? 'Up to 10' : 'Unlimited'}
-          - Companies: ${planId === 'basic' ? '1' : planId === 'professional' ? '3' : 'Unlimited'}
-
-          Your account is now fully activated with all the features of the ${plan.name} plan.
-
-          If you have any questions, please don't hesitate to reach out to our support team.
-
-          Best regards,
-          Edge Cloud ERP Team
-        `
+        body: `Dear ${currentCompany.company_name} Team,\n\nCongratulations! Your subscription to Edge Cloud ERP ${plan.name} plan has been activated.\n\nPlan: ${plan.name} · $${plan.price}/month\n\nBest regards,\nEdge Cloud ERP Team`
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries(['companies']);
-      alert('Subscription upgraded successfully! Please refresh the page.');
-      window.location.reload();
-    },
-    onError: (error) => {
-      alert(`Upgrade failed: ${error.message}`);
-    }
+    onSuccess: () => { queryClient.invalidateQueries(['companies']); alert('Subscription upgraded successfully! Please refresh the page.'); window.location.reload(); },
+    onError: (error) => alert(`Upgrade failed: ${error.message}`)
   });
 
   const handleUpgrade = (planId) => {
@@ -176,188 +63,150 @@ export default function UpgradeSubscription() {
   };
 
   const evaluationDaysRemaining = React.useMemo(() => {
-    if (!currentCompany?.is_evaluation || !currentCompany?.license_expiry_date) {
-      return null;
-    }
-    
-    const today = new Date();
-    const expiryDate = new Date(currentCompany.license_expiry_date);
-    const diffTime = expiryDate - today;
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
+    if (!currentCompany?.is_evaluation || !currentCompany?.license_expiry_date) return null;
+    const diffDays = Math.ceil((new Date(currentCompany.license_expiry_date) - new Date()) / (1000*60*60*24));
     return diffDays > 0 ? diffDays : 0;
   }, [currentCompany]);
 
   if (!currentCompany?.is_evaluation) {
     return (
-      <div className="p-6">
-        <Alert className="bg-blue-50 border-blue-200">
-          <AlertCircle className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-900">
+      <PageShell>
+        <div style={{ background: '#EBF4FB', border: '1.5px solid #BFDBFE', borderRadius: 12, padding: '20px 24px', display: 'flex', gap: 14 }}>
+          <AlertCircle style={{ width: 22, height: 22, color: '#1B4F8A', flexShrink: 0, marginTop: 2 }} />
+          <p style={{ fontSize: 14, color: '#1E3A5F', fontWeight: 500 }}>
             Your account is already on a paid subscription plan. To change your plan, please contact our support team.
-          </AlertDescription>
-        </Alert>
-      </div>
+          </p>
+        </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Header */}
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold text-gray-900">Upgrade Your Subscription</h1>
-        <p className="text-xl text-gray-600">
-          Choose the perfect plan for your business needs
-        </p>
-        {evaluationDaysRemaining !== null && (
-          <Alert className={`max-w-2xl mx-auto ${
-            evaluationDaysRemaining <= 5 ? 'bg-red-50 border-red-200' : 'bg-orange-50 border-orange-200'
-          }`}>
-            <AlertCircle className={`h-4 w-4 ${evaluationDaysRemaining <= 5 ? 'text-red-600' : 'text-orange-600'}`} />
-            <AlertDescription className={evaluationDaysRemaining <= 5 ? 'text-red-900' : 'text-orange-900'}>
-              {evaluationDaysRemaining === 0 ? (
-                <strong>Your evaluation period has expired. Upgrade now to continue using the system.</strong>
-              ) : (
-                <strong>You have {evaluationDaysRemaining} day{evaluationDaysRemaining !== 1 ? 's' : ''} remaining in your evaluation period.</strong>
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Upgrade Your Subscription"
+        subtitle="Choose the perfect plan for your business needs"
+        icon={CreditCard}
+        accentColor="#1B4F8A"
+      />
+
+      {/* Evaluation warning banner */}
+      {evaluationDaysRemaining !== null && (
+        <div style={{
+          background: evaluationDaysRemaining <= 5 ? '#FEF2F2' : '#FFF7ED',
+          border: `1.5px solid ${evaluationDaysRemaining <= 5 ? '#FECACA' : '#FED7AA'}`,
+          borderRadius: 12, padding: '14px 20px', display: 'flex', gap: 12, marginBottom: 28, alignItems: 'center'
+        }}>
+          <AlertCircle style={{ width: 20, height: 20, color: evaluationDaysRemaining <= 5 ? '#EF4444' : '#F97316', flexShrink: 0 }} />
+          <p style={{ fontSize: 14, fontWeight: 600, color: evaluationDaysRemaining <= 5 ? '#991B1B' : '#9A3412' }}>
+            {evaluationDaysRemaining === 0
+              ? 'Your evaluation period has expired. Upgrade now to continue using the system.'
+              : `You have ${evaluationDaysRemaining} day${evaluationDaysRemaining !== 1 ? 's' : ''} remaining in your evaluation period.`}
+          </p>
+        </div>
+      )}
 
       {/* Pricing Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-        {plans.map((plan) => {
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24, marginBottom: 32 }}>
+        {plans.map(plan => {
           const Icon = plan.icon;
+          const pc = PLAN_COLORS[plan.id];
           return (
-            <Card 
+            <div
               key={plan.id}
-              className={`relative ${
-                plan.popular ? 'border-4 border-purple-500 shadow-2xl scale-105' : 'border-2 border-gray-200'
-              } transition-all hover:shadow-xl`}
+              style={{
+                background: 'white', borderRadius: 16,
+                border: plan.popular ? `2.5px solid ${pc.primary}` : '1.5px solid #E2E8F0',
+                boxShadow: plan.popular ? `0 8px 32px ${pc.primary}22` : '0 2px 12px rgba(15,43,91,0.07)',
+                overflow: 'hidden', position: 'relative',
+                transform: plan.popular ? 'scale(1.03)' : 'scale(1)',
+                transition: 'box-shadow 200ms',
+              }}
             >
               {plan.popular && (
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                  <Badge className="bg-purple-600 text-white px-4 py-1 text-sm font-semibold">
-                    MOST POPULAR
-                  </Badge>
+                <div style={{ background: pc.primary, color: 'white', textAlign: 'center', padding: '6px 0', fontSize: 11.5, fontWeight: 800, letterSpacing: '0.12em' }}>
+                  MOST POPULAR
                 </div>
               )}
 
-              <CardHeader className={`bg-gradient-to-br from-${plan.color}-50 to-${plan.color}-100 border-b`}>
-                <div className="flex items-center gap-3 mb-2">
-                  <div className={`w-12 h-12 bg-${plan.color}-600 rounded-xl flex items-center justify-center`}>
-                    <Icon className="w-6 h-6 text-white" />
+              {/* Plan header */}
+              <div style={{ background: pc.light, padding: '24px 24px 20px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+                  <div style={{ width: 44, height: 44, background: pc.primary, borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <Icon style={{ width: 22, height: 22, color: 'white' }} />
                   </div>
                   <div>
-                    <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                    <p className="text-sm text-gray-600">{plan.description}</p>
+                    <p style={{ fontSize: 20, fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>{plan.name}</p>
+                    <p style={{ fontSize: 12.5, color: '#64748B', marginTop: 3 }}>{plan.description}</p>
                   </div>
                 </div>
-                <div className="mt-4">
-                  <span className="text-5xl font-bold text-gray-900">${plan.price}</span>
-                  <span className="text-gray-600">/{plan.period}</span>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                  <span style={{ fontSize: 42, fontWeight: 900, color: pc.primary, lineHeight: 1 }}>${plan.price}</span>
+                  <span style={{ fontSize: 14, color: '#64748B' }}>/{plan.period}</span>
                 </div>
-              </CardHeader>
+              </div>
 
-              <CardContent className="p-6">
-                <ul className="space-y-3 mb-6">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <CheckCircle className={`w-5 h-5 text-${plan.color}-600 flex-shrink-0 mt-0.5`} />
-                      <span className="text-gray-700">{feature}</span>
+              {/* Features */}
+              <div style={{ padding: '20px 24px' }}>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 20px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {plan.features.map((feature, i) => (
+                    <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 9 }}>
+                      <CheckCircle style={{ width: 16, height: 16, color: pc.primary, flexShrink: 0, marginTop: 1 }} />
+                      <span style={{ fontSize: 13.5, color: '#374151' }}>{feature}</span>
                     </li>
                   ))}
                 </ul>
-
-                <Button
+                <button
                   onClick={() => handleUpgrade(plan.id)}
-                  disabled={upgradeMutation.isLoading}
-                  className={`w-full ${
-                    plan.popular 
-                      ? 'bg-purple-600 hover:bg-purple-700' 
-                      : `bg-${plan.color}-600 hover:bg-${plan.color}-700`
-                  } text-white font-semibold py-3 text-lg`}
+                  disabled={upgradeMutation.isPending}
+                  style={{
+                    width: '100%', padding: '12px', border: 'none', borderRadius: 10,
+                    background: pc.primary, color: 'white', fontSize: 15, fontWeight: 700,
+                    cursor: upgradeMutation.isPending ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+                    opacity: upgradeMutation.isPending ? 0.7 : 1
+                  }}
                 >
-                  {upgradeMutation.isLoading ? 'Processing...' : 'Upgrade Now'}
-                </Button>
-              </CardContent>
-            </Card>
+                  {upgradeMutation.isPending ? 'Processing…' : `Upgrade to ${plan.name}`}
+                </button>
+              </div>
+            </div>
           );
         })}
       </div>
 
       {/* Custom Plan */}
-      <Card className="max-w-4xl mx-auto border-2 border-gray-300">
-        <CardContent className="p-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 bg-gradient-to-br from-gray-700 to-gray-900 rounded-xl flex items-center justify-center">
-                <Zap className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900">Custom Enterprise Plan</h3>
-                <p className="text-gray-600 mt-1">
-                  Need a tailored solution? We can create a custom plan specific to your requirements.
-                </p>
-              </div>
-            </div>
-            <Button
-              onClick={() => setShowContactForm(true)}
-              variant="outline"
-              size="lg"
-              className="border-2 border-gray-700 hover:bg-gray-700 hover:text-white"
-            >
-              Contact Sales
-            </Button>
+      <div style={{ background: 'white', borderRadius: 14, border: '1.5px solid #E2E8F0', padding: '24px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32, boxShadow: '0 2px 8px rgba(15,43,91,0.06)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div style={{ width: 56, height: 56, background: 'linear-gradient(135deg, #1B4F8A, #0F2B5B)', borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <Zap style={{ width: 28, height: 28, color: 'white' }} />
           </div>
-        </CardContent>
-      </Card>
+          <div>
+            <p style={{ fontSize: 18, fontWeight: 800, color: '#0F172A', marginBottom: 4 }}>Custom Enterprise Plan</p>
+            <p style={{ fontSize: 13.5, color: '#64748B' }}>Need a tailored solution? We can create a custom plan specific to your requirements.</p>
+          </div>
+        </div>
+        <button style={{ padding: '10px 22px', border: '2px solid #1B4F8A', borderRadius: 9, background: 'white', color: '#1B4F8A', fontSize: 14, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+          Contact Sales
+        </button>
+      </div>
 
-      {/* FAQ Section */}
-      <div className="max-w-4xl mx-auto mt-12">
-        <h2 className="text-3xl font-bold text-center mb-8">Frequently Asked Questions</h2>
-        <div className="space-y-4">
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-lg mb-2">Can I change my plan later?</h3>
-              <p className="text-gray-600">
-                Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately, 
-                and we'll prorate any charges or credits.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-lg mb-2">What happens to my data if I don't upgrade?</h3>
-              <p className="text-gray-600">
-                Your data is safe. After the evaluation period ends, your account will be in read-only mode. 
-                You can view your data but cannot create new transactions until you upgrade.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-lg mb-2">Is there a long-term contract?</h3>
-              <p className="text-gray-600">
-                No, all our plans are month-to-month. You can cancel anytime without any penalties.
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="font-semibold text-lg mb-2">What payment methods do you accept?</h3>
-              <p className="text-gray-600">
-                We accept all major credit cards, bank transfers, and PayPal. Contact our sales team for 
-                enterprise payment options.
-              </p>
-            </CardContent>
-          </Card>
+      {/* FAQ */}
+      <div>
+        <p style={{ fontSize: 20, fontWeight: 800, color: '#0F172A', marginBottom: 16, textAlign: 'center' }}>Frequently Asked Questions</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {[
+            { q: 'Can I change my plan later?', a: 'Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately, and we\'ll prorate any charges or credits.' },
+            { q: 'What happens to my data if I don\'t upgrade?', a: 'Your data is safe. After the evaluation period ends, your account will be in read-only mode. You can view your data but cannot create new transactions until you upgrade.' },
+            { q: 'Is there a long-term contract?', a: 'No, all our plans are month-to-month. You can cancel anytime without any penalties.' },
+            { q: 'What payment methods do you accept?', a: 'We accept all major credit cards, bank transfers, and PayPal. Contact our sales team for enterprise payment options.' },
+          ].map((faq, i) => (
+            <div key={i} style={{ background: 'white', borderRadius: 12, border: '1px solid #F1F5F9', padding: '18px 22px', boxShadow: '0 1px 4px rgba(15,43,91,0.05)' }}>
+              <p style={{ fontSize: 14.5, fontWeight: 700, color: '#0F172A', marginBottom: 8 }}>{faq.q}</p>
+              <p style={{ fontSize: 13.5, color: '#64748B', lineHeight: 1.6 }}>{faq.a}</p>
+            </div>
+          ))}
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

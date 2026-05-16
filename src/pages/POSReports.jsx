@@ -4,10 +4,7 @@ import { POSSale, POSSession, Store } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "../components/auth/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -15,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import PageShell, { PageHeader, StatBar } from "../components/shared/PageShell";
 import {
   Table,
   TableBody,
@@ -46,8 +44,8 @@ import {
   ShoppingCart,
   Users,
   Package,
-  Calendar,
-  Store as StoreIcon
+  Store as StoreIcon,
+  BarChart3
 } from "lucide-react";
 import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
 
@@ -190,127 +188,66 @@ export default function POSReports() {
   const cashierPerformance = Object.values(salesByCashier).sort((a, b) => b.total_sales - a.total_sales);
 
 
+  const INPUT_STYLE = { padding: '8px 12px', border: '1.5px solid #E2E8F0', borderRadius: 8, fontSize: 13.5, fontFamily: 'inherit', outline: 'none', background: 'white', color: '#0F172A', width: '100%', boxSizing: 'border-box' };
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">POS Reports & Analytics</h1>
-          <p className="text-gray-500 mt-1">Comprehensive sales and performance insights</p>
-        </div>
-        <Button variant="outline">
-          <Download className="w-4 h-4 mr-2" />
-          Export Report
-        </Button>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="POS Reports & Analytics"
+        subtitle="Comprehensive sales and performance insights"
+        icon={BarChart3}
+        accentColor="#1B4F8A"
+        actions={
+          <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', border: '1.5px solid #E2E8F0', borderRadius: 8, background: 'white', color: '#475569', fontSize: 13.5, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+            <Download style={{ width: 14, height: 14 }} />
+            Export Report
+          </button>
+        }
+      />
+
+      <StatBar stats={[
+        { label: 'Total Sales',       value: `$${totalSales.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`, icon: DollarSign, color: '#1B4F8A' },
+        { label: 'Transactions',      value: totalTransactions,                icon: ShoppingCart, color: '#00A86B' },
+        { label: 'Avg Transaction',   value: `$${averageTransaction.toFixed(2)}`, icon: TrendingUp, color: '#8B5CF6' },
+        { label: 'Total Discount',    value: `$${totalDiscount.toFixed(2)}`,   color: '#F59E0B' },
+        { label: 'Tax Collected',     value: `$${totalTax.toFixed(2)}`,        icon: FileText, color: '#EF4444' },
+      ]} />
 
       {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4"> {/* Changed to 5 columns */}
-            <div className="space-y-2">
-              <Label>From Date</Label>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>To Date</Label>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Store</Label>
-              <Select value={selectedStore} onValueChange={setSelectedStore}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a store" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Stores</SelectItem>
-                  {stores.map(store => (
-                    <SelectItem key={store.id} value={store.id}>
-                      {store.store_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2"> {/* New Sales Rep filter */}
-              <Label>Sales Rep</Label>
-              <Select value={selectedCashier} onValueChange={setSelectedCashier}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a sales rep" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sales Reps</SelectItem>
-                  {cashierPerformance.map(cashier => (
-                    <SelectItem key={cashier.cashier_id} value={cashier.cashier_id}>
-                      {cashier.cashier_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>&nbsp;</Label>
-              <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                Generate Report
-              </Button>
-            </div>
+      <div style={{ background: 'white', borderRadius: 12, border: '1px solid #F1F5F9', padding: '16px 20px', marginBottom: 20, boxShadow: '0 1px 4px rgba(15,43,91,0.05)' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr auto', gap: 14, alignItems: 'end' }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 5, display: 'block' }}>From Date</label>
+            <input type="date" style={INPUT_STYLE} value={dateFrom} onChange={e => setDateFrom(e.target.value)} />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900">Total Sales</CardTitle>
-            <DollarSign className="w-8 h-8 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-900">${totalSales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <p className="text-xs text-blue-700 mt-2">Period total</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-green-900">Transactions</CardTitle>
-            <ShoppingCart className="w-8 h-8 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-900">{totalTransactions}</div>
-            <p className="text-xs text-green-700 mt-2">Completed sales</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-purple-900">Avg Transaction</CardTitle>
-            <TrendingUp className="w-8 h-8 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-900">${averageTransaction.toFixed(2)}</div>
-            <p className="text-xs text-purple-700 mt-2">Per transaction</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-orange-50 to-orange-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-orange-900">Tax Collected</CardTitle>
-            <FileText className="w-8 h-8 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-orange-900">${totalTax.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-            <p className="text-xs text-orange-700 mt-2">Total tax</p>
-          </CardContent>
-        </Card>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 5, display: 'block' }}>To Date</label>
+            <input type="date" style={INPUT_STYLE} value={dateTo} onChange={e => setDateTo(e.target.value)} />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 5, display: 'block' }}>Store</label>
+            <Select value={selectedStore} onValueChange={setSelectedStore}>
+              <SelectTrigger style={{ height: 38, fontSize: 13.5 }}><SelectValue placeholder="All Stores" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stores</SelectItem>
+                {stores.map(store => <SelectItem key={store.id} value={store.id}>{store.store_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', marginBottom: 5, display: 'block' }}>Sales Rep</label>
+            <Select value={selectedCashier} onValueChange={setSelectedCashier}>
+              <SelectTrigger style={{ height: 38, fontSize: 13.5 }}><SelectValue placeholder="All Sales Reps" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Sales Reps</SelectItem>
+                {cashierPerformance.map(c => <SelectItem key={c.cashier_id} value={c.cashier_id}>{c.cashier_name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <button style={{ padding: '9px 18px', border: 'none', borderRadius: 8, background: '#1B4F8A', color: 'white', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+            Generate
+          </button>
+        </div>
       </div>
 
       {/* Detailed Reports Tabs */}
@@ -558,6 +495,6 @@ export default function POSReports() {
           </Card>
         </TabsContent>
       </Tabs>
-    </div>
+    </PageShell>
   );
 }

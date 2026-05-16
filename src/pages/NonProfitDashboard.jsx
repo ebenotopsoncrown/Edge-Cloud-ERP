@@ -1,23 +1,15 @@
 import React from "react";
 import { Donation, Donor, Program, Grant } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useCompany } from "../components/auth/CompanyContext";
-import {
-  Heart,
-  Users,
-  Target,
-  DollarSign,
-  Plus,
-  Receipt,
-  CreditCard,
-  FileText,
-  TrendingUp,
-  Briefcase
-} from "lucide-react";
+import { Heart, Users, Target, DollarSign, Plus, Receipt, CreditCard, FileText, TrendingUp, Briefcase } from "lucide-react";
+import { format } from "date-fns";
+import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, ActionBtn } from "../components/shared/PageShell";
+
+const fmt = (n) => `$${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const ACCENT = '#EC4899';
 
 export default function NonProfitDashboard() {
   const { currentCompany } = useCompany();
@@ -46,171 +38,103 @@ export default function NonProfitDashboard() {
     enabled: !!currentCompany
   });
 
-  const totalDonations = donations
-    .filter(d => d.status === 'received')
-    .reduce((sum, d) => sum + (parseFloat(d.amount) || 0), 0);
-
-  const totalGrants = grants
-    .filter(g => g.status === 'active')
-    .reduce((sum, g) => sum + (parseFloat(g.grant_amount) || 0), 0);
-
+  const totalDonations = donations.filter(d => d.status === 'received').reduce((s, d) => s + (parseFloat(d.amount) || 0), 0);
+  const totalGrants    = grants.filter(g => g.status === 'active').reduce((s, g) => s + (parseFloat(g.grant_amount) || 0), 0);
   const activePrograms = programs.filter(p => p.status === 'active').length;
 
+  const quickActions = [
+    { label: 'Enter Donation',   icon: Receipt,    color: ACCENT },
+    { label: 'Enter Pledge',     icon: FileText,   color: '#8B5CF6' },
+    { label: 'Receive Payment',  icon: CreditCard, color: '#1B4F8A' },
+    { label: 'Budget Setup',     icon: TrendingUp, color: '#F59E0B' },
+    { label: 'New Donor',        icon: Plus,       color: '#00A86B' },
+    { label: 'New Program',      icon: Briefcase,  color: '#EF4444' },
+    { label: 'New Grant',        icon: Plus,       color: '#8B5CF6' },
+    { label: 'NP Reports',       icon: FileText,   color: '#64748B' },
+  ];
+
+  const HEADERS = [{ label: 'Donor' }, { label: 'Program' }, { label: 'Date' }, { label: 'Amount', right: true }, { label: 'Status' }];
+
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Non-Profit Management</h1>
-        <p className="text-gray-500 mt-1">Manage donations, grants, and programs for {currentCompany?.company_name}</p>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Non-Profit Management"
+        subtitle={`Donations, grants & programs · ${currentCompany?.company_name || ''}`}
+        icon={Heart}
+        accentColor={ACCENT}
+        actions={
+          <Link to={createPageUrl('NonProfit')} style={{ textDecoration: 'none' }}>
+            <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', border: 'none', borderRadius: 8, background: ACCENT, color: 'white', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+              <Plus style={{ width: 15, height: 15 }} />
+              Enter Donation
+            </button>
+          </Link>
+        }
+      />
+
+      <StatBar stats={[
+        { label: 'Total Donations',  value: fmt(totalDonations), icon: Heart,       color: ACCENT },
+        { label: 'Active Grants',    value: fmt(totalGrants),    icon: DollarSign,  color: '#8B5CF6' },
+        { label: 'Total Donors',     value: donors.length,       icon: Users,       color: '#1B4F8A' },
+        { label: 'Active Programs',  value: activePrograms,      icon: Target,      color: '#00A86B' },
+        { label: 'Total Programs',   value: programs.length,     color: '#64748B' },
+      ]} />
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <Card className="border-2 border-pink-100">
-          <CardHeader>
-            <CardTitle className="text-lg">Transactions</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Button asChild className="bg-pink-600 hover:bg-pink-700">
-              <Link to={createPageUrl("NonProfit")}>
-                <Receipt className="w-4 h-4 mr-2" />
-                Enter Donation
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to={createPageUrl("NonProfit")}>
-                <FileText className="w-4 h-4 mr-2" />
-                Enter Pledge
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to={createPageUrl("NonProfit")}>
-                <CreditCard className="w-4 h-4 mr-2" />
-                Receive Payment
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to={createPageUrl("NonProfit")}>
-                <TrendingUp className="w-4 h-4 mr-2" />
-                Budget Setup
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
-
-        <Card className="border-2 border-rose-100">
-          <CardHeader>
-            <CardTitle className="text-lg">Master Data</CardTitle>
-          </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <Button asChild className="bg-rose-600 hover:bg-rose-700">
-              <Link to={createPageUrl("NonProfit")}>
-                <Plus className="w-4 h-4 mr-2" />
-                New Donor
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to={createPageUrl("NonProfit")}>
-                <Briefcase className="w-4 h-4 mr-2" />
-                New Program
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to={createPageUrl("NonProfit")}>
-                <Plus className="w-4 h-4 mr-2" />
-                New Grant
-              </Link>
-            </Button>
-            <Button asChild variant="outline">
-              <Link to={createPageUrl("Reports")}>
-                NP Reports
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+      <div style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94A3B8', marginBottom: 10 }}>Quick Actions</p>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          {quickActions.map((qa, i) => (
+            <Link key={i} to={createPageUrl(i === 7 ? 'Reports' : 'NonProfit')} style={{ textDecoration: 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', background: 'white', border: '1.5px solid #E2E8F0', borderRadius: 9, fontSize: 13.5, fontWeight: 600, color: qa.color, boxShadow: '0 1px 3px rgba(15,43,91,0.05)' }}>
+                <qa.icon style={{ width: 15, height: 15 }} />
+                {qa.label}
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-pink-50 to-pink-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-pink-900">Total Donations</CardTitle>
-            <Heart className="w-8 h-8 text-pink-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-pink-900">${totalDonations.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-            <p className="text-xs text-pink-700 mt-2">Year to date</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-purple-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-purple-900">Total Grants</CardTitle>
-            <DollarSign className="w-8 h-8 text-purple-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-purple-900">${totalGrants.toLocaleString(undefined, {minimumFractionDigits: 2})}</div>
-            <p className="text-xs text-purple-700 mt-2">Active grants</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-blue-50 to-blue-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-blue-900">Total Donors</CardTitle>
-            <Users className="w-8 h-8 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-900">{donors.length}</div>
-            <p className="text-xs text-blue-700 mt-2">Active donors</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-green-50 to-green-100">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-green-900">Active Programs</CardTitle>
-            <Target className="w-8 h-8 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-900">{activePrograms}</div>
-            <p className="text-xs text-green-700 mt-2">Total: {programs.length}</p>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Program Summary */}
+      {programs.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94A3B8', marginBottom: 10 }}>Programs</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+            {programs.slice(0, 8).map(prog => (
+              <div key={prog.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #F1F5F9', padding: '16px 18px', boxShadow: '0 2px 8px rgba(15,43,91,0.06)' }}>
+                <p style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8', marginBottom: 4, letterSpacing: '0.06em' }}>
+                  {(prog.status || 'active').toUpperCase()}
+                </p>
+                <p style={{ fontSize: 14, fontWeight: 800, color: ACCENT, marginBottom: 2 }}>{prog.program_name || prog.name}</p>
+                <p style={{ fontSize: 11.5, color: '#64748B' }}>{prog.status === 'active' ? 'Active' : 'Inactive'}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Recent Donations */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Recent Donations</CardTitle>
-          <Button asChild variant="outline" size="sm">
-            <Link to={createPageUrl("NonProfit")}>View All</Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          {donations.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">
-              <Heart className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p>No donations yet</p>
-              <Button asChild variant="outline" size="sm" className="mt-3">
-                <Link to={createPageUrl("NonProfit")}>Record First Donation</Link>
-              </Button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {donations.slice(0, 5).map(donation => (
-                <div key={donation.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-semibold">{donation.donor_name}</p>
-                    <p className="text-sm text-gray-600">{donation.program_name || 'General'}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold">${(donation.amount || 0).toFixed(2)}</p>
-                    <p className="text-xs text-gray-600">{donation.donation_date}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-    </div>
+      <ERPTable headers={HEADERS} emptyIcon={Heart} emptyTitle="No donations yet" emptyDesc="Record your first donation to get started.">
+        {donations.slice(0, 10).map(donation => (
+          <ERPTableRow key={donation.id}>
+            <ERPTableCell bold>{donation.donor_name || '—'}</ERPTableCell>
+            <ERPTableCell>
+              {donation.program_name ? (
+                <span style={{ padding: '3px 9px', background: '#FCE7F3', color: '#BE185D', borderRadius: 99, fontSize: 11.5, fontWeight: 600 }}>
+                  {donation.program_name}
+                </span>
+              ) : (
+                <span style={{ color: '#94A3B8', fontSize: 13 }}>General</span>
+              )}
+            </ERPTableCell>
+            <ERPTableCell muted>
+              {donation.donation_date ? format(new Date(donation.donation_date), 'MMM d, yyyy') : '—'}
+            </ERPTableCell>
+            <ERPTableCell right bold style={{ color: '#00A86B' }}>{fmt(donation.amount)}</ERPTableCell>
+            <ERPTableCell><StatusBadge status={donation.status || 'received'} /></ERPTableCell>
+          </ERPTableRow>
+        ))}
+      </ERPTable>
+    </PageShell>
   );
 }

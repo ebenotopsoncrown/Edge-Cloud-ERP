@@ -1,16 +1,27 @@
 import React, { useState } from "react";
 import { InventoryLocation, Store } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Plus, MapPin, Pencil, Trash2, X, Save } from "lucide-react";
+import { MapPin, Pencil, Trash2, X, Save } from "lucide-react";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, {
+  PageHeader,
+  StatBar,
+  ERPTable,
+  ERPTableRow,
+  ERPTableCell,
+  StatusBadge,
+  ActionBtn,
+  NewBtn,
+} from "../components/shared/PageShell";
+
+const PRIMARY = "#1B4F8A";
+const ACCENT  = "#00A86B";
 
 export default function InventoryLocationManagement() {
   const { currentCompany } = useCompany();
@@ -24,26 +35,26 @@ export default function InventoryLocationManagement() {
     company_id: currentCompany?.id,
     store_id: '',
     location_type: 'warehouse',
-    address: {
-      street: '',
-      city: '',
-      state: '',
-      postal_code: '',
-      country: ''
-    },
-    is_active: true
+    address: { street: '', city: '', state: '', postal_code: '', country: '' },
+    is_active: true,
   });
 
   const { data: locations = [] } = useQuery({
     queryKey: ['inventory-locations', currentCompany?.id],
-    queryFn: () => currentCompany ? InventoryLocation.list({ filters: { company_id: currentCompany.id } }) : Promise.resolve([]),
-    enabled: !!currentCompany
+    queryFn: () =>
+      currentCompany
+        ? InventoryLocation.list({ filters: { company_id: currentCompany.id } })
+        : Promise.resolve([]),
+    enabled: !!currentCompany,
   });
 
   const { data: stores = [] } = useQuery({
     queryKey: ['stores', currentCompany?.id],
-    queryFn: () => currentCompany ? Store.list({ filters: { company_id: currentCompany.id } }) : Promise.resolve([]),
-    enabled: !!currentCompany
+    queryFn: () =>
+      currentCompany
+        ? Store.list({ filters: { company_id: currentCompany.id } })
+        : Promise.resolve([]),
+    enabled: !!currentCompany,
   });
 
   const saveMutation = useMutation({
@@ -56,14 +67,14 @@ export default function InventoryLocationManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries(['inventory-locations']);
       handleClose();
-    }
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => InventoryLocation.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['inventory-locations']);
-    }
+    },
   });
 
   const handleEdit = (location) => {
@@ -82,7 +93,7 @@ export default function InventoryLocationManagement() {
       store_id: '',
       location_type: 'warehouse',
       address: { street: '', city: '', state: '', postal_code: '', country: '' },
-      is_active: true
+      is_active: true,
     });
   };
 
@@ -91,23 +102,52 @@ export default function InventoryLocationManagement() {
     saveMutation.mutate(formData);
   };
 
+  const activeCount   = locations.filter(l => l.is_active).length;
+  const inactiveCount = locations.filter(l => !l.is_active).length;
+
+  const TABLE_HEADERS = [
+    { label: 'Code' },
+    { label: 'Location Name' },
+    { label: 'Type' },
+    { label: 'Store' },
+    { label: 'City' },
+    { label: 'Status' },
+    { label: '' },
+  ];
+
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventory Locations</h1>
-          <p className="text-gray-500 mt-1">Manage warehouses and inventory storage locations</p>
-        </div>
-        <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          New Location
-        </Button>
-      </div>
+    <PageShell>
+      <PageHeader
+        title="Inventory Locations"
+        subtitle="Manage warehouses and inventory storage locations"
+        icon={MapPin}
+        accentColor={PRIMARY}
+        actions={<NewBtn onClick={() => setShowForm(true)} label="New Location" />}
+      />
+
+      <StatBar
+        stats={[
+          { label: 'Total Locations', value: locations.length, color: PRIMARY },
+          { label: 'Active',          value: activeCount,       color: ACCENT  },
+          { label: 'Inactive',        value: inactiveCount,     color: '#94A3B8' },
+        ]}
+      />
 
       {showForm && (
-        <Card className="border-2 border-blue-200">
-          <CardHeader className="flex flex-row items-center justify-between border-b bg-blue-50">
-            <CardTitle>{editingLocation ? 'Edit Location' : 'New Inventory Location'}</CardTitle>
+        <Card style={{ marginBottom: 24, border: `1.5px solid ${PRIMARY}30` }}>
+          <CardHeader
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              borderBottom: '1px solid #F1F5F9',
+              background: `${PRIMARY}06`,
+            }}
+          >
+            <CardTitle style={{ color: '#0F172A' }}>
+              {editingLocation ? 'Edit Location' : 'New Inventory Location'}
+            </CardTitle>
             <Button variant="ghost" size="icon" onClick={handleClose}>
               <X className="w-4 h-4" />
             </Button>
@@ -141,9 +181,7 @@ export default function InventoryLocationManagement() {
                     value={formData.location_type}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, location_type: value }))}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="store">Store</SelectItem>
                       <SelectItem value="warehouse">Warehouse</SelectItem>
@@ -160,9 +198,7 @@ export default function InventoryLocationManagement() {
                     value={formData.store_id}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, store_id: value }))}
                   >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select store" />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Select store" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value={null}>None</SelectItem>
                       {stores.map(store => (
@@ -175,55 +211,40 @@ export default function InventoryLocationManagement() {
                 <div className="space-y-2 md:col-span-2">
                   <Label>Street Address</Label>
                   <Input
-                    value={formData.address.street}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      address: { ...prev.address, street: e.target.value }
-                    }))}
+                    value={formData.address?.street || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: { ...prev.address, street: e.target.value } }))}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>City</Label>
                   <Input
-                    value={formData.address.city}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      address: { ...prev.address, city: e.target.value }
-                    }))}
+                    value={formData.address?.city || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: { ...prev.address, city: e.target.value } }))}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>State</Label>
                   <Input
-                    value={formData.address.state}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      address: { ...prev.address, state: e.target.value }
-                    }))}
+                    value={formData.address?.state || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: { ...prev.address, state: e.target.value } }))}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Postal Code</Label>
                   <Input
-                    value={formData.address.postal_code}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      address: { ...prev.address, postal_code: e.target.value }
-                    }))}
+                    value={formData.address?.postal_code || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: { ...prev.address, postal_code: e.target.value } }))}
                   />
                 </div>
 
                 <div className="space-y-2">
                   <Label>Country</Label>
                   <Input
-                    value={formData.address.country}
-                    onChange={(e) => setFormData(prev => ({
-                      ...prev,
-                      address: { ...prev.address, country: e.target.value }
-                    }))}
+                    value={formData.address?.country || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, address: { ...prev.address, country: e.target.value } }))}
                   />
                 </div>
               </div>
@@ -237,11 +258,23 @@ export default function InventoryLocationManagement() {
                 <Label htmlFor="is_active">Active Location</Label>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4 border-t">
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'flex-end',
+                  gap: 10,
+                  paddingTop: 16,
+                  borderTop: '1px solid #F1F5F9',
+                }}
+              >
                 <Button type="button" variant="outline" onClick={handleClose}>
                   Cancel
                 </Button>
-                <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+                <Button
+                  type="submit"
+                  disabled={saveMutation.isPending}
+                  style={{ background: PRIMARY, color: 'white', border: 'none' }}
+                >
                   <Save className="w-4 h-4 mr-2" />
                   Save Location
                 </Button>
@@ -251,66 +284,39 @@ export default function InventoryLocationManagement() {
         </Card>
       )}
 
-      <Card>
-        <CardContent className="p-6">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Code</TableHead>
-                <TableHead>Location Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Store</TableHead>
-                <TableHead>City</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {locations.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8">
-                    <MapPin className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p className="text-gray-500">No inventory locations found</p>
-                    <Button onClick={() => setShowForm(true)} variant="outline" className="mt-3">
-                      Add your first location
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                locations.map(location => (
-                  <TableRow key={location.id}>
-                    <TableCell className="font-medium">{location.location_code}</TableCell>
-                    <TableCell>{location.location_name}</TableCell>
-                    <TableCell className="capitalize">{location.location_type}</TableCell>
-                    <TableCell>{stores.find(s => s.id === location.store_id)?.store_name || 'N/A'}</TableCell>
-                    <TableCell>{location.address?.city || 'N/A'}</TableCell>
-                    <TableCell>
-                      <Badge className={location.is_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                        {location.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="ghost" onClick={() => handleEdit(location)}>
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => deleteMutation.mutate(location.id)}
-                          className="text-red-600"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
+      <ERPTable
+        headers={TABLE_HEADERS}
+        emptyIcon={MapPin}
+        emptyTitle="No inventory locations found"
+        emptyDesc="Add your first warehouse or storage location."
+        emptyAction={<NewBtn onClick={() => setShowForm(true)} label="Add First Location" />}
+      >
+        {locations.map((location) => (
+          <ERPTableRow key={location.id}>
+            <ERPTableCell bold style={{ color: PRIMARY }}>{location.location_code}</ERPTableCell>
+            <ERPTableCell bold>{location.location_name}</ERPTableCell>
+            <ERPTableCell muted style={{ textTransform: 'capitalize' }}>{location.location_type}</ERPTableCell>
+            <ERPTableCell muted>
+              {stores.find(s => s.id === location.store_id)?.store_name || 'N/A'}
+            </ERPTableCell>
+            <ERPTableCell muted>{location.address?.city || 'N/A'}</ERPTableCell>
+            <ERPTableCell>
+              <StatusBadge status={location.is_active ? 'active' : 'inactive'} />
+            </ERPTableCell>
+            <ERPTableCell>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <ActionBtn onClick={() => handleEdit(location)} icon={Pencil} variant="ghost" />
+                <ActionBtn
+                  onClick={() => deleteMutation.mutate(location.id)}
+                  icon={Trash2}
+                  variant="ghost"
+                  style={{ color: '#EF4444' }}
+                />
+              </div>
+            </ERPTableCell>
+          </ERPTableRow>
+        ))}
+      </ERPTable>
+    </PageShell>
   );
 }

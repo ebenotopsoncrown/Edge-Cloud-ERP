@@ -7,26 +7,36 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, TrendingUp, RefreshCw, Pencil, Trash2, AlertCircle } from "lucide-react";
+import { TrendingUp, RefreshCw, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, {
+  PageHeader,
+  StatBar,
+  ERPTable,
+  ERPTableRow,
+  ERPTableCell,
+  ActionBtn,
+  NewBtn,
+} from "../components/shared/PageShell";
+
+const ACCENT = "#00A86B";
+const PRIMARY = "#1B4F8A";
 
 const CURRENCIES = [
-  { code: 'USD', name: 'US Dollar', symbol: '$' },
-  { code: 'EUR', name: 'Euro', symbol: '€' },
-  { code: 'GBP', name: 'British Pound', symbol: '£' },
-  { code: 'NGN', name: 'Nigerian Naira', symbol: '₦' },
-  { code: 'ZAR', name: 'South African Rand', symbol: 'R' },
-  { code: 'KES', name: 'Kenyan Shilling', symbol: 'KSh' },
-  { code: 'GHS', name: 'Ghanaian Cedi', symbol: '₵' },
-  { code: 'CAD', name: 'Canadian Dollar', symbol: 'C$' },
-  { code: 'AUD', name: 'Australian Dollar', symbol: 'A$' },
-  { code: 'INR', name: 'Indian Rupee', symbol: '₹' },
-  { code: 'JPY', name: 'Japanese Yen', symbol: '¥' },
-  { code: 'CNY', name: 'Chinese Yuan', symbol: '¥' }
+  { code: 'USD', name: 'US Dollar',           symbol: '$'   },
+  { code: 'EUR', name: 'Euro',                symbol: '€'   },
+  { code: 'GBP', name: 'British Pound',       symbol: '£'   },
+  { code: 'NGN', name: 'Nigerian Naira',      symbol: '₦'   },
+  { code: 'ZAR', name: 'South African Rand',  symbol: 'R'   },
+  { code: 'KES', name: 'Kenyan Shilling',     symbol: 'KSh' },
+  { code: 'GHS', name: 'Ghanaian Cedi',       symbol: '₵'   },
+  { code: 'CAD', name: 'Canadian Dollar',     symbol: 'C$'  },
+  { code: 'AUD', name: 'Australian Dollar',   symbol: 'A$'  },
+  { code: 'INR', name: 'Indian Rupee',        symbol: '₹'   },
+  { code: 'JPY', name: 'Japanese Yen',        symbol: '¥'   },
+  { code: 'CNY', name: 'Chinese Yuan',        symbol: '¥'   },
 ];
 
 export default function ExchangeRates() {
@@ -40,28 +50,30 @@ export default function ExchangeRates() {
     exchange_rate: 0,
     effective_date: format(new Date(), 'yyyy-MM-dd'),
     rate_type: 'spot',
-    source: 'Manual'
+    source: 'Manual',
   });
 
   const { data: rates = [], isLoading } = useQuery({
     queryKey: ['exchange-rates', currentCompany?.id],
-    queryFn: () => currentCompany 
-      ? ExchangeRate.list({ filters: { company_id: currentCompany.id }, orderBy: 'effective_date', ascending: false })
-      : Promise.resolve([]),
-    enabled: !!currentCompany
+    queryFn: () =>
+      currentCompany
+        ? ExchangeRate.list({
+            filters: { company_id: currentCompany.id },
+            orderBy: 'effective_date',
+            ascending: false,
+          })
+        : Promise.resolve([]),
+    enabled: !!currentCompany,
   });
 
   const createMutation = useMutation({
-    mutationFn: (data) => ExchangeRate.create({
-      ...data,
-      company_id: currentCompany.id
-    }),
+    mutationFn: (data) => ExchangeRate.create({ ...data, company_id: currentCompany.id }),
     onSuccess: () => {
       queryClient.invalidateQueries(['exchange-rates', currentCompany?.id]);
       setShowForm(false);
       setEditingRate(null);
       resetForm();
-    }
+    },
   });
 
   const updateMutation = useMutation({
@@ -71,36 +83,32 @@ export default function ExchangeRates() {
       setShowForm(false);
       setEditingRate(null);
       resetForm();
-    }
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id) => ExchangeRate.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries(['exchange-rates', currentCompany?.id]);
-    }
+    },
   });
 
   const fetchLiveRates = useMutation({
     mutationFn: async ({ from, to }) => {
       const prompt = `Get the current exchange rate from ${from} to ${to}. Return ONLY a JSON object with this exact structure: {"exchange_rate": number}. The number should be how many ${to} equals 1 ${from}. For example, if 1 USD = 1500 NGN, return {"exchange_rate": 1500}`;
-      
       const result = await InvokeLLM({
         prompt,
         add_context_from_internet: true,
         response_json_schema: {
-          type: "object",
-          properties: {
-            exchange_rate: { type: "number" }
-          }
-        }
+          type: 'object',
+          properties: { exchange_rate: { type: 'number' } },
+        },
       });
-      
       return result.exchange_rate;
     },
     onSuccess: (rate) => {
       setFormData(prev => ({ ...prev, exchange_rate: rate, source: 'Live API' }));
-    }
+    },
   });
 
   const resetForm = () => {
@@ -110,7 +118,7 @@ export default function ExchangeRates() {
       exchange_rate: 0,
       effective_date: format(new Date(), 'yyyy-MM-dd'),
       rate_type: 'spot',
-      source: 'Manual'
+      source: 'Manual',
     });
   };
 
@@ -122,7 +130,7 @@ export default function ExchangeRates() {
       exchange_rate: rate.exchange_rate,
       effective_date: rate.effective_date,
       rate_type: rate.rate_type,
-      source: rate.source || 'Manual'
+      source: rate.source || 'Manual',
     });
     setShowForm(true);
   };
@@ -139,36 +147,50 @@ export default function ExchangeRates() {
   const baseCurrency = currentCompany?.base_currency || 'USD';
   const activeCurrencies = [...new Set(rates.map(r => r.to_currency))];
 
-  return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Exchange Rates</h1>
-          <p className="text-gray-500 mt-1">
-            Manage currency exchange rates for {currentCompany?.company_name}
-          </p>
-          <p className="text-sm text-gray-600 mt-1">
-            Base Currency: <span className="font-semibold">{baseCurrency}</span>
-          </p>
-        </div>
-        <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
-          <Plus className="w-4 h-4 mr-2" />
-          Add Exchange Rate
-        </Button>
-      </div>
+  const TABLE_HEADERS = [
+    { label: 'From' },
+    { label: 'To' },
+    { label: 'Rate', right: true },
+    { label: 'Effective Date' },
+    { label: 'Type' },
+    { label: 'Source' },
+    { label: '' },
+  ];
 
-      <Alert className="bg-blue-50 border-blue-200">
-        <TrendingUp className="h-4 w-4 text-blue-600" />
-        <AlertDescription className="text-blue-900">
-          <strong>Multi-Currency Setup:</strong> Exchange rates allow you to transact in multiple currencies. 
+  return (
+    <PageShell>
+      <PageHeader
+        title="Exchange Rates"
+        subtitle={`Manage currency exchange rates for ${currentCompany?.company_name} · Base: ${baseCurrency}`}
+        icon={TrendingUp}
+        accentColor={ACCENT}
+        actions={
+          <NewBtn onClick={() => setShowForm(true)} label="Add Exchange Rate" />
+        }
+      />
+
+      <StatBar
+        stats={[
+          { label: 'Total Rates', value: rates.length, color: ACCENT },
+          { label: 'Currencies', value: activeCurrencies.length, color: PRIMARY },
+          { label: 'Base Currency', value: baseCurrency, color: '#64748B' },
+        ]}
+      />
+
+      <Alert style={{ marginBottom: 20, background: '#F0FDF4', border: '1px solid #BBF7D0' }}>
+        <TrendingUp style={{ height: 16, width: 16, color: ACCENT }} />
+        <AlertDescription style={{ color: '#14532D' }}>
+          <strong>Multi-Currency Setup:</strong> Exchange rates allow you to transact in multiple currencies.
           All amounts are converted to your base currency ({baseCurrency}) for reporting.
         </AlertDescription>
       </Alert>
 
       {showForm && (
-        <Card>
+        <Card style={{ marginBottom: 24, border: `1.5px solid ${ACCENT}30` }}>
           <CardHeader>
-            <CardTitle>{editingRate ? 'Edit Exchange Rate' : 'Add Exchange Rate'}</CardTitle>
+            <CardTitle style={{ color: '#0F172A' }}>
+              {editingRate ? 'Edit Exchange Rate' : 'Add Exchange Rate'}
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -179,9 +201,7 @@ export default function ExchangeRates() {
                     value={formData.from_currency}
                     onValueChange={(value) => setFormData({ ...formData, from_currency: value })}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {CURRENCIES.map(curr => (
                         <SelectItem key={curr.code} value={curr.code}>
@@ -198,9 +218,7 @@ export default function ExchangeRates() {
                     value={formData.to_currency}
                     onValueChange={(value) => setFormData({ ...formData, to_currency: value })}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {CURRENCIES.map(curr => (
                         <SelectItem key={curr.code} value={curr.code}>
@@ -227,20 +245,13 @@ export default function ExchangeRates() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => fetchLiveRates.mutate({ 
-                        from: formData.from_currency, 
-                        to: formData.to_currency 
-                      })}
+                      onClick={() => fetchLiveRates.mutate({ from: formData.from_currency, to: formData.to_currency })}
                       disabled={fetchLiveRates.isPending}
                     >
-                      {fetchLiveRates.isPending ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-4 h-4" />
-                      )}
+                      <RefreshCw className={`w-4 h-4 ${fetchLiveRates.isPending ? 'animate-spin' : ''}`} />
                     </Button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 4 }}>
                     1 {formData.from_currency} = {formData.exchange_rate} {formData.to_currency}
                   </p>
                 </div>
@@ -263,9 +274,7 @@ export default function ExchangeRates() {
                     value={formData.rate_type}
                     onValueChange={(value) => setFormData({ ...formData, rate_type: value })}
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="spot">Spot Rate</SelectItem>
                       <SelectItem value="average">Average Rate</SelectItem>
@@ -284,22 +293,18 @@ export default function ExchangeRates() {
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 pt-4">
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, paddingTop: 16, borderTop: '1px solid #F1F5F9' }}>
                 <Button
                   type="button"
                   variant="outline"
-                  onClick={() => {
-                    setShowForm(false);
-                    setEditingRate(null);
-                    resetForm();
-                  }}
+                  onClick={() => { setShowForm(false); setEditingRate(null); resetForm(); }}
                 >
                   Cancel
                 </Button>
                 <Button
                   type="submit"
                   disabled={createMutation.isPending || updateMutation.isPending}
-                  className="bg-green-600 hover:bg-green-700"
+                  style={{ background: ACCENT, color: 'white', border: 'none' }}
                 >
                   {editingRate ? 'Update Rate' : 'Add Rate'}
                 </Button>
@@ -309,107 +314,77 @@ export default function ExchangeRates() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Exchange Rates History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <p className="text-center py-8 text-gray-500">Loading exchange rates...</p>
-          ) : rates.length === 0 ? (
-            <div className="text-center py-12">
-              <TrendingUp className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-              <p className="text-gray-500 mb-4">No exchange rates configured</p>
-              <Button onClick={() => setShowForm(true)} variant="outline">
-                Add your first exchange rate
-              </Button>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>From</TableHead>
-                  <TableHead>To</TableHead>
-                  <TableHead>Rate</TableHead>
-                  <TableHead>Effective Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Source</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {rates.map((rate) => (
-                  <TableRow key={rate.id}>
-                    <TableCell className="font-medium">{rate.from_currency}</TableCell>
-                    <TableCell className="font-medium">{rate.to_currency}</TableCell>
-                    <TableCell>
-                      <span className="font-mono text-green-600">
-                        {rate.exchange_rate.toLocaleString(undefined, { 
-                          minimumFractionDigits: 2, 
-                          maximumFractionDigits: 4 
-                        })}
-                      </span>
-                    </TableCell>
-                    <TableCell>{format(new Date(rate.effective_date), 'MMM d, yyyy')}</TableCell>
-                    <TableCell className="capitalize">{rate.rate_type}</TableCell>
-                    <TableCell>{rate.source}</TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(rate)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => deleteMutation.mutate(rate.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+      <ERPTable
+        headers={TABLE_HEADERS}
+        isLoading={isLoading}
+        emptyIcon={TrendingUp}
+        emptyTitle="No exchange rates configured"
+        emptyDesc="Add your first exchange rate to enable multi-currency transactions."
+        emptyAction={<NewBtn onClick={() => setShowForm(true)} label="Add First Rate" />}
+      >
+        {rates.map((rate) => (
+          <ERPTableRow key={rate.id}>
+            <ERPTableCell bold>{rate.from_currency}</ERPTableCell>
+            <ERPTableCell bold>{rate.to_currency}</ERPTableCell>
+            <ERPTableCell right style={{ fontFamily: 'monospace', color: ACCENT, fontWeight: 700 }}>
+              {rate.exchange_rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+            </ERPTableCell>
+            <ERPTableCell muted>
+              {format(new Date(rate.effective_date), 'MMM d, yyyy')}
+            </ERPTableCell>
+            <ERPTableCell muted style={{ textTransform: 'capitalize' }}>{rate.rate_type}</ERPTableCell>
+            <ERPTableCell muted>{rate.source}</ERPTableCell>
+            <ERPTableCell>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <ActionBtn onClick={() => handleEdit(rate)} icon={Pencil} variant="ghost" />
+                <ActionBtn
+                  onClick={() => deleteMutation.mutate(rate.id)}
+                  icon={Trash2}
+                  variant="ghost"
+                  style={{ color: '#EF4444' }}
+                />
+              </div>
+            </ERPTableCell>
+          </ERPTableRow>
+        ))}
+      </ERPTable>
 
       {rates.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Reference</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {activeCurrencies.map(currency => {
-                const latestRate = rates
-                  .filter(r => r.to_currency === currency && r.from_currency === baseCurrency)
-                  .sort((a, b) => new Date(b.effective_date) - new Date(a.effective_date))[0];
-                
-                if (!latestRate) return null;
+        <div style={{ marginTop: 24 }}>
+          <p style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', marginBottom: 12 }}>Quick Reference</p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
+            {activeCurrencies.map(currency => {
+              const latestRate = rates
+                .filter(r => r.to_currency === currency && r.from_currency === baseCurrency)
+                .sort((a, b) => new Date(b.effective_date) - new Date(a.effective_date))[0];
 
-                return (
-                  <div key={currency} className="p-4 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-                    <p className="text-sm text-blue-900 font-semibold">{baseCurrency} → {currency}</p>
-                    <p className="text-2xl font-bold text-blue-900 mt-2">
-                      {latestRate.exchange_rate.toFixed(2)}
-                    </p>
-                    <p className="text-xs text-blue-700 mt-1">
-                      {format(new Date(latestRate.effective_date), 'MMM d')}
-                    </p>
-                  </div>
-                );
-              })}
-            </div>
-          </CardContent>
-        </Card>
+              if (!latestRate) return null;
+
+              return (
+                <div
+                  key={currency}
+                  style={{
+                    background: `${PRIMARY}08`,
+                    border: `1px solid ${PRIMARY}20`,
+                    borderRadius: 10,
+                    padding: '14px 16px',
+                  }}
+                >
+                  <p style={{ fontSize: 12, fontWeight: 600, color: PRIMARY }}>
+                    {baseCurrency} → {currency}
+                  </p>
+                  <p style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', marginTop: 4 }}>
+                    {latestRate.exchange_rate.toFixed(2)}
+                  </p>
+                  <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>
+                    {format(new Date(latestRate.effective_date), 'MMM d')}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
-    </div>
+    </PageShell>
   );
 }

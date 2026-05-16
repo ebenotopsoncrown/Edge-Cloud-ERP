@@ -1,13 +1,44 @@
 import React, { useState } from "react";
 import { Product, InventoryTransaction } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useCompany } from "../components/auth/CompanyContext";
 import ProductForm from "../components/products/ProductForm";
-import { Plus, Package } from "lucide-react";
+import { Plus, Package, AlertTriangle, TrendingUp, DollarSign, Layers } from "lucide-react";
 import { formatCurrency } from "../components/shared/FinancialCalculations";
+
+function KpiCard({ title, value, subtitle, icon: Icon, accentColor }) {
+  return (
+    <div style={{
+      background: '#fff',
+      borderRadius: 14,
+      boxShadow: '0 2px 8px rgba(15,43,91,0.06)',
+      border: '1px solid #F1F5F9',
+      padding: '22px 24px',
+      borderTop: `3px solid ${accentColor}`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 8 }}>
+            {title}
+          </p>
+          <p style={{ fontSize: 28, fontWeight: 800, color: '#0F172A', lineHeight: 1 }}>
+            {value}
+          </p>
+          {subtitle && (
+            <p style={{ fontSize: 13, color: '#94A3B8', marginTop: 6 }}>{subtitle}</p>
+          )}
+        </div>
+        <div style={{
+          width: 44, height: 44, borderRadius: 10,
+          background: `${accentColor}18`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+        }}>
+          <Icon size={20} style={{ color: accentColor }} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function InventoryDashboard() {
   const { currentCompany } = useCompany();
@@ -35,28 +66,28 @@ export default function InventoryDashboard() {
   // Calculate inventory metrics for each product
   const inventoryData = products.map(product => {
     const productTransactions = transactions.filter(t => t.product_id === product.id);
-    
+
     // Calculate beginning balance (from opening balance transactions)
     const openingBalance = productTransactions
       .filter(t => t.transaction_type === 'opening_balance')
       .reduce((sum, t) => sum + (t.quantity_in || 0), 0);
-    
+
     // Calculate units sold
     const unitsSold = productTransactions
       .filter(t => t.transaction_type === 'sale')
       .reduce((sum, t) => sum + (t.quantity_out || 0), 0);
-    
+
     // Calculate units purchased
     const unitsPurchased = productTransactions
       .filter(t => t.transaction_type === 'purchase')
       .reduce((sum, t) => sum + (t.quantity_in || 0), 0);
-    
+
     // Quantity on hand
     const quantityOnHand = product.quantity_on_hand || 0;
-    
+
     // Value (Quantity × Cost Price)
     const value = quantityOnHand * (product.cost_price || 0);
-    
+
     return {
       id: product.id,
       itemId: product.sku || product.id.substring(0, 8),
@@ -73,6 +104,8 @@ export default function InventoryDashboard() {
   // Calculate totals
   const totalValue = inventoryData.reduce((sum, item) => sum + item.value, 0);
   const totalQuantity = inventoryData.reduce((sum, item) => sum + item.quantityOnHand, 0);
+  const lowStockItems = inventoryData.filter(item => item.quantityOnHand > 0 && item.quantityOnHand < 5).length;
+  const zeroStockItems = inventoryData.filter(item => item.quantityOnHand <= 0).length;
 
   const handleRowClick = (product) => {
     setSelectedProduct(product);
@@ -82,7 +115,7 @@ export default function InventoryDashboard() {
   const baseCurrency = currentCompany?.base_currency || 'USD';
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50">
+    <div style={{ padding: '28px 32px', background: '#F5F7FA', minHeight: '100%' }}>
       {showProductForm && (
         <ProductForm
           product={selectedProduct}
@@ -93,121 +126,199 @@ export default function InventoryDashboard() {
         />
       )}
 
-      <div className="flex items-center justify-between">
+      {/* Page Header */}
+      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Inventory</h1>
-          <p className="text-gray-500 mt-1">Setup / Maintain</p>
+          <h1 style={{ fontSize: 24, fontWeight: 800, color: '#0F172A', letterSpacing: '-0.025em', margin: 0 }}>
+            Inventory
+          </h1>
+          <p style={{ fontSize: 14, color: '#64748B', marginTop: 4 }}>
+            Setup / Maintain — <strong>{currentCompany?.company_name}</strong>
+          </p>
         </div>
-        <Button
+        <button
           onClick={() => {
             setSelectedProduct(null);
             setShowProductForm(true);
           }}
-          className="bg-blue-600 hover:bg-blue-700"
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            padding: '10px 20px', borderRadius: 10, fontSize: 14, fontWeight: 600,
+            background: '#1B4F8A', color: '#fff', border: 'none', cursor: 'pointer',
+            boxShadow: '0 2px 6px rgba(27,79,138,0.3)', transition: 'opacity 0.15s'
+          }}
         >
-          <Plus className="w-4 h-4 mr-2" />
-          New Inventory Item
-        </Button>
+          <Plus size={16} /> New Inventory Item
+        </button>
+      </div>
+
+      {/* KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 24 }}>
+        <KpiCard
+          title="Total Products"
+          value={inventoryData.length}
+          subtitle="Inventory items"
+          icon={Layers}
+          accentColor="#1B4F8A"
+        />
+        <KpiCard
+          title="Stock Value"
+          value={formatCurrency(totalValue, baseCurrency)}
+          subtitle={`${totalQuantity.toFixed(0)} total units`}
+          icon={DollarSign}
+          accentColor="#00A86B"
+        />
+        <KpiCard
+          title="Low Stock"
+          value={lowStockItems}
+          subtitle="Items below threshold"
+          icon={AlertTriangle}
+          accentColor="#F59E0B"
+        />
+        <KpiCard
+          title="Out of Stock"
+          value={zeroStockItems}
+          subtitle="Items at zero"
+          icon={TrendingUp}
+          accentColor="#EF4444"
+        />
       </div>
 
       {/* Main Inventory Table */}
-      <Card className="shadow-md border-none">
-        <CardHeader className="border-b bg-gray-50">
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
-              <Package className="w-5 h-5 text-blue-600" />
-              Inventory Items
-            </CardTitle>
-            <div className="text-sm text-gray-600">
-              <span className="font-semibold">Total Value:</span> {formatCurrency(totalValue, baseCurrency)} | 
-              <span className="font-semibold ml-3">Total Units:</span> {totalQuantity.toFixed(2)}
+      <div style={{
+        background: '#fff', borderRadius: 14,
+        boxShadow: '0 2px 8px rgba(15,43,91,0.06)',
+        border: '1px solid #F1F5F9', overflow: 'hidden', marginBottom: 20
+      }}>
+        {/* Table Header */}
+        <div style={{
+          padding: '18px 24px',
+          borderBottom: '1px solid #F1F5F9',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          background: '#FAFBFC'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 8, background: '#EFF6FF',
+              display: 'flex', alignItems: 'center', justifyContent: 'center'
+            }}>
+              <Package size={18} style={{ color: '#1B4F8A' }} />
             </div>
+            <p style={{ fontSize: 15, fontWeight: 700, color: '#0F172A' }}>Inventory Items</p>
           </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-gray-100 hover:bg-gray-100">
-                  <TableHead className="font-bold">Item ID</TableHead>
-                  <TableHead className="font-bold">Description</TableHead>
-                  <TableHead className="font-bold text-right">Beginning Balance</TableHead>
-                  <TableHead className="font-bold text-right">No. Units Sold</TableHead>
-                  <TableHead className="font-bold text-right">No. Units Purchased</TableHead>
-                  <TableHead className="font-bold text-right">Qty on Hand</TableHead>
-                  <TableHead className="font-bold text-right">Value ({baseCurrency})</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inventoryData.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12 text-gray-500">
-                      <Package className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                      <p className="font-semibold">No inventory items yet</p>
-                      <p className="text-sm mt-1">Click "New Inventory Item" to create your first item</p>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  inventoryData.map((item) => (
-                    <TableRow 
+          <div style={{ fontSize: 13, color: '#64748B', display: 'flex', gap: 20 }}>
+            <span><strong style={{ color: '#0F172A' }}>Total Value:</strong> {formatCurrency(totalValue, baseCurrency)}</span>
+            <span><strong style={{ color: '#0F172A' }}>Total Units:</strong> {totalQuantity.toFixed(2)}</span>
+          </div>
+        </div>
+
+        {/* Table */}
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ background: '#F8FAFC' }}>
+                {['Item ID', 'Description', 'Beginning Balance', 'Units Sold', 'Units Purchased', 'Qty on Hand', `Value (${baseCurrency})`].map((col, i) => (
+                  <th
+                    key={col}
+                    style={{
+                      padding: '11px 16px', fontSize: 12, fontWeight: 700,
+                      color: '#475569', textTransform: 'uppercase', letterSpacing: '0.04em',
+                      textAlign: i >= 2 ? 'right' : 'left',
+                      borderBottom: '1px solid #E2E8F0', whiteSpace: 'nowrap'
+                    }}
+                  >
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {inventoryData.length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: 'center', padding: '48px 24px', color: '#94A3B8' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                      <Package size={40} style={{ color: '#CBD5E1' }} />
+                      <p style={{ fontWeight: 600, color: '#64748B' }}>No inventory items yet</p>
+                      <p style={{ fontSize: 13 }}>Click "New Inventory Item" to create your first item</p>
+                    </div>
+                  </td>
+                </tr>
+              ) : (
+                inventoryData.map((item, i) => {
+                  const qtyColor = item.quantityOnHand < 0 ? '#EF4444'
+                    : item.quantityOnHand === 0 ? '#94A3B8'
+                    : '#0F172A';
+                  return (
+                    <tr
                       key={item.id}
-                      className="hover:bg-blue-50 cursor-pointer transition-colors"
                       onClick={() => {
                         const product = products.find(p => p.id === item.id);
                         handleRowClick(product);
                       }}
+                      style={{
+                        cursor: 'pointer',
+                        borderBottom: '1px solid #F1F5F9',
+                        transition: 'background 0.12s',
+                      }}
+                      onMouseEnter={e => e.currentTarget.style.background = '#EFF6FF'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      <TableCell className="font-mono text-blue-600 hover:underline">
+                      <td style={{ padding: '13px 16px', fontSize: 13, fontFamily: 'monospace', color: '#1B4F8A', fontWeight: 600 }}>
                         {item.itemId}
-                      </TableCell>
-                      <TableCell className="font-medium">{item.description}</TableCell>
-                      <TableCell className="text-right">{item.beginningBalance.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{item.unitsSold.toFixed(2)}</TableCell>
-                      <TableCell className="text-right">{item.unitsPurchased.toFixed(2)}</TableCell>
-                      <TableCell className={`text-right font-semibold ${
-                        item.quantityOnHand < 0 ? 'text-red-600' : 
-                        item.quantityOnHand === 0 ? 'text-gray-500' : 
-                        'text-gray-900'
-                      }`}>
+                      </td>
+                      <td style={{ padding: '13px 16px', fontSize: 13, fontWeight: 600, color: '#0F172A' }}>
+                        {item.description}
+                      </td>
+                      <td style={{ padding: '13px 16px', fontSize: 13, textAlign: 'right', color: '#374151' }}>
+                        {item.beginningBalance.toFixed(2)}
+                      </td>
+                      <td style={{ padding: '13px 16px', fontSize: 13, textAlign: 'right', color: '#374151' }}>
+                        {item.unitsSold.toFixed(2)}
+                      </td>
+                      <td style={{ padding: '13px 16px', fontSize: 13, textAlign: 'right', color: '#374151' }}>
+                        {item.unitsPurchased.toFixed(2)}
+                      </td>
+                      <td style={{ padding: '13px 16px', fontSize: 13, textAlign: 'right', fontWeight: 700, color: qtyColor }}>
                         {item.quantityOnHand.toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right font-semibold">
+                      </td>
+                      <td style={{ padding: '13px 16px', fontSize: 13, textAlign: 'right', fontWeight: 700, color: '#0F172A' }}>
                         {formatCurrency(item.value, baseCurrency)}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-              {inventoryData.length > 0 && (
-                <TableBody>
-                  <TableRow className="bg-gray-100 font-bold hover:bg-gray-100">
-                    <TableCell colSpan={6} className="text-right">TOTAL:</TableCell>
-                    <TableCell className="text-right text-blue-700">
-                      {formatCurrency(totalValue, baseCurrency)}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+            </tbody>
+            {inventoryData.length > 0 && (
+              <tfoot>
+                <tr style={{ background: '#F0F4FA', borderTop: '2px solid #E2E8F0' }}>
+                  <td colSpan={6} style={{ padding: '13px 16px', fontSize: 13, fontWeight: 700, color: '#374151', textAlign: 'right', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                    Total
+                  </td>
+                  <td style={{ padding: '13px 16px', fontSize: 14, fontWeight: 800, color: '#1B4F8A', textAlign: 'right' }}>
+                    {formatCurrency(totalValue, baseCurrency)}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
+          </table>
+        </div>
+      </div>
 
-      {/* Summary Information */}
-      <Card className="border-blue-200 bg-blue-50">
-        <CardContent className="p-4">
-          <div className="flex items-center gap-3 text-sm text-blue-900">
-            <Package className="w-5 h-5" />
-            <div>
-              <p className="font-semibold">Inventory Summary</p>
-              <p className="text-xs mt-1">
-                This table shows real-time inventory movements. Value is calculated as Quantity × Cost Price. 
-                Click any row to view or edit item details.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Info Banner */}
+      <div style={{
+        background: '#EFF6FF', borderRadius: 12,
+        border: '1px solid #BFDBFE', padding: '14px 20px',
+        display: 'flex', gap: 12, alignItems: 'center'
+      }}>
+        <Package size={18} style={{ color: '#1B4F8A', flexShrink: 0 }} />
+        <div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#1E3A5F' }}>Inventory Summary</p>
+          <p style={{ fontSize: 12, color: '#2563EB', marginTop: 2 }}>
+            Real-time inventory movements. Value is calculated as Quantity x Cost Price. Click any row to view or edit item details.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

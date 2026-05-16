@@ -1,261 +1,140 @@
 import React, { useState } from "react";
 import { Product } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Plus, Search, Package, Pencil, AlertTriangle, Trash2 } from "lucide-react";
+import { Package, Pencil, Trash2, AlertTriangle, DollarSign, Boxes } from "lucide-react";
 import ProductForm from "../components/products/ProductForm";
 import { useCompany } from "../components/auth/CompanyContext";
+import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn, FilterSelect } from "../components/shared/PageShell";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
-// CRITICAL FIX: Currency symbol function
-const getCurrencySymbol = (currencyCode) => {
-  const symbols = {
-    'USD': '$',
-    'EUR': '€',
-    'GBP': '£',
-    'NGN': '₦',
-    'ZAR': 'R',
-    'KES': 'KSh',
-    'GHS': '₵',
-    'CAD': 'C$',
-    'AUD': 'A$',
-    'INR': '₹',
-    'JPY': '¥',
-    'CNY': '¥'
-  };
-  return symbols[currencyCode] || currencyCode;
-};
+const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const currencySymbol = code => ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
 export default function Products() {
-  const [showForm, setShowForm] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState(null);
-
+  const [showForm, setShowForm]     = useState(false);
+  const [editing, setEditing]       = useState(null);
+  const [search, setSearch]         = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [toDelete, setToDelete]     = useState(null);
   const queryClient = useQueryClient();
   const { currentCompany } = useCompany();
+  const sym = currencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', currentCompany?.id],
-    queryFn: () => currentCompany ? Product.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_date', ascending: false }) : Promise.resolve([]),
-    enabled: !!currentCompany
+    queryFn: () => currentCompany ? Product.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_date', ascending: false }) : [],
+    enabled: !!currentCompany,
   });
-
-  // CRITICAL: Get base currency
-  const baseCurrency = currentCompany?.base_currency || 'USD';
-  const currencySymbol = getCurrencySymbol(baseCurrency);
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => Product.delete(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries(['products']);
-      setDeleteDialogOpen(false);
-      setProductToDelete(null);
-    }
+    mutationFn: id => Product.delete(id),
+    onSuccess: () => { queryClient.invalidateQueries(['products']); setDeleteOpen(false); setToDelete(null); },
   });
 
-  const filteredProducts = products.filter(product =>
-    product.product_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.sku?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filtered = products.filter(p => {
+    const matchSearch = !search || p.product_name?.toLowerCase().includes(search.toLowerCase()) || p.sku?.toLowerCase().includes(search.toLowerCase());
+    const matchType = typeFilter === 'all' || p.product_type === typeFilter;
+    return matchSearch && matchType;
+  });
 
-  const handleEdit = (product) => {
-    setEditingProduct(product);
-    setShowForm(true);
-  };
+  const inventoryProducts = products.filter(p => p.product_type === 'inventory');
+  const lowStock          = inventoryProducts.filter(p => p.quantity_on_hand <= p.reorder_level).length;
+  const totalValue        = inventoryProducts.reduce((s, p) => s + (p.quantity_on_hand || 0) * (p.cost_price || 0), 0);
 
-  const handleDelete = (product) => {
-    setProductToDelete(product);
-    setDeleteDialogOpen(true);
-  };
+  const TABLE_HEADERS = [
+    { label: 'SKU' }, { label: 'Product Name' }, { label: 'Type' },
+    { label: `Unit Price (${currentCompany?.base_currency || 'USD'})`, right: true },
+    { label: `Cost Price`, right: true }, { label: 'Stock' }, { label: 'Status' }, { label: 'Actions' },
+  ];
 
-  const confirmDelete = () => {
-    if (productToDelete) {
-      deleteMutation.mutate(productToDelete.id);
-    }
-  };
-
-  const handleFormClose = () => {
-    setShowForm(false);
-    setEditingProduct(null);
-  };
+  const typeLabel = t => (t || '').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Products & Inventory</h1>
-          <p className="text-gray-500 mt-1">Manage your product catalog and stock levels</p>
-          <p className="text-sm text-blue-600 font-semibold mt-1">
-            💰 All prices shown in {baseCurrency} ({currencySymbol})
-          </p>
-        </div>
-        <Button 
-          onClick={() => setShowForm(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Product
-        </Button>
-      </div>
+    <PageShell>
+      {showForm && <ProductForm product={editing} onClose={() => { setShowForm(false); setEditing(null); }} />}
 
-      {showForm && (
-        <ProductForm
-          product={editingProduct}
-          onClose={handleFormClose}
-        />
-      )}
-
-      <Card className="p-6">
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <Input
-              placeholder="Search products by name or SKU..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>SKU</TableHead>
-                <TableHead>Product Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Unit Price ({baseCurrency})</TableHead>
-                <TableHead>Cost Price ({baseCurrency})</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-gray-500">
-                    Loading products...
-                  </TableCell>
-                </TableRow>
-              ) : filteredProducts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
-                    <Package className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-                    <p className="text-gray-500">No products found</p>
-                    <Button 
-                      onClick={() => setShowForm(true)}
-                      variant="outline"
-                      className="mt-3"
-                    >
-                      Add your first product
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ) : (
-                filteredProducts.map((product) => (
-                  <TableRow key={product.id} className="hover:bg-gray-50">
-                    <TableCell className="font-medium">{product.sku}</TableCell>
-                    <TableCell>{product.product_name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {product.product_type?.replace(/_/g, ' ')}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="font-semibold text-green-600">
-                      {currencySymbol}{product.unit_price?.toFixed(2)}
-                    </TableCell>
-                    <TableCell>{currencySymbol}{product.cost_price?.toFixed(2)}</TableCell>
-                    <TableCell>
-                      {product.product_type === 'inventory' ? (
-                        <div className="flex items-center gap-2">
-                          <span className={
-                            product.quantity_on_hand <= product.reorder_level 
-                              ? "font-semibold text-red-600" 
-                              : "font-semibold"
-                          }>
-                            {product.quantity_on_hand}
-                          </span>
-                          {product.quantity_on_hand <= product.reorder_level && (
-                            <AlertTriangle className="w-4 h-4 text-red-500" />
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-gray-400">N/A</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={product.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                        {product.is_active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleEdit(product)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleDelete(product)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+      <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete Product</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete "{productToDelete?.product_name}"? 
-              This action cannot be undone.
-            </AlertDialogDescription>
+            <AlertDialogTitle>Delete Product?</AlertDialogTitle>
+            <AlertDialogDescription>This will permanently delete <strong>{toDelete?.product_name}</strong>. This action cannot be undone.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => deleteMutation.mutate(toDelete?.id)} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+
+      <PageHeader
+        title="Products & Inventory"
+        subtitle={`${products.length} products · ${inventoryProducts.length} inventory items`}
+        icon={Package}
+        accentColor="#00A86B"
+        actions={<NewBtn onClick={() => { setEditing(null); setShowForm(true); }} label="New Product" />}
+      />
+
+      <StatBar stats={[
+        { label: 'Total Products', value: products.length,        icon: Package,       color: '#1B4F8A' },
+        { label: 'Inventory Items',value: inventoryProducts.length, icon: Boxes,        color: '#00A86B' },
+        { label: 'Low Stock',      value: lowStock,               icon: AlertTriangle, color: '#EF4444' },
+        { label: 'Inventory Value',value: fmt(totalValue, sym),   icon: DollarSign,    color: '#F59E0B' },
+      ]} />
+
+      <SearchBar value={search} onChange={setSearch} placeholder="Search by name or SKU…">
+        <FilterSelect
+          value={typeFilter}
+          onChange={setTypeFilter}
+          options={[
+            { value: 'all', label: 'All Types' },
+            { value: 'inventory', label: 'Inventory' },
+            { value: 'service', label: 'Service' },
+            { value: 'non_inventory', label: 'Non-Inventory' },
+          ]}
+        />
+      </SearchBar>
+
+      <ERPTable headers={TABLE_HEADERS} emptyIcon={Package} emptyTitle="No products yet" emptyDesc="Add your first product to start managing inventory.">
+        {filtered.map(p => {
+          const isLow = p.product_type === 'inventory' && p.quantity_on_hand <= p.reorder_level;
+          return (
+            <ERPTableRow key={p.id} highlight={isLow}>
+              <ERPTableCell muted style={{ fontFamily: 'monospace', fontSize: 12.5 }}>{p.sku}</ERPTableCell>
+              <ERPTableCell bold>{p.product_name}</ERPTableCell>
+              <ERPTableCell>
+                <span style={{ display: 'inline-flex', padding: '2px 8px', borderRadius: 99, fontSize: 11.5, fontWeight: 600, background: '#EBF4FB', color: '#1B4F8A' }}>
+                  {typeLabel(p.product_type)}
+                </span>
+              </ERPTableCell>
+              <ERPTableCell right style={{ color: '#00875A', fontWeight: 700 }}>{fmt(p.unit_price, sym)}</ERPTableCell>
+              <ERPTableCell right>{fmt(p.cost_price, sym)}</ERPTableCell>
+              <ERPTableCell>
+                {p.product_type === 'inventory' ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <span style={{ fontWeight: 700, color: isLow ? '#EF4444' : '#0F172A' }}>{p.quantity_on_hand}</span>
+                    {isLow && (
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 7px', background: '#FEF2F2', color: '#DC2626', borderRadius: 99, fontSize: 10.5, fontWeight: 700 }}>
+                        <AlertTriangle style={{ width: 10, height: 10 }} /> Low
+                      </span>
+                    )}
+                  </div>
+                ) : <span style={{ color: '#CBD5E1' }}>N/A</span>}
+              </ERPTableCell>
+              <ERPTableCell><StatusBadge status={p.is_active ? 'active' : 'inactive'} /></ERPTableCell>
+              <ERPTableCell>
+                <div style={{ display: 'flex', gap: 6 }} onClick={e => e.stopPropagation()}>
+                  <ActionBtn onClick={() => { setEditing(p); setShowForm(true); }} icon={Pencil} variant="outline" />
+                  <ActionBtn onClick={() => { setToDelete(p); setDeleteOpen(true); }} icon={Trash2} danger />
+                </div>
+              </ERPTableCell>
+            </ERPTableRow>
+          );
+        })}
+      </ERPTable>
+    </PageShell>
   );
 }
