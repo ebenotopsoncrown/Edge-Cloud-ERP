@@ -55,12 +55,9 @@ export function CompanyProvider({ children }) {
         }
       }
 
-      // Auto-select if only one company exists
-      if (accessibleCompanies.length === 1) {
-        setCurrentCompany(accessibleCompanies[0]);
-        sessionStorage.setItem('current_company_id', accessibleCompanies[0].id);
-      }
-
+      // Auto-select the first company if no valid stored selection
+      setCurrentCompany(accessibleCompanies[0]);
+      sessionStorage.setItem('current_company_id', accessibleCompanies[0].id);
       setIsLoadingCompany(false);
     } else {
       const timer = setTimeout(() => setIsLoadingCompany(false), 5000);

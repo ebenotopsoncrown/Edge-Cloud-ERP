@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "../api/supabaseClient";
 import Login from "./Login";
+import LandingPage from "./LandingPage";
 import Layout from "./Layout.jsx";
 
 import Dashboard from "./Dashboard";
@@ -124,17 +125,16 @@ function _getCurrentPage(url) {
 }
 
 // ─── Auth Guard ───────────────────────────────────────────────────────────────
-// Wraps the entire app — shows Login if not authenticated, app if authenticated
+// Unauthenticated visitors see LandingPage first, then Login on demand
 function AuthGuard({ children }) {
     const [user, setUser] = useState(undefined); // undefined = still checking
+    const [showLogin, setShowLogin] = useState(false);
 
     useEffect(() => {
-        // Check if user is already logged in
         supabase.auth.getSession().then(({ data: { session } }) => {
             setUser(session?.user ?? null);
         });
 
-        // Listen for login/logout events
         const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
             setUser(session?.user ?? null);
         });
@@ -157,9 +157,12 @@ function AuthGuard({ children }) {
         );
     }
 
-    // Not logged in — show Login page
+    // Not logged in — show Landing page, or Login if they clicked Sign In
     if (!user) {
-        return <Login />;
+        if (showLogin) {
+            return <Login onBack={() => setShowLogin(false)} />;
+        }
+        return <LandingPage onSignIn={() => setShowLogin(true)} />;
     }
 
     // Logged in — show the app
