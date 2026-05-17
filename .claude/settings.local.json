@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(node resolve_conflicts.mjs src/api/entities.js src/api/integrations.js src/api/supabaseClient.js src/App.jsx src/components/accounts/AccountForm.jsx src/components/auth/CompanyContext.jsx src/components/auth/CompanySelector.jsx src/components/auth/LandingPage.jsx src/components/bills/BillForm.jsx src/components/customers/CustomerForm.jsx src/components/fixedAssets/FixedAssetForm.jsx src/components/import/ImportChartOfAccounts.jsx src/components/import/ImportCustomers.jsx src/components/import/ImportProducts.jsx src/components/import/ImportVendors.jsx src/components/inventory/ReceiveInventoryForm.jsx src/components/invoices/InvoiceForm.jsx src/components/jobCosting/CostCodeForm.jsx src/components/jobCosting/JobCostForm.jsx src/components/jobCosting/JobForm.jsx src/components/jobCosting/JobPhaseForm.jsx src/components/manufacturing/BOMForm.jsx src/components/manufacturing/WorkOrderForm.jsx src/components/products/ProductForm.jsx src/components/purchaseOrders/PurchaseOrderForm.jsx src/components/purchases/BillPaymentForm.jsx src/components/reports/AccountLedger.jsx src/components/reports/TransactionDetails.jsx src/components/sales/SalesReturnForm.jsx src/components/setup/CompanySetupWizard.jsx src/components/shared/ActiveUsersWidget.jsx src/components/shared/RealtimeNotifications.jsx src/components/shared/RecordLockManager.jsx src/components/vendors/VendorForm.jsx)",
+      "Bash(node resolve_conflicts.mjs src/pages/AccountingDashboard.jsx src/pages/AccountingDemo.jsx src/pages/AuditTrail.jsx src/pages/Banking.jsx src/pages/Bills.jsx src/pages/ChartOfAccounts.jsx src/pages/CompanyManagement.jsx src/pages/Customers.jsx src/pages/DeploymentGuide.jsx src/pages/EvaluationSignup.jsx src/pages/ExchangeRates.jsx src/pages/FixedAssets.jsx src/pages/FixedAssetsDashboard.jsx src/pages/FXRevaluation.jsx src/pages/index.jsx src/pages/InventoryDashboard.jsx src/pages/InventoryLocationManagement.jsx src/pages/InventoryReports.jsx src/pages/Invoices.jsx src/pages/JobCosting.jsx src/pages/JobCostingDashboard.jsx src/pages/JournalEntries.jsx src/pages/LicenseManagement.jsx src/pages/LicensingGuide.jsx src/pages/LockManagement.jsx src/pages/ManagementDashboard.jsx src/pages/Manufacturing.jsx src/pages/ManufacturingDashboard.jsx src/pages/MultiTenancyGuide.jsx src/pages/NonProfitDashboard.jsx src/pages/Payments.jsx src/pages/Payroll.jsx src/pages/PayrollDashboard.jsx src/pages/POS.jsx src/pages/POSReports.jsx src/pages/Products.jsx src/pages/PurchaseDashboard.jsx src/pages/PurchaseOrders.jsx src/pages/ReceiveInventory.jsx src/pages/Reports.jsx src/pages/SalesDashboard.jsx src/pages/SalesReturns.jsx src/pages/Settings.jsx src/pages/SetupSuperAdmin.jsx src/pages/StoreManagement.jsx src/pages/UpgradeSubscription.jsx src/pages/UserManagement.jsx src/pages/Vendors.jsx)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)",
+      "Read(//c/Projects/**)",
+      "Bash(npm create *)",
+      "Bash(npm install *)",
+      "Bash(git init *)"
+    ]
+  }
+}
