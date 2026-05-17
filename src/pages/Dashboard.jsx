@@ -24,7 +24,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 
 // ── Brand colors ────────────────────────────────────────────
-const PRIMARY   = '#1B4F8A';
+const PRIMARY   = '#2E7DE8';
 const ACCENT    = '#00A86B';
 const COLORS    = [PRIMARY, ACCENT, '#F59E0B', '#EF4444', '#8B5CF6'];
 
@@ -58,13 +58,13 @@ function KPICard({ title, value, subtitle, icon: Icon, accentColor = PRIMARY, tr
       onClick={onClick}
       style={{
         background: 'white', borderRadius: 14, padding: '22px 24px',
-        boxShadow: '0 2px 8px rgba(15,43,91,0.06), 0 0 1px rgba(15,43,91,0.08)',
-        border: '1px solid #F1F5F9', cursor: onClick ? 'pointer' : 'default',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+        border: '1px solid #E8EDF5', cursor: onClick ? 'pointer' : 'default',
         transition: 'transform 200ms, box-shadow 200ms', position: 'relative',
         overflow: 'hidden',
       }}
-      onMouseEnter={e => { if (onClick) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 10px 24px rgba(15,43,91,0.12)'; }}}
-      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 8px rgba(15,43,91,0.06), 0 0 1px rgba(15,43,91,0.08)'; }}
+      onMouseEnter={e => { if (onClick) { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 24px rgba(0,0,0,0.08)'; }}}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'; }}
     >
       {/* Top accent bar */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: accentColor }} />
@@ -109,7 +109,7 @@ function KPICard({ title, value, subtitle, icon: Icon, accentColor = PRIMARY, tr
 function StatusBadge({ status }) {
   const cfg = {
     paid:      { bg: '#E6F9F2', color: '#00875A', label: 'Paid' },
-    sent:      { bg: '#EBF4FB', color: '#1B4F8A', label: 'Sent' },
+    sent:      { bg: '#DBEAFE', color: '#2563EB', label: 'Sent' },
     overdue:   { bg: '#FEF2F2', color: '#DC2626', label: 'Overdue' },
     draft:     { bg: '#F8FAFC', color: '#64748B', label: 'Draft' },
     partial:   { bg: '#FEF3C7', color: '#B45309', label: 'Partial' },
@@ -133,7 +133,7 @@ function SectionHeader({ title, icon: Icon, action, actionUrl }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <div style={{ width: 28, height: 28, background: '#EBF4FB', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ width: 28, height: 28, background: '#EFF6FF', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <Icon style={{ width: 14, height: 14, color: PRIMARY }} />
         </div>
         <h2 style={{ fontSize: 14.5, fontWeight: 700, color: '#0F172A' }}>{title}</h2>
@@ -156,9 +156,9 @@ function SectionHeader({ title, icon: Icon, action, actionUrl }) {
 function Card({ children, style = {} }) {
   return (
     <div style={{
-      background: 'white', borderRadius: 14, padding: 24,
-      boxShadow: '0 2px 8px rgba(15,43,91,0.06), 0 0 1px rgba(15,43,91,0.08)',
-      border: '1px solid #F1F5F9', ...style,
+      background: 'white', borderRadius: 12, padding: 24,
+      boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+      border: '1px solid #E8EDF5', ...style,
     }}>
       {children}
     </div>
@@ -220,11 +220,11 @@ export default function Dashboard() {
         title="Financial Dashboard"
         subtitle={`Welcome back · ${currentCompany.company_name} · ${today}`}
         icon={DollarSign}
-        accentColor="#1B4F8A"
+        accentColor="#2E7DE8"
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <Link to={createPageUrl("Invoices")}>
-              <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', background: '#EBF4FB', color: PRIMARY, border: '1.5px solid #AED6F1', borderRadius: 9, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
+              <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', background: '#EFF6FF', color: PRIMARY, border: '1px solid #BFDBFE', borderRadius: 8, fontSize: 13.5, fontWeight: 600, cursor: 'pointer' }}>
                 <FileText style={{ width: 15, height: 15 }} /> New Invoice
               </button>
             </Link>
@@ -421,7 +421,7 @@ export default function Dashboard() {
             color: '#8B5CF6',
           },
         ].map(({ label, value, icon: Icon, color }) => (
-          <div key={label} style={{ background: 'white', borderRadius: 12, padding: '18px 20px', border: '1px solid #F1F5F9', boxShadow: '0 1px 4px rgba(15,43,91,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div key={label} style={{ background: 'white', borderRadius: 12, padding: '18px 20px', border: '1px solid #E8EDF5', boxShadow: '0 1px 3px rgba(0,0,0,0.04)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
               <p style={{ fontSize: 12, color: '#94A3B8', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</p>
               <p style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', marginTop: 4, letterSpacing: '-0.02em' }}>{value}</p>
@@ -447,13 +447,13 @@ export default function Dashboard() {
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '11px 14px', marginBottom: 4, borderRadius: 10, cursor: 'pointer',
                   background: idx % 2 === 0 ? '#F8FAFC' : 'white',
-                  border: '1px solid #F1F5F9', transition: 'all 150ms',
+                  border: '1px solid #E8EDF5', transition: 'all 150ms',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#EBF4FB'; e.currentTarget.style.borderColor = '#AED6F1'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = idx % 2 === 0 ? '#F8FAFC' : 'white'; e.currentTarget.style.borderColor = '#F1F5F9'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#EFF6FF'; e.currentTarget.style.borderColor = '#BFDBFE'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = idx % 2 === 0 ? '#F8FAFC' : 'white'; e.currentTarget.style.borderColor = '#E8EDF5'; }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <div style={{ width: 32, height: 32, background: '#EBF4FB', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <div style={{ width: 32, height: 32, background: '#EFF6FF', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                     <FileText style={{ width: 14, height: 14, color: PRIMARY }} />
                   </div>
                   <div>
@@ -488,10 +488,10 @@ export default function Dashboard() {
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '11px 14px', marginBottom: 4, borderRadius: 10, cursor: 'pointer',
                   background: idx % 2 === 0 ? '#F8FAFC' : 'white',
-                  border: '1px solid #F1F5F9', transition: 'all 150ms',
+                  border: '1px solid #E8EDF5', transition: 'all 150ms',
                 }}
-                onMouseEnter={e => { e.currentTarget.style.background = '#FEF3C7'; e.currentTarget.style.borderColor = '#FCD34D'; }}
-                onMouseLeave={e => { e.currentTarget.style.background = idx % 2 === 0 ? '#F8FAFC' : 'white'; e.currentTarget.style.borderColor = '#F1F5F9'; }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#FFFBEB'; e.currentTarget.style.borderColor = '#FDE68A'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = idx % 2 === 0 ? '#F8FAFC' : 'white'; e.currentTarget.style.borderColor = '#E8EDF5'; }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 32, height: 32, background: '#FEF3C7', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>

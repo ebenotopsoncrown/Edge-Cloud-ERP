@@ -5,7 +5,7 @@ module.exports = {
   theme: {
   	extend: {
   		fontFamily: {
-  			sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
+  			sans: ['DM Sans', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'sans-serif'],
   		},
   		borderRadius: {
   			lg: 'var(--radius)',
@@ -28,13 +28,13 @@ module.exports = {
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
   				foreground: 'hsl(var(--primary-foreground))',
-  				50:  '#EBF4FB',
-  				100: '#D6EAF8',
-  				200: '#AED6F1',
-  				500: '#2E86C1',
-  				600: '#1B4F8A',
-  				700: '#1A5276',
-  				800: '#0F2B5B',
+  				50:  '#EFF6FF',
+  				100: '#DBEAFE',
+  				200: '#BFDBFE',
+  				500: '#60A5FA',
+  				600: '#2E7DE8',
+  				700: '#1E3A5F',
+  				800: '#163354',
   			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
@@ -62,8 +62,8 @@ module.exports = {
   			ring: 'hsl(var(--ring))',
   			// Brand colors as utilities
   			brand: {
-  				primary: '#1B4F8A',
-  				'primary-dark': '#0F2B5B',
+  				primary: '#2E7DE8',
+  				'primary-dark': '#163354',
   				accent: '#00A86B',
   				'accent-dark': '#00875A',
   			},
@@ -86,9 +86,9 @@ module.exports = {
   			}
   		},
   		boxShadow: {
-  			card:  '0 2px 8px rgba(15,43,91,0.06), 0 0 1px rgba(15,43,91,0.08)',
-  			'card-lg': '0 10px 24px rgba(15,43,91,0.10)',
-  			brand: '0 4px 14px rgba(27,79,138,0.25)',
+  			card:  '0 1px 3px rgba(0,0,0,0.04), 0 0 0 1px rgba(0,0,0,0.03)',
+  			'card-lg': '0 8px 24px rgba(0,0,0,0.08)',
+  			brand: '0 4px 14px rgba(46,125,232,0.25)',
   		},
   		keyframes: {
   			'accordion-down': {

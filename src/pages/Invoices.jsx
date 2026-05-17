@@ -62,7 +62,7 @@ export default function Invoices() {
       />
 
       <StatBar stats={[
-        { label: 'Total Invoiced', value: fmt(totalAmt, sym), icon: DollarSign, color: '#1B4F8A' },
+        { label: 'Total Invoiced', value: fmt(totalAmt, sym), icon: DollarSign, color: '#2E7DE8' },
         { label: 'Collected',      value: fmt(totalPaid, sym), icon: CheckCircle, color: '#00A86B' },
         { label: 'AR Balance',     value: fmt(totalAR, sym), icon: Clock, color: '#F59E0B' },
         { label: 'Overdue',        value: overdue, icon: AlertCircle, color: '#EF4444' },
@@ -87,7 +87,7 @@ export default function Invoices() {
 
       {isLoading ? (
         <div style={{ textAlign: 'center', padding: '48px', color: '#94A3B8' }}>
-          <div style={{ width: 36, height: 36, border: '3px solid #E2E8F0', borderTopColor: '#1B4F8A', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 12px' }} />
+          <div style={{ width: 36, height: 36, border: '3px solid #E2E8F0', borderTopColor: '#2E7DE8', borderRadius: '50%', animation: 'spin 0.7s linear infinite', margin: '0 auto 12px' }} />
           Loading invoices…
           <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
         </div>
@@ -95,7 +95,7 @@ export default function Invoices() {
         <ERPTable headers={TABLE_HEADERS} emptyIcon={FileText} emptyTitle="No invoices yet" emptyDesc="Click 'New Invoice' to create your first invoice.">
           {filtered.map(inv => (
             <ERPTableRow key={inv.id} onClick={() => open(inv)}>
-              <ERPTableCell bold style={{ color: '#1B4F8A' }}>{inv.invoice_number}</ERPTableCell>
+              <ERPTableCell bold style={{ color: '#2E7DE8' }}>{inv.invoice_number}</ERPTableCell>
               <ERPTableCell bold>{inv.customer_name}</ERPTableCell>
               <ERPTableCell muted>{fmtDate(inv.invoice_date)}</ERPTableCell>
               <ERPTableCell muted>{fmtDate(inv.due_date)}</ERPTableCell>

@@ -197,7 +197,7 @@ const navigationGroups = [
 // ── Loading screen ──────────────────────────────────────────
 function LoadingScreen() {
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F0F4F8' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F1F5FB' }}>
       <div className="text-center">
         <div
           style={{
@@ -504,50 +504,64 @@ function LayoutContent({ children }) {
     }}>
       {/* Logo / Brand */}
       <div style={{
-        padding: '20px 18px 16px',
+        padding: '18px 16px 16px',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
         background: '#163354',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <div style={{
-            width: 40, height: 40, flexShrink: 0,
+            width: 48, height: 48, flexShrink: 0,
             background: 'linear-gradient(135deg, #2E7DE8, #00A86B)',
-            borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(46,125,232,0.4)',
+            borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 16px rgba(46,125,232,0.45)',
           }}>
-            <Cloud style={{ width: 22, height: 22, color: 'white' }} />
+            <Cloud style={{ width: 26, height: 26, color: 'white' }} />
           </div>
           <div>
-            <div style={{ color: 'white', fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em', lineHeight: 1.2 }}>
+            <div style={{ color: 'white', fontWeight: 700, fontSize: 18, letterSpacing: '-0.02em', lineHeight: 1.2 }}>
               Edge Cloud
             </div>
-            <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 11, fontWeight: 500, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+            <div style={{ color: '#94A3B8', fontSize: 10.5, fontWeight: 500, letterSpacing: '0.1em', textTransform: 'uppercase', marginTop: 2 }}>
               ERP Platform
             </div>
           </div>
         </div>
 
-        {/* Company pill */}
+        {/* Company switcher */}
         {currentCompany && (
-          <div style={{
-            background: 'rgba(255,255,255,0.06)', borderRadius: 8,
-            padding: '8px 12px', display: 'flex', alignItems: 'center', gap: 8,
-            border: '1px solid rgba(255,255,255,0.08)',
-          }}>
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.08)', borderRadius: 10,
+              padding: '10px 12px', display: 'flex', alignItems: 'center', gap: 10,
+              border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer',
+              transition: 'background 150ms',
+            }}
+            onClick={() => { switchCompany(null); window.location.reload(); }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.13)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
+            title="Switch company"
+          >
             <div style={{
-              width: 24, height: 24, background: '#2E7DE8', borderRadius: 6,
-              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+              width: 32, height: 32, flexShrink: 0,
+              background: 'linear-gradient(135deg, #2E7DE8, #1E3A5F)',
+              borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <Building2 style={{ width: 13, height: 13, color: 'rgba(255,255,255,0.8)' }} />
+              <Building2 style={{ width: 16, height: 16, color: 'white' }} />
             </div>
             <div style={{ minWidth: 0, flex: 1 }}>
-              <div style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: 600, truncate: true, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <div style={{ color: 'white', fontSize: 13.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {currentCompany.company_name}
               </div>
-              <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: 10.5, fontWeight: 500 }}>
+              <span style={{
+                display: 'inline-block', marginTop: 3,
+                fontSize: 10, fontWeight: 600, letterSpacing: '0.04em',
+                background: 'rgba(46,125,232,0.35)', color: '#93C5FD',
+                padding: '1px 7px', borderRadius: 99,
+              }}>
                 {isSuperAdmin ? 'Super Admin' : 'Standard User'}
-              </div>
+              </span>
             </div>
+            <ChevronDown style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.4)', flexShrink: 0 }} />
           </div>
         )}
 
@@ -657,7 +671,7 @@ function LayoutContent({ children }) {
         * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
       `}</style>
 
-      <div style={{ display: 'flex', minHeight: '100vh', background: '#F0F4F8' }}>
+      <div style={{ display: 'flex', minHeight: '100vh', background: '#F1F5FB' }}>
         {/* Desktop sidebar */}
         <div className="hidden md:flex">
           {sidebarContent}
