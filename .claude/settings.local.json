@@ -10,7 +10,8 @@
       "Read(//c/Projects/**)",
       "Bash(npm create *)",
       "Bash(npm install *)",
-      "Bash(git init *)"
+      "Bash(git init *)",
+      "Bash(ping -n 3 127.0.0.1)"
     ]
   }
 }
