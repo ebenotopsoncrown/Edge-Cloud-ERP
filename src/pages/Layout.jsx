@@ -197,12 +197,12 @@ const navigationGroups = [
 // ── Loading screen ──────────────────────────────────────────
 function LoadingScreen() {
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F5F7FA' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F0F4F8' }}>
       <div className="text-center">
         <div
           style={{
             width: 64, height: 64,
-            background: 'linear-gradient(135deg, #1B4F8A, #2E86C1)',
+            background: 'linear-gradient(135deg, #1E3A5F, #2E7DE8)',
             borderRadius: 16,
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             margin: '0 auto 20px',
@@ -249,36 +249,36 @@ function NavItem({ item, isActive }) {
         gap: 10,
         padding: '7px 12px',
         borderRadius: 7,
-        color: isActive ? '#00C97F' : 'rgba(255,255,255,0.65)',
+        color: isActive ? '#E2E8F0' : 'rgba(226,232,240,0.65)',
         fontWeight: isActive ? 600 : 400,
         fontSize: 13.5,
         textDecoration: 'none',
-        background: isActive ? 'rgba(0,168,107,0.18)' : 'transparent',
+        background: isActive ? 'rgba(46,125,232,0.22)' : 'transparent',
         transition: 'all 150ms ease',
         marginBottom: 1,
       }}
       onMouseEnter={e => {
         if (!isActive) {
           e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-          e.currentTarget.style.color = 'white';
+          e.currentTarget.style.color = '#E2E8F0';
         }
       }}
       onMouseLeave={e => {
         if (!isActive) {
           e.currentTarget.style.background = 'transparent';
-          e.currentTarget.style.color = 'rgba(255,255,255,0.65)';
+          e.currentTarget.style.color = 'rgba(226,232,240,0.65)';
         }
       }}
     >
       <Icon style={{
         width: 15, height: 15, flexShrink: 0,
-        color: isActive ? '#00C97F' : 'rgba(255,255,255,0.5)',
+        color: isActive ? '#60A5FA' : 'rgba(226,232,240,0.45)',
       }} />
       <span style={{ lineHeight: 1.3 }}>{item.title}</span>
       {isActive && (
         <div style={{
           marginLeft: 'auto', width: 5, height: 5,
-          borderRadius: '50%', background: '#00C97F',
+          borderRadius: '50%', background: '#2E7DE8',
           flexShrink: 0,
         }} />
       )}
@@ -308,8 +308,8 @@ function NavGroup({ group, isExpanded, onToggle, currentPath }) {
         style={{
           display: 'flex', alignItems: 'center', gap: 10,
           width: '100%', padding: '8px 12px', borderRadius: 7,
-          background: hasActive && !isExpanded ? 'rgba(0,168,107,0.12)' : 'transparent',
-          color: hasActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.75)',
+          background: hasActive && !isExpanded ? 'rgba(46,125,232,0.15)' : 'transparent',
+          color: hasActive ? '#E2E8F0' : 'rgba(226,232,240,0.75)',
           fontWeight: 600, fontSize: 13.5,
           cursor: 'pointer', border: 'none', textAlign: 'left',
           transition: 'all 150ms ease',
@@ -317,17 +317,17 @@ function NavGroup({ group, isExpanded, onToggle, currentPath }) {
         }}
         onMouseEnter={e => {
           e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
-          e.currentTarget.style.color = 'white';
+          e.currentTarget.style.color = '#E2E8F0';
         }}
         onMouseLeave={e => {
-          e.currentTarget.style.background = hasActive && !isExpanded ? 'rgba(0,168,107,0.12)' : 'transparent';
-          e.currentTarget.style.color = hasActive ? 'rgba(255,255,255,0.95)' : 'rgba(255,255,255,0.75)';
+          e.currentTarget.style.background = hasActive && !isExpanded ? 'rgba(46,125,232,0.15)' : 'transparent';
+          e.currentTarget.style.color = hasActive ? '#E2E8F0' : 'rgba(226,232,240,0.75)';
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Icon style={{
             width: 15, height: 15, flexShrink: 0,
-            color: hasActive ? '#00C97F' : 'rgba(255,255,255,0.5)',
+            color: hasActive ? '#60A5FA' : 'rgba(226,232,240,0.45)',
           }} />
           <span>{group.label}</span>
         </div>
@@ -498,7 +498,7 @@ function LayoutContent({ children }) {
   const sidebarContent = (
     <div style={{
       width: 256, minWidth: 256,
-      background: '#0F2B5B',
+      background: '#1E3A5F',
       height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden',
       position: 'sticky', top: 0, flexShrink: 0,
     }}>
@@ -506,13 +506,14 @@ function LayoutContent({ children }) {
       <div style={{
         padding: '20px 18px 16px',
         borderBottom: '1px solid rgba(255,255,255,0.08)',
+        background: '#163354',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
           <div style={{
             width: 40, height: 40, flexShrink: 0,
-            background: 'linear-gradient(135deg, #2E86C1, #00A86B)',
+            background: 'linear-gradient(135deg, #2E7DE8, #00A86B)',
             borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0,168,107,0.35)',
+            boxShadow: '0 4px 12px rgba(46,125,232,0.4)',
           }}>
             <Cloud style={{ width: 22, height: 22, color: 'white' }} />
           </div>
@@ -534,7 +535,7 @@ function LayoutContent({ children }) {
             border: '1px solid rgba(255,255,255,0.08)',
           }}>
             <div style={{
-              width: 24, height: 24, background: '#1B4F8A', borderRadius: 6,
+              width: 24, height: 24, background: '#2E7DE8', borderRadius: 6,
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
             }}>
               <Building2 style={{ width: 13, height: 13, color: 'rgba(255,255,255,0.8)' }} />
@@ -572,7 +573,7 @@ function LayoutContent({ children }) {
       </div>
 
       {/* User profile footer */}
-      <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ padding: '12px 10px', borderTop: '1px solid rgba(255,255,255,0.08)', background: '#163354' }}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button style={{
@@ -587,7 +588,7 @@ function LayoutContent({ children }) {
             >
               <div style={{
                 width: 34, height: 34, flexShrink: 0,
-                background: 'linear-gradient(135deg, #1B4F8A, #00A86B)',
+                background: 'linear-gradient(135deg, #2E7DE8, #00A86B)',
                 borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <span style={{ color: 'white', fontWeight: 700, fontSize: 12.5 }}>{userInitials}</span>
@@ -613,7 +614,7 @@ function LayoutContent({ children }) {
               <p style={{ fontSize: 13, fontWeight: 600, color: '#0F172A' }}>{user?.full_name || 'User'}</p>
               <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>{user?.email}</p>
               {isSuperAdmin && (
-                <span style={{ display: 'inline-block', marginTop: 4, fontSize: 10, fontWeight: 700, background: '#EBF4FB', color: '#1B4F8A', padding: '2px 8px', borderRadius: 99, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                <span style={{ display: 'inline-block', marginTop: 4, fontSize: 10, fontWeight: 700, background: '#EFF6FF', color: '#2E7DE8', padding: '2px 8px', borderRadius: 99, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
                   Super Admin
                 </span>
               )}
@@ -656,7 +657,7 @@ function LayoutContent({ children }) {
         * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
       `}</style>
 
-      <div style={{ display: 'flex', minHeight: '100vh', background: '#F5F7FA' }}>
+      <div style={{ display: 'flex', minHeight: '100vh', background: '#F0F4F8' }}>
         {/* Desktop sidebar */}
         <div className="hidden md:flex">
           {sidebarContent}
@@ -680,7 +681,7 @@ function LayoutContent({ children }) {
           {/* Evaluation banner */}
           {evaluationDaysRemaining !== null && (
             <div style={{
-              background: evaluationDaysRemaining <= 5 ? '#EF4444' : evaluationDaysRemaining <= 10 ? '#F59E0B' : '#1B4F8A',
+              background: evaluationDaysRemaining <= 5 ? '#EF4444' : evaluationDaysRemaining <= 10 ? '#F59E0B' : '#2E7DE8',
               color: 'white', padding: '10px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               fontSize: 13.5, fontWeight: 500, flexShrink: 0,
             }}>
@@ -710,7 +711,7 @@ function LayoutContent({ children }) {
 
           {/* Mobile top bar */}
           <div className="flex md:hidden" style={{
-            background: '#0F2B5B', color: 'white', padding: '12px 16px',
+            background: '#1E3A5F', color: 'white', padding: '12px 16px',
             alignItems: 'center', gap: 12, flexShrink: 0,
           }}>
             <button
