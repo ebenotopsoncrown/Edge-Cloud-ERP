@@ -840,9 +840,11 @@ export default function BillForm({ bill, billId, onClose }) {
                 <SelectItem value="draft">Draft</SelectItem>
                 <SelectItem value="pending">Pending</SelectItem>
                 <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="paid">Paid</SelectItem>
+                {/* Paid is set by recording a payment, which is what posts the cash. Shown only so existing paid bills still display. */}
+                {formData.status === 'paid' && <SelectItem value="paid" disabled>Paid</SelectItem>}
               </SelectContent>
             </Select>
+            <p className="text-xs text-gray-500">To mark as paid, use Payments → Make Payment.</p>
           </div>
         </div>
 

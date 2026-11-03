@@ -38,7 +38,8 @@ const TABS = [
   { id: 'payroll-runs',  label: 'Payroll Runs' },
   { id: 'employees',     label: 'Employees' },
   { id: 'payroll-items', label: 'Payroll Items' },
-  { id: 'timesheets',    label: 'Time Sheets' },
+  // Hidden until time sheet tracking is built.
+  // { id: 'timesheets',    label: 'Time Sheets' },
 ];
 
 export default function Payroll() {

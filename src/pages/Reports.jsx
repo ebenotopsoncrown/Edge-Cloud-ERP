@@ -130,7 +130,8 @@ export default function Reports() {
       reports: [
         { id: 'financial-performance', label: 'Statement of Financial Performance' },
         { id: 'financial-position',    label: 'Statement of Financial Position' },
-        { id: 'cash-flow',             label: 'Statement of Cash Flows' },
+        // Hidden until reliable: investing, financing and opening cash are hard-coded.
+        // { id: 'cash-flow',             label: 'Statement of Cash Flows' },
         { id: 'trial-balance',         label: 'Trial Balance' },
         { id: 'general-ledger',        label: 'General Ledger' },
       ],

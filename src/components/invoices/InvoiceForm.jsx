@@ -1128,9 +1128,11 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
                   <SelectItem value="draft">Draft</SelectItem>
                   <SelectItem value="sent">Sent</SelectItem>
                   <SelectItem value="viewed">Viewed</SelectItem>
-                  <SelectItem value="paid">Paid</SelectItem>
+                  {/* Paid is set by recording a payment, which is what posts the cash. Shown only so existing paid invoices still display. */}
+                  {formData.status === 'paid' && <SelectItem value="paid" disabled>Paid</SelectItem>}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-gray-500">To mark as paid, use Payments → Receive Payment.</p>
             </div>
           </div>
 

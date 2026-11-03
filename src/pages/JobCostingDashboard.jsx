@@ -37,7 +37,8 @@ export default function JobCostingDashboard() {
 
   const quickActions = [
     { label: 'Record Job Cost', icon: Plus,      color: ACCENT },
-    { label: 'Time Sheet',      icon: Clock,     color: '#1B4F8A' },
+    // Hidden until time sheet tracking is built.
+    // { label: 'Time Sheet',      icon: Clock,     color: '#1B4F8A' },
     { label: 'Job Invoice',     icon: FileText,  color: '#00A86B' },
     { label: 'Job Report',      icon: TrendingUp,color: '#F59E0B' },
     { label: 'New Job',         icon: Plus,      color: ACCENT },
