@@ -481,7 +481,6 @@ function LayoutContent({ children }) {
   }
 
   if (location.pathname === '/EvaluationSignup') return children;
-  if (location.pathname === '/SetupSuperAdmin') return children;
 
   // Wait for the company list first, otherwise login flashes "No Company Access".
   if (!currentCompany) return isLoadingCompany ? <LoadingScreen /> : <CompanySelector />;
@@ -769,7 +768,7 @@ function AuthWrapper({ children }) {
 
   if (isChecking) return <LoadingScreen />;
 
-  const publicPages = ['/SetupSuperAdmin', '/EvaluationSignup'];
+  const publicPages = ['/EvaluationSignup'];
   if (publicPages.includes(location.pathname)) return children;
 
   if (!isAuthenticated) {

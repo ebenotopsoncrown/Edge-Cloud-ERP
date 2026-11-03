@@ -45,7 +45,6 @@ import Payments from "./Payments";
 import UserManagement from "./UserManagement";
 import EvaluationSignup from "./EvaluationSignup";
 import UpgradeSubscription from "./UpgradeSubscription";
-import SetupSuperAdmin from "./SetupSuperAdmin";
 import StoreManagement from "./StoreManagement";
 import InventoryLocationManagement from "./InventoryLocationManagement";
 import ImportData from "./ImportData";
@@ -100,7 +99,6 @@ const PAGES = {
     UserManagement,
     EvaluationSignup,
     UpgradeSubscription,
-    SetupSuperAdmin,
     StoreManagement,
     InventoryLocationManagement,
     ImportData,
@@ -219,7 +217,6 @@ function PagesContent() {
                 <Route path="/UserManagement" element={<UserManagement />} />
                 <Route path="/EvaluationSignup" element={<EvaluationSignup />} />
                 <Route path="/UpgradeSubscription" element={<UpgradeSubscription />} />
-                <Route path="/SetupSuperAdmin" element={<SetupSuperAdmin />} />
                 <Route path="/StoreManagement" element={<StoreManagement />} />
                 <Route path="/InventoryLocationManagement" element={<InventoryLocationManagement />} />
                 <Route path="/ImportData" element={<ImportData />} />
