@@ -142,6 +142,13 @@ export async function updateRowById(table, id, changes) {
   return JSON.parse(body).length;
 }
 
+// Every MLU row in a table.
+export async function updateCompanyRows(table, changes) {
+  if (table === 'companies') throw new Error('Use updateCompany for the company row.');
+  const { body } = await request(scoped(table), { method: 'PATCH', headers: { Prefer: 'return=representation' }, body: JSON.stringify(changes) });
+  return JSON.parse(body).length;
+}
+
 export function writeOutput(name, data) {
   mkdirSync(outputDir, { recursive: true });
   writeFileSync(join(outputDir, name), typeof data === 'string' ? data : JSON.stringify(data, null, 2));

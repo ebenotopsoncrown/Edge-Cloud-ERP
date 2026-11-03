@@ -161,7 +161,7 @@ try {
   for (const t of [...BASE_TABLES, ...TX_TABLES]) baseline[t] = await countRows(t);
   accountsBefore = await readRows('accounts');
   console.log('Baseline', JSON.stringify(baseline));
-  if (TX_TABLES.some(t => baseline[t] !== 0)) throw new Error(`MLU already has transactions: ${JSON.stringify(baseline)}. Stopping before writing anything.`);
+  if (TX_TABLES.some(t => baseline[t] !== 0)) throw new Error(`MLU already has transactions, and this test's expected totals assume none. Run seed-transactions.mjs --clear, run this test, then seed-transactions.mjs. Nothing was written.`);
 
   // ── Read-only: what this user can see through RLS ──
   await step('RLS: what the test user can read (read-only)', async (check, o) => {

@@ -37,6 +37,9 @@ async function main() {
   const existing = {};
   for (const table of scopable) existing[table] = await countRows(table);
   const hasRows = Object.values(existing).some(n => n > 0);
+  for (const table of ['invoices', 'bills', 'payments', 'journal_entries']) {
+    if (await countRows(table) > 0) throw new Error('MLU has transactions. Run seed-transactions.mjs --clear first. Nothing changed.');
+  }
   if (hasRows && !reset) {
     throw new Error(`MLU already has rows (${JSON.stringify(existing)}). Re-run with --reset to replace them. Nothing changed.`);
   }
