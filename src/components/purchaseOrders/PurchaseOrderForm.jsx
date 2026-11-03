@@ -253,7 +253,7 @@ export default function PurchaseOrderForm({ purchaseOrder, onClose }) {
                     <SelectItem value="EUR">EUR - Euro</SelectItem>
                     <SelectItem value="GBP">GBP - British Pound</SelectItem>
                     <SelectItem value="NGN">NGN - Nigerian Naira</SelectItem>
-                    <SelectItem value="ZAR">ZAR - South African Rand</SelectItem>
+                    <SelectItem value="ZAR">ZAR - Rand</SelectItem>
                     <SelectItem value="KES">KES - Kenyan Shilling</SelectItem>
                     <SelectItem value="GHS">GHS - Ghanaian Cedi</SelectItem>
                   </SelectContent>

@@ -55,7 +55,7 @@ import AuditTrail from "./AuditTrail";
 import AccountingDemo from "./AccountingDemo";
 import SalesReturns from "./SalesReturns";
 
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 
 const PAGES = {
     Dashboard,
@@ -123,10 +123,9 @@ function _getCurrentPage(url) {
 }
 
 // ─── Auth Guard ───────────────────────────────────────────────────────────────
-// Unauthenticated visitors see LandingPage first, then Login on demand
+// Unauthenticated visitors see the sign-in page
 function AuthGuard({ children }) {
     const [user, setUser] = useState(undefined); // undefined = still checking
-    const [showLogin, setShowLogin] = useState(false);
 
     useEffect(() => {
         supabase.auth.getSession().then(({ data: { session } }) => {
@@ -143,24 +142,21 @@ function AuthGuard({ children }) {
     // Still checking auth state — show loading spinner
     if (user === undefined) {
         return (
-            <div className="min-h-screen bg-slate-900 flex items-center justify-center">
+            <div className="min-h-screen bg-white flex items-center justify-center">
                 <div className="text-center">
                     <svg className="animate-spin h-10 w-10 text-blue-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                     </svg>
-                    <p className="text-slate-400">Loading Edge Cloud ERP...</p>
+                    <p className="text-slate-500">Loading Edge Cloud ERP...</p>
                 </div>
             </div>
         );
     }
 
-    // Not logged in — show Landing page, or Login if they clicked Sign In
+    // Not logged in — show the sign-in page
     if (!user) {
-        if (showLogin) {
-            return <Login onBack={() => setShowLogin(false)} />;
-        }
-        return <LandingPage onSignIn={() => setShowLogin(true)} />;
+        return <Login />;
     }
 
     // Logged in — show the app
@@ -231,13 +227,28 @@ function PagesContent() {
     );
 }
 
+// ─── Top-level routes ────────────────────────────────────────────────────────
+// The marketing page is public, so it sits outside the auth guard.
+function AppRoutes() {
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    if (location.pathname.replace(/\/+$/, '').toLowerCase() === '/landing') {
+        return <LandingPage onSignIn={() => navigate('/')} />;
+    }
+
+    return (
+        <AuthGuard>
+            <PagesContent />
+        </AuthGuard>
+    );
+}
+
 // ─── Main Export ──────────────────────────────────────────────────────────────
 export default function Pages() {
     return (
         <Router>
-            <AuthGuard>
-                <PagesContent />
-            </AuthGuard>
+            <AppRoutes />
         </Router>
     );
 }

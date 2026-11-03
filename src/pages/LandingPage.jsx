@@ -48,12 +48,6 @@ export default function LandingPage({ onSignIn }) {
     },
   ];
 
-  const testimonialPlaceholders = [
-    { name: "Founding Beta Partner", role: "SME Owner, Nigeria", text: "Spots available — be the first to share your experience" },
-    { name: "Founding Beta Partner", role: "Non-Profit Director, UK", text: "Join our beta programme and shape the product" },
-    { name: "Founding Beta Partner", role: "Manufacturing Business, Ghana", text: "5 founding partner spots — limited availability" },
-  ];
-
   return (
     <div style={{ fontFamily: "'DM Sans', 'Segoe UI', sans-serif", color: "#1a1f36", overflowX: "hidden" }}>
 
@@ -79,16 +73,16 @@ export default function LandingPage({ onSignIn }) {
         <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundImage: "radial-gradient(circle at 20% 50%, rgba(46,125,232,0.3) 0%, transparent 50%), radial-gradient(circle at 80% 20%, rgba(0,168,107,0.2) 0%, transparent 40%)", pointerEvents: "none" }} />
         <div style={{ maxWidth: 800, margin: "0 auto", position: "relative" }}>
           <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 100, padding: "6px 20px", fontSize: 13, fontWeight: 600, marginBottom: 24, color: "#7dd3fc" }}>
-            🚀 Now Live — Founding Beta Partners Wanted
+            🚀 Now Live — Beta Partners Wanted
           </div>
           <h1 style={{ fontSize: "clamp(2rem, 5vw, 3.5rem)", fontWeight: 800, lineHeight: 1.15, marginBottom: 24, letterSpacing: "-0.02em" }}>
             The Cloud ERP Built for<br />
             <span style={{ background: "linear-gradient(90deg, #00A86B, #7dd3fc)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>
-              African & Diaspora Businesses
+              Growing Businesses
             </span>
           </h1>
           <p style={{ fontSize: "1.25rem", color: "rgba(255,255,255,0.75)", lineHeight: 1.7, marginBottom: 40, maxWidth: 600, margin: "0 auto 40px" }}>
-            Full-suite ERP — Accounting, Inventory, Payroll, POS, Manufacturing, Non-Profit and more. One platform. Fraction of the cost of Xero or QuickBooks.
+            Full-suite ERP — Accounting, Inventory, Payroll, POS, Manufacturing, Non-Profit and more. One platform for your whole business.
           </p>
           <div style={{ display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
             <button onClick={onSignIn} style={{ background: "#00A86B", border: "none", color: "white", padding: "16px 36px", borderRadius: 10, cursor: "pointer", fontSize: 16, fontWeight: 700, boxShadow: "0 4px 24px rgba(0,168,107,0.4)" }}>
@@ -125,7 +119,7 @@ export default function LandingPage({ onSignIn }) {
           <div style={{ textAlign: "center", marginBottom: 60 }}>
             <div style={{ color: "#1B4F8A", fontWeight: 700, fontSize: 13, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>Everything in One Platform</div>
             <h2 style={{ fontSize: "clamp(1.8rem, 3vw, 2.5rem)", fontWeight: 800, marginBottom: 16, letterSpacing: "-0.02em" }}>Replace 6 different tools<br />with one platform</h2>
-            <p style={{ color: "#6b7280", fontSize: "1.1rem", maxWidth: 500, margin: "0 auto" }}>Built specifically for the way African and diaspora businesses actually operate</p>
+            <p style={{ color: "#6b7280", fontSize: "1.1rem", maxWidth: 500, margin: "0 auto" }}>Built for the way growing businesses actually operate</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
             {features.map((f, i) => (
@@ -165,7 +159,7 @@ export default function LandingPage({ onSignIn }) {
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
           <div style={{ textAlign: "center", marginBottom: 60 }}>
             <div style={{ color: "#1B4F8A", fontWeight: 700, fontSize: 13, letterSpacing: "0.1em", textTransform: "uppercase", marginBottom: 12 }}>Simple Pricing</div>
-            <h2 style={{ fontSize: "clamp(1.8rem, 3vw, 2.5rem)", fontWeight: 800, marginBottom: 16, letterSpacing: "-0.02em" }}>A fraction of what Xero charges</h2>
+            <h2 style={{ fontSize: "clamp(1.8rem, 3vw, 2.5rem)", fontWeight: 800, marginBottom: 16, letterSpacing: "-0.02em" }}>Plans that grow with your business</h2>
             <p style={{ color: "#6b7280", fontSize: "1.1rem" }}>30-day free trial on all plans. No credit card required.</p>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 24 }}>
@@ -202,15 +196,15 @@ export default function LandingPage({ onSignIn }) {
             <div style={{ display: "inline-block", background: "rgba(255,255,255,0.1)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: 100, padding: "6px 20px", fontSize: 13, fontWeight: 600, marginBottom: 24 }}>
               🎯 5 Spots Only
             </div>
-            <h2 style={{ fontSize: "clamp(1.8rem, 3vw, 2.2rem)", fontWeight: 800, marginBottom: 16 }}>Founding Beta Partner Programme</h2>
+            <h2 style={{ fontSize: "clamp(1.8rem, 3vw, 2.2rem)", fontWeight: 800, marginBottom: 16 }}>Beta Partner Programme</h2>
             <p style={{ opacity: 0.8, fontSize: "1.1rem", lineHeight: 1.7, marginBottom: 40, maxWidth: 600, margin: "0 auto 40px" }}>
-              Be one of 5 businesses that shape Edge Cloud ERP from the ground up. Free access, direct founder support, and founding member pricing locked in forever.
+              Be one of 5 businesses that shape Edge Cloud ERP from the ground up. Free access, direct founder support, and early-partner pricing locked in forever.
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20, marginBottom: 40, textAlign: "left" }}>
               {[
                 { icon: "🎁", title: "6 Months FREE", desc: "Full access worth £300+" },
                 { icon: "📞", title: "Direct Founder Access", desc: "WhatsApp support from Ebenezer" },
-                { icon: "🔒", title: "Locked Pricing Forever", desc: "Founding member rate for life" },
+                { icon: "🔒", title: "Locked Pricing Forever", desc: "Early-partner rate for life" },
                 { icon: "🏆", title: "Launch Partner Status", desc: "Featured on our website" },
                 { icon: "⚡", title: "Shape the Roadmap", desc: "Your feedback drives features" },
                 { icon: "🎯", title: "Priority Onboarding", desc: "Dedicated setup support" },
@@ -223,7 +217,7 @@ export default function LandingPage({ onSignIn }) {
               ))}
             </div>
             <p style={{ opacity: 0.7, fontSize: 14, marginBottom: 24 }}>
-              Ideal for: SMEs in Nigeria & UK · Non-profit organisations · Construction & manufacturing · Retail businesses · African diaspora businesses
+              Ideal for: SMEs in Nigeria & UK · Non-profit organisations · Construction & manufacturing · Retail businesses
             </p>
             <a href="https://www.linkedin.com/in/ebenezer-james" target="_blank" rel="noopener noreferrer" style={{ display: "inline-block", background: "#00A86B", border: "none", color: "white", padding: "16px 40px", borderRadius: 10, cursor: "pointer", fontSize: 16, fontWeight: 700, textDecoration: "none", boxShadow: "0 4px 24px rgba(0,168,107,0.4)" }}>
               Apply for Beta Access →

@@ -342,19 +342,19 @@ export default function LicensingGuide() {
                   <CardContent className="pt-6">
                     <h4 className="font-semibold text-lg mb-3">Company File Concept</h4>
                     <p className="text-gray-700 mb-3">
-                      If you're familiar with QuickBooks' "company file" concept, here's how it maps to Edge Cloud Enterprise:
+                      If you're familiar with the "company file" concept from desktop accounting software, here's how it maps to Edge Cloud Enterprise:
                     </p>
                     <div className="bg-white rounded-lg p-4">
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b">
-                            <th className="text-left py-2">QuickBooks</th>
+                            <th className="text-left py-2">Desktop accounting software</th>
                             <th className="text-left py-2">Edge Cloud Enterprise</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr className="border-b">
-                            <td className="py-2">Company File (.QBW)</td>
+                            <td className="py-2">Company File</td>
                             <td className="py-2">Separate App Instance</td>
                           </tr>
                           <tr className="border-b">

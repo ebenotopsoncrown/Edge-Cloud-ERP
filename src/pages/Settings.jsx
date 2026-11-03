@@ -125,7 +125,7 @@ export default function Settings() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[['USD','USD - US Dollar ($)'],['EUR','EUR - Euro (€)'],['GBP','GBP - British Pound (£)'],['NGN','NGN - Nigerian Naira (₦)'],['ZAR','ZAR - South African Rand (R)'],['KES','KES - Kenyan Shilling (KSh)'],['GHS','GHS - Ghanaian Cedi (₵)'],['CAD','CAD - Canadian Dollar (C$)'],['AUD','AUD - Australian Dollar (A$)'],['INR','INR - Indian Rupee (₹)'],['JPY','JPY - Japanese Yen (¥)'],['CNY','CNY - Chinese Yuan (¥)']].map(([v,l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
+                {[['USD','USD - US Dollar ($)'],['EUR','EUR - Euro (€)'],['GBP','GBP - British Pound (£)'],['NGN','NGN - Nigerian Naira (₦)'],['ZAR','ZAR - Rand (R)'],['KES','KES - Kenyan Shilling (KSh)'],['GHS','GHS - Ghanaian Cedi (₵)'],['CAD','CAD - Canadian Dollar (C$)'],['AUD','AUD - Australian Dollar (A$)'],['INR','INR - Indian Rupee (₹)'],['JPY','JPY - Japanese Yen (¥)'],['CNY','CNY - Chinese Yuan (¥)']].map(([v,l]) => <SelectItem key={v} value={v}>{l}</SelectItem>)}
               </SelectContent>
             </Select>
           </FormField>

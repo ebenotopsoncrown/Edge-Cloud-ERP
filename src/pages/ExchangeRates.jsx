@@ -29,7 +29,7 @@ const CURRENCIES = [
   { code: 'EUR', name: 'Euro',                symbol: '€'   },
   { code: 'GBP', name: 'British Pound',       symbol: '£'   },
   { code: 'NGN', name: 'Nigerian Naira',      symbol: '₦'   },
-  { code: 'ZAR', name: 'South African Rand',  symbol: 'R'   },
+  { code: 'ZAR', name: 'Rand',                symbol: 'R'   },
   { code: 'KES', name: 'Kenyan Shilling',     symbol: 'KSh' },
   { code: 'GHS', name: 'Ghanaian Cedi',       symbol: '₵'   },
   { code: 'CAD', name: 'Canadian Dollar',     symbol: 'C$'  },

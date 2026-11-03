@@ -47,7 +47,7 @@ export default function MultiTenancyGuide() {
                   <Cloud className="w-5 h-5" />
                   Model 1: SaaS Multi-Tenant
                 </CardTitle>
-                <Badge className="bg-green-600 text-white w-fit">RECOMMENDED - Like QuickBooks Online</Badge>
+                <Badge className="bg-green-600 text-white w-fit">RECOMMENDED</Badge>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="bg-white rounded-lg p-4">
@@ -157,7 +157,7 @@ export default function MultiTenancyGuide() {
                 <CheckCircle className="w-16 h-16 mx-auto text-green-600" />
                 <h3 className="text-2xl font-bold text-gray-900">Recommendation: Use SaaS Model</h3>
                 <p className="text-gray-700 max-w-2xl mx-auto">
-                  Based on your requirement ("like QuickBooks Online"), you should use the <strong>SaaS Multi-Tenant Model</strong>. 
+                  Based on your requirements, you should use the <strong>SaaS Multi-Tenant Model</strong>. 
                   All clients access via <strong>edgecloudenterprise.com</strong>, select their company on login, and get a fully white-labeled experience under YOUR brand.
                 </p>
                 <div className="flex justify-center gap-4 pt-4">
@@ -366,7 +366,7 @@ export default function MultiTenancyGuide() {
             <p className="text-gray-700 max-w-3xl mx-auto">
               <strong>To implement true multi-tenancy (SaaS model):</strong> I can help you add Company entity, 
               company_id to all entities, company selector, and automatic filtering. This will give you the 
-              QuickBooks Online style deployment where all clients access via edgecloudenterprise.com.
+              standard SaaS deployment where all clients access via edgecloudenterprise.com.
             </p>
             <p className="text-sm text-gray-600 italic">
               Let me know if you want me to implement the SaaS multi-tenant model now!

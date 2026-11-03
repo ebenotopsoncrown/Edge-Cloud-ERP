@@ -4,7 +4,7 @@ import { createPageUrl } from "@/utils";
 import { User } from "@/api/supabaseClient";
 import { CompanyProvider, useCompany } from "../components/auth/CompanyContext";
 import CompanySelector from "../components/auth/CompanySelector";
-import LandingPage from "../components/auth/LandingPage";
+import Login from "./Login";
 import RealtimeNotifications from "../components/shared/RealtimeNotifications";
 import ActiveUsersWidget from "../components/shared/ActiveUsersWidget";
 import {
@@ -771,16 +771,7 @@ function AuthWrapper({ children }) {
   const publicPages = ['/EvaluationSignup'];
   if (publicPages.includes(location.pathname)) return children;
 
-  if (!isAuthenticated) {
-    return (
-      <LandingPage
-        onSignIn={() => {
-          sessionStorage.setItem('returnUrl', window.location.pathname);
-          window.location.href = '/';
-        }}
-      />
-    );
-  }
+  if (!isAuthenticated) return <Login />;
 
   return children;
 }
