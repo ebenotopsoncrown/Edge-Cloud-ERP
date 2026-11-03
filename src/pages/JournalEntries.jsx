@@ -6,7 +6,8 @@ import { format } from "date-fns";
 import { useCompany } from "../components/auth/CompanyContext";
 import { getCurrencySymbol } from "../components/shared/FinancialCalculations";
 import TransactionDetails from "../components/reports/TransactionDetails";
-import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, ActionBtn } from "../components/shared/PageShell";
+import ManualJournalEntryForm from "../components/journalEntries/ManualJournalEntryForm";
+import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, ActionBtn, NewBtn } from "../components/shared/PageShell";
 
 const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return '—'; } };
@@ -14,6 +15,7 @@ const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch 
 export default function JournalEntries() {
   const [selectedEntryId, setSelectedEntryId] = useState(null);
   const [search, setSearch]                   = useState("");
+  const [showNewEntry, setShowNewEntry]       = useState(false);
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const sym = getCurrencySymbol(currentCompany?.base_currency || 'USD');
@@ -72,12 +74,14 @@ export default function JournalEntries() {
   return (
     <PageShell>
       {selectedEntryId && <TransactionDetails entryId={selectedEntryId} onClose={() => setSelectedEntryId(null)} />}
+      {showNewEntry && <ManualJournalEntryForm onClose={() => setShowNewEntry(false)} />}
 
       <PageHeader
         title="Journal Entries"
         subtitle="Manual and system-generated accounting transactions"
         icon={FileText}
         accentColor="#8B5CF6"
+        actions={<NewBtn onClick={() => setShowNewEntry(true)} label="New Journal Entry" />}
       />
 
       <StatBar stats={[
