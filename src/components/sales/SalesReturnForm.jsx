@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Customer, Invoice, Account, SalesReturn, JournalEntry, Product, InventoryTransaction } from "@/api/entities";
+import { isForeignDocument } from "@/lib/currency";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,7 +52,7 @@ export default function SalesReturnForm({ onClose }) {
       company_id: currentCompany.id,
       customer_id: selectedCustomerId,
       status: ['paid', 'partial']
-    } }) : [],
+    } }).then(list => list.filter(inv => !isForeignDocument(inv, currentCompany?.base_currency || 'USD'))) : [],
     enabled: !!selectedCustomerId
   });
 

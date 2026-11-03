@@ -354,7 +354,7 @@ export default function SalesDashboard() {
                       {invoice.status}
                     </span>
                     <p style={{ fontSize: 14, fontWeight: 700, color: '#0F172A', minWidth: 80, textAlign: 'right' }}>
-                      {formatCurrency(invoice.total_amount || 0, baseCurrency)}
+                      {formatCurrency(invoice.total_amount || 0, invoice.currency || baseCurrency)}
                     </p>
                   </div>
                 </div>

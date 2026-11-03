@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/api/supabaseClient';
+import { normalizeCompany } from '@/api/entities';
 import { useQuery } from '@tanstack/react-query';
 
 const CompanyContext = createContext(null);
@@ -34,7 +35,7 @@ export function CompanyProvider({ children }) {
         console.error('Error fetching companies:', error);
         throw error;
       }
-      return data ?? [];
+      return (data ?? []).map(normalizeCompany);
     },
     enabled: !!userData,
     staleTime: 5 * 60 * 1000,

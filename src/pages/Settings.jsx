@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Company, createEntity } from "@/api/entities";
 const UserRecord = createEntity('users');
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -10,7 +10,23 @@ import PageShell, { PageHeader, NewBtn, ActionBtn } from "../components/shared/P
 const PRIMARY = '#1B4F8A';
 const ACCENT  = '#00A86B';
 
-function SettingsSection({ title, icon: Icon, accentColor = PRIMARY, children, onSave, saving, saveLabel = "Save Changes" }) {
+// PostgREST reports "no row came back" with this code, which on an update means nothing was saved.
+const describeSaveError = (error) =>
+  error?.code === 'PGRST116'
+    ? 'Nothing was saved: the database updated no records. Your account may not have permission to change this record, or the record does not exist.'
+    : error?.message || 'The save failed for an unknown reason.';
+
+function SaveStatus({ status }) {
+  if (!status) return null;
+  const isError = status.type === 'error';
+  return (
+    <div role={isError ? 'alert' : 'status'} style={{ marginTop: 20, padding: '10px 14px', borderRadius: 8, fontSize: 13, background: isError ? '#FEF2F2' : '#F0FDF4', border: `1px solid ${isError ? '#FECACA' : '#BBF7D0'}`, color: isError ? '#B91C1C' : '#166534' }}>
+      {status.message}
+    </div>
+  );
+}
+
+function SettingsSection({ title, icon: Icon, accentColor = PRIMARY, children, onSave, saving, saveLabel = "Save Changes", status }) {
   return (
     <div style={{ background: 'white', borderRadius: 14, border: '1px solid #F1F5F9', boxShadow: '0 2px 8px rgba(15,43,91,0.06)', overflow: 'hidden', marginBottom: 24 }}>
       <div style={{ padding: '18px 24px', borderBottom: '1px solid #F1F5F9', display: 'flex', alignItems: 'center', gap: 12, background: `${accentColor}06` }}>
@@ -21,6 +37,7 @@ function SettingsSection({ title, icon: Icon, accentColor = PRIMARY, children, o
       </div>
       <div style={{ padding: '24px' }}>
         {children}
+        <SaveStatus status={status} />
         {onSave && (
           <div style={{ marginTop: 24, paddingTop: 20, borderTop: '1px solid #F1F5F9', display: 'flex', justifyContent: 'flex-end' }}>
             <button
@@ -61,7 +78,7 @@ const inputStyle = {
 };
 
 export default function Settings() {
-  const { currentCompany, user, switchCompany } = useCompany();
+  const { currentCompany, user, switchCompany, refetchCompanies } = useCompany();
   const queryClient = useQueryClient();
 
   const [company, setCompany] = useState({
@@ -72,9 +89,15 @@ export default function Settings() {
   const [profile, setProfile] = useState({
     full_name: '', email: '', phone: '', job_title: '', department: '',
   });
+  const [companyStatus, setCompanyStatus] = useState(null);
+  const [profileStatus, setProfileStatus] = useState(null);
+  const savedCompany = useRef(null);
 
   useEffect(() => {
-    if (currentCompany) setCompany({ company_name: currentCompany.company_name || '', base_currency: currentCompany.base_currency || 'USD', fiscal_year_end: currentCompany.fiscal_year_end || '12-31', time_zone: currentCompany.time_zone || 'UTC', address: currentCompany.address || { street: '', city: '', state: '', postal_code: '', country: '' } });
+    if (!currentCompany) return;
+    const loaded = { company_name: currentCompany.company_name || '', base_currency: currentCompany.base_currency || 'USD', fiscal_year_end: currentCompany.fiscal_year_end || '12-31', time_zone: currentCompany.time_zone || 'UTC', address: currentCompany.address || { street: '', city: '', state: '', postal_code: '', country: '' } };
+    savedCompany.current = loaded;
+    setCompany(loaded);
   }, [currentCompany]);
 
   useEffect(() => {
@@ -82,13 +105,37 @@ export default function Settings() {
   }, [user]);
 
   const updateCompanyMutation = useMutation({
-    mutationFn: data => Company.update(currentCompany.id, data),
-    onSuccess: () => { queryClient.invalidateQueries(['companies']); window.location.reload(); },
+    mutationFn: async (data) => {
+      // Send only what changed, so a problem with one field can't block the others.
+      const changes = Object.fromEntries(Object.entries(data).filter(([key, value]) => JSON.stringify(value) !== JSON.stringify(savedCompany.current?.[key])));
+      if (Object.keys(changes).length === 0) return null;
+      const saved = await Company.update(currentCompany.id, changes);
+      if (changes.base_currency && saved?.base_currency !== changes.base_currency) {
+        throw new Error(`The database did not keep the new base currency (it still says ${saved?.base_currency || 'nothing'}).`);
+      }
+      return saved;
+    },
+    onMutate: () => setCompanyStatus(null),
+    onSuccess: (saved) => {
+      if (!saved) { setCompanyStatus({ type: 'success', message: 'No changes to save.' }); return; }
+      switchCompany({ ...currentCompany, ...saved });
+      refetchCompanies();
+      setCompanyStatus({ type: 'success', message: `Company settings saved. Base currency is ${saved.base_currency}.` });
+    },
+    onError: (error) => setCompanyStatus({ type: 'error', message: `Company settings were not saved. ${describeSaveError(error)}` }),
   });
+
+  const saveCompany = () => {
+    const previous = savedCompany.current?.base_currency;
+    if (previous && company.base_currency !== previous && !window.confirm(`Change the base currency from ${previous} to ${company.base_currency}?\n\nExisting amounts are not converted. Figures already posted will simply be shown in ${company.base_currency}.`)) return;
+    updateCompanyMutation.mutate(company);
+  };
 
   const updateUserMutation = useMutation({
     mutationFn: data => user?.id ? UserRecord.update(user.id, data) : null,
-    onSuccess: () => { queryClient.invalidateQueries(['current-user']); alert('Profile updated successfully!'); },
+    onMutate: () => setProfileStatus(null),
+    onSuccess: () => { queryClient.invalidateQueries(['current-user']); setProfileStatus({ type: 'success', message: 'Profile updated.' }); },
+    onError: (error) => setProfileStatus({ type: 'error', message: `Your profile was not saved. ${describeSaveError(error)}` }),
   });
 
   if (!currentCompany || !user) {
@@ -108,18 +155,18 @@ export default function Settings() {
         <DollarSign style={{ width: 18, height: 18, color: PRIMARY, flexShrink: 0, marginTop: 1 }} />
         <div>
           <p style={{ fontWeight: 700, color: PRIMARY, fontSize: 13.5 }}>Base Currency: <strong>{company.base_currency}</strong></p>
-          <p style={{ color: '#2E86C1', fontSize: 13, marginTop: 3 }}>All financial reports and dashboards display amounts in {company.base_currency}. Foreign currency transactions are auto-converted.</p>
+          <p style={{ color: '#2E86C1', fontSize: 13, marginTop: 3 }}>All financial reports and dashboards display amounts in {company.base_currency}. Sales invoices in another currency post to the ledger in {company.base_currency}.</p>
         </div>
       </div>
 
       {/* Company Settings */}
-      <SettingsSection title="Company Settings" icon={Building2} accentColor={PRIMARY} onSave={() => updateCompanyMutation.mutate(company)} saving={updateCompanyMutation.isPending} saveLabel="Save Company Settings">
+      <SettingsSection title="Company Settings" icon={Building2} accentColor={PRIMARY} onSave={saveCompany} saving={updateCompanyMutation.isPending} saveLabel="Save Company Settings" status={companyStatus}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 24 }}>
           <FormField label="Company Name">
             <input style={inputStyle} value={company.company_name} onChange={e => setCompany({ ...company, company_name: e.target.value })} onFocus={e => e.target.style.borderColor = PRIMARY} onBlur={e => e.target.style.borderColor = '#E2E8F0'} />
           </FormField>
 
-          <FormField label="Base Currency (Reporting Currency)" hint="⚠️ This affects all financial reports. Foreign transactions are auto-converted.">
+          <FormField label="Base Currency (Reporting Currency)" hint="⚠️ This affects all financial reports. Changing it does not convert amounts already posted.">
             <Select value={company.base_currency} onValueChange={v => setCompany({ ...company, base_currency: v })}>
               <SelectTrigger style={{ border: '1.5px solid #00A86B30', borderRadius: 8, fontSize: 13.5 }}>
                 <SelectValue />
@@ -159,7 +206,7 @@ export default function Settings() {
       </SettingsSection>
 
       {/* User Profile */}
-      <SettingsSection title="My Profile" icon={User} accentColor={ACCENT} onSave={() => updateUserMutation.mutate(profile)} saving={updateUserMutation.isPending} saveLabel="Save Profile">
+      <SettingsSection title="My Profile" icon={User} accentColor={ACCENT} onSave={() => updateUserMutation.mutate(profile)} saving={updateUserMutation.isPending} saveLabel="Save Profile" status={profileStatus}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
           <FormField label="Full Name"><input style={inputStyle} value={profile.full_name} onChange={e => setProfile({ ...profile, full_name: e.target.value })} onFocus={e => e.target.style.borderColor = ACCENT} onBlur={e => e.target.style.borderColor = '#E2E8F0'} /></FormField>
           <FormField label="Email" hint="Email cannot be changed."><input style={{ ...inputStyle, background: '#F8FAFC', color: '#94A3B8', cursor: 'not-allowed' }} value={profile.email} disabled /></FormField>
@@ -179,8 +226,8 @@ export default function Settings() {
           {[
             ['Set Your Base Currency', `Choose the currency for all financial reports (e.g., NGN for Nigerian companies). Currently: ${company.base_currency}`],
             ['Dashboards Show Base Currency', 'All dashboards — Sales, Purchases, Accounting — display amounts in your base currency.'],
-            ['Foreign Currency Transactions', 'Record invoices/bills in any currency. The system converts to your base currency using exchange rates you set.'],
-            ['Chart of Accounts', 'Account balances are maintained in your base currency. Enable Multi-Currency in Settings to track foreign currency accounts separately.'],
+            ['Foreign Currency Transactions', 'Raise sales invoices in any currency. They post in your base currency using the rate on the invoice. Bills and payments are recorded in base currency.'],
+            ['Chart of Accounts', 'Account balances are maintained in your base currency.'],
           ].map(([title, desc], i) => (
             <div key={i} style={{ display: 'flex', gap: 14, marginBottom: i < 3 ? 16 : 0 }}>
               <div style={{ width: 24, height: 24, borderRadius: '50%', background: PRIMARY, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>{i + 1}</div>

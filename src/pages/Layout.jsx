@@ -371,7 +371,7 @@ function LayoutContent({ children }) {
   });
 
   const [enabledModules, setEnabledModules] = React.useState({
-    multi_currency: false,
+    multi_currency: true,
     fixed_assets: true,
     manufacturing: true,
     job_costing: true,

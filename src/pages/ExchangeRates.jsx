@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { TrendingUp, RefreshCw, Pencil, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../components/auth/CompanyContext";
+import { safeFormatDate } from "@/lib/utils";
+import { findExchangeRateRecord } from "@/lib/currency";
 import PageShell, {
   PageHeader,
   StatBar,
@@ -44,9 +46,12 @@ export default function ExchangeRates() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editingRate, setEditingRate] = useState(null);
+  const [formError, setFormError] = useState('');
+  const baseCurrency = currentCompany?.base_currency || 'USD';
+  // Default to the way rates are usually quoted: 1 foreign = x base.
+  const defaultPair = baseCurrency === 'USD' ? { from_currency: 'USD', to_currency: 'NGN' } : { from_currency: 'USD', to_currency: baseCurrency };
   const [formData, setFormData] = useState({
-    from_currency: 'USD',
-    to_currency: 'NGN',
+    ...defaultPair,
     exchange_rate: 0,
     effective_date: format(new Date(), 'yyyy-MM-dd'),
     rate_type: 'spot',
@@ -107,14 +112,13 @@ export default function ExchangeRates() {
       return result.exchange_rate;
     },
     onSuccess: (rate) => {
-      setFormData(prev => ({ ...prev, exchange_rate: rate, source: 'Live API' }));
+      setFormData(prev => ({ ...prev, exchange_rate: rate, source: 'AI estimate - verify' }));
     },
   });
 
   const resetForm = () => {
     setFormData({
-      from_currency: currentCompany?.base_currency || 'USD',
-      to_currency: 'NGN',
+      ...defaultPair,
       exchange_rate: 0,
       effective_date: format(new Date(), 'yyyy-MM-dd'),
       rate_type: 'spot',
@@ -137,6 +141,15 @@ export default function ExchangeRates() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setFormError('');
+    if (formData.from_currency === formData.to_currency) {
+      setFormError('From and To must be different currencies.');
+      return;
+    }
+    if (!(Number(formData.exchange_rate) > 0)) {
+      setFormError('Enter an exchange rate greater than zero.');
+      return;
+    }
     if (editingRate) {
       updateMutation.mutate({ id: editingRate.id, data: formData });
     } else {
@@ -144,8 +157,8 @@ export default function ExchangeRates() {
     }
   };
 
-  const baseCurrency = currentCompany?.base_currency || 'USD';
-  const activeCurrencies = [...new Set(rates.map(r => r.to_currency))];
+  const activeCurrencies = [...new Set(rates.flatMap(r => [r.from_currency, r.to_currency]))].filter(code => code !== baseCurrency);
+  const mutationError = createMutation.error || updateMutation.error || deleteMutation.error || fetchLiveRates.error;
 
   const TABLE_HEADERS = [
     { label: 'From' },
@@ -184,6 +197,12 @@ export default function ExchangeRates() {
           All amounts are converted to your base currency ({baseCurrency}) for reporting.
         </AlertDescription>
       </Alert>
+
+      {(formError || mutationError) && (
+        <div role="alert" style={{ marginBottom: 20, padding: '10px 14px', borderRadius: 8, fontSize: 13, background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C' }}>
+          {formError || mutationError.message}
+        </div>
+      )}
 
       {showForm && (
         <Card style={{ marginBottom: 24, border: `1.5px solid ${ACCENT}30` }}>
@@ -238,7 +257,7 @@ export default function ExchangeRates() {
                       type="number"
                       step="0.0001"
                       value={formData.exchange_rate}
-                      onChange={(e) => setFormData({ ...formData, exchange_rate: parseFloat(e.target.value) })}
+                      onChange={(e) => setFormData({ ...formData, exchange_rate: e.target.value })}
                       placeholder="1500.00"
                       required
                     />
@@ -247,6 +266,7 @@ export default function ExchangeRates() {
                       variant="outline"
                       onClick={() => fetchLiveRates.mutate({ from: formData.from_currency, to: formData.to_currency })}
                       disabled={fetchLiveRates.isPending}
+                      title="Get an AI estimate. Check it against a trusted source before saving."
                     >
                       <RefreshCw className={`w-4 h-4 ${fetchLiveRates.isPending ? 'animate-spin' : ''}`} />
                     </Button>
@@ -327,10 +347,10 @@ export default function ExchangeRates() {
             <ERPTableCell bold>{rate.from_currency}</ERPTableCell>
             <ERPTableCell bold>{rate.to_currency}</ERPTableCell>
             <ERPTableCell right style={{ fontFamily: 'monospace', color: ACCENT, fontWeight: 700 }}>
-              {rate.exchange_rate.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+              {Number(rate.exchange_rate).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
             </ERPTableCell>
             <ERPTableCell muted>
-              {format(new Date(rate.effective_date), 'MMM d, yyyy')}
+              {safeFormatDate(rate.effective_date)}
             </ERPTableCell>
             <ERPTableCell muted style={{ textTransform: 'capitalize' }}>{rate.rate_type}</ERPTableCell>
             <ERPTableCell muted>{rate.source}</ERPTableCell>
@@ -354,9 +374,7 @@ export default function ExchangeRates() {
           <p style={{ fontSize: 13, fontWeight: 700, color: '#0F172A', marginBottom: 12 }}>Quick Reference</p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
             {activeCurrencies.map(currency => {
-              const latestRate = rates
-                .filter(r => r.to_currency === currency && r.from_currency === baseCurrency)
-                .sort((a, b) => new Date(b.effective_date) - new Date(a.effective_date))[0];
+              const latestRate = findExchangeRateRecord(rates, currency, baseCurrency);
 
               if (!latestRate) return null;
 
@@ -371,13 +389,13 @@ export default function ExchangeRates() {
                   }}
                 >
                   <p style={{ fontSize: 12, fontWeight: 600, color: PRIMARY }}>
-                    {baseCurrency} → {currency}
+                    1 {currency} in {baseCurrency}
                   </p>
                   <p style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', marginTop: 4 }}>
-                    {latestRate.exchange_rate.toFixed(2)}
+                    {(1 / latestRate.rate).toLocaleString(undefined, { maximumFractionDigits: 4 })}
                   </p>
                   <p style={{ fontSize: 11, color: '#94A3B8', marginTop: 2 }}>
-                    {format(new Date(latestRate.effective_date), 'MMM d')}
+                    {safeFormatDate(latestRate.effective_date, 'MMM d')}
                   </p>
                 </div>
               );

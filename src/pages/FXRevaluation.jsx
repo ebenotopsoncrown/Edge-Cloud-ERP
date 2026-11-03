@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { TrendingUp, TrendingDown, RefreshCw, Save, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../components/auth/CompanyContext";
+import { findExchangeRate, isForeignDocument, round2 } from "@/lib/currency";
 import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, ActionBtn } from "../components/shared/PageShell";
 
 const PRIMARY = '#1B4F8A';
@@ -19,6 +20,13 @@ export default function FXRevaluation() {
   const queryClient = useQueryClient();
   const [revaluationDate, setRevaluationDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [revaluationResults, setRevaluationResults] = useState(null);
+
+  // Earlier revaluations record the rate each document was last carried at.
+  const { data: pastRevaluations = [] } = useQuery({
+    queryKey: ['fx-revaluations', currentCompany?.id],
+    queryFn: () => JournalEntry.list({ filters: { company_id: currentCompany.id, reference: 'FX Revaluation', status: 'posted' }, orderBy: 'entry_date', ascending: true }),
+    enabled: !!currentCompany
+  });
 
   const { data: exchangeRates = [] } = useQuery({
     queryKey: ['exchange-rates', currentCompany?.id],
@@ -46,38 +54,44 @@ export default function FXRevaluation() {
 
   const baseCurrency = currentCompany?.base_currency || 'USD';
 
+  const isOpenForeign = (doc) =>
+    isForeignDocument(doc, baseCurrency) && !['draft', 'cancelled'].includes(doc.status) && (doc.balance_due || 0) > 0;
+
+  // The last revaluation's rate if there is one, otherwise the document's own. Without
+  // this, every run would post the same movement again.
+  const carryingRate = (doc) => {
+    let rate = Number(doc.exchange_rate);
+    pastRevaluations.forEach(entry => {
+      if ((entry.entry_date || '') > revaluationDate) return;
+      (entry.line_items || []).forEach(line => {
+        (line.fx_documents || []).forEach(item => { if (item.id === doc.id) rate = Number(item.rate); });
+      });
+    });
+    return rate;
+  };
+
   const calculateRevaluation = () => {
     const results = [];
+    const missingRates = new Set();
 
-    const foreignInvoices = invoices.filter(inv => inv.currency !== baseCurrency && inv.balance_due > 0);
-    const foreignBills    = bills.filter(b => b.currency !== baseCurrency && b.balance_due > 0);
-
-    foreignInvoices.forEach(invoice => {
-      const latestRate = exchangeRates.filter(r => r.from_currency === baseCurrency && r.to_currency === invoice.currency && new Date(r.effective_date) <= new Date(revaluationDate)).sort((a, b) => new Date(b.effective_date) - new Date(a.effective_date))[0];
-      if (latestRate) {
-        const currentValueBase  = invoice.balance_due / latestRate.exchange_rate;
-        const originalValueBase = invoice.balance_due_base_currency || (invoice.balance_due / invoice.exchange_rate);
-        const fxGainLoss = currentValueBase - originalValueBase;
-        if (Math.abs(fxGainLoss) > 0.01) {
-          results.push({ type: 'Invoice', document_number: invoice.invoice_number, customer_vendor: invoice.customer_name, currency: invoice.currency, balance_foreign: invoice.balance_due, original_rate: invoice.exchange_rate, current_rate: latestRate.exchange_rate, original_value_base: originalValueBase, current_value_base: currentValueBase, fx_gain_loss: fxGainLoss, is_gain: fxGainLoss > 0 });
-        }
+    const revalue = (doc, type, number, party, gainWhenRateFalls) => {
+      const currentRate = findExchangeRate(exchangeRates, doc.currency, baseCurrency, revaluationDate);
+      if (!currentRate) { missingRates.add(doc.currency); return; }
+      const previousRate = carryingRate(doc);
+      const currentValueBase  = doc.balance_due / currentRate;
+      const originalValueBase = doc.balance_due / previousRate;
+      const fxGainLoss = round2(gainWhenRateFalls ? currentValueBase - originalValueBase : originalValueBase - currentValueBase);
+      if (Math.abs(fxGainLoss) > 0.01) {
+        results.push({ id: doc.id, type, document_number: number, customer_vendor: party, currency: doc.currency, balance_foreign: doc.balance_due, original_rate: previousRate, current_rate: currentRate, original_value_base: originalValueBase, current_value_base: currentValueBase, fx_gain_loss: fxGainLoss, is_gain: fxGainLoss > 0 });
       }
-    });
+    };
 
-    foreignBills.forEach(bill => {
-      const latestRate = exchangeRates.filter(r => r.from_currency === baseCurrency && r.to_currency === bill.currency && new Date(r.effective_date) <= new Date(revaluationDate)).sort((a, b) => new Date(b.effective_date) - new Date(a.effective_date))[0];
-      if (latestRate) {
-        const currentValueBase  = bill.balance_due / latestRate.exchange_rate;
-        const originalValueBase = bill.balance_due_base_currency || (bill.balance_due / bill.exchange_rate);
-        const fxGainLoss = originalValueBase - currentValueBase;
-        if (Math.abs(fxGainLoss) > 0.01) {
-          results.push({ type: 'Bill', document_number: bill.bill_number, customer_vendor: bill.vendor_name, currency: bill.currency, balance_foreign: bill.balance_due, original_rate: bill.exchange_rate, current_rate: latestRate.exchange_rate, original_value_base: originalValueBase, current_value_base: currentValueBase, fx_gain_loss: fxGainLoss, is_gain: fxGainLoss > 0 });
-        }
-      }
-    });
+    invoices.filter(isOpenForeign).forEach(inv => revalue(inv, 'Invoice', inv.invoice_number, inv.customer_name, true));
+    bills.filter(isOpenForeign).forEach(bill => revalue(bill, 'Bill', bill.bill_number, bill.vendor_name, false));
 
     setRevaluationResults({
       items: results,
+      missing_rates: [...missingRates],
       total_gain: results.filter(r => r.is_gain).reduce((s, r) => s + r.fx_gain_loss, 0),
       total_loss: results.filter(r => !r.is_gain).reduce((s, r) => s + Math.abs(r.fx_gain_loss), 0),
       net_fx:     results.reduce((s, r) => s + r.fx_gain_loss, 0)
@@ -92,10 +106,12 @@ export default function FXRevaluation() {
         fxAccount = await Account.create({ company_id: currentCompany.id, account_code: '7000', account_name: 'Foreign Exchange Gain/Loss', account_type: 'expense', account_category: 'other_expense', description: 'Unrealized FX gains and losses', balance: 0, is_active: true });
       }
       const arAccount = accounts.find(a => a.account_type === 'asset' && a.account_name?.toLowerCase().includes('receivable'));
-      const apAccount = accounts.find(a => a.account_type === 'liability' && a.account_name?.toLowerCase().includes('payable'));
+      const apAccount = accounts.find(a => a.account_type === 'liability' && a.account_name?.toLowerCase().includes('payable') && !a.account_name?.toLowerCase().includes('tax'));
       const journalLineItems = [];
-      const arAdj = revaluationResults.items.filter(r => r.type === 'Invoice').reduce((s, r) => s + r.fx_gain_loss, 0);
-      const apAdj = revaluationResults.items.filter(r => r.type === 'Bill').reduce((s, r) => s + r.fx_gain_loss, 0);
+      const arAdj = round2(revaluationResults.items.filter(r => r.type === 'Invoice').reduce((s, r) => s + r.fx_gain_loss, 0));
+      const apAdj = round2(revaluationResults.items.filter(r => r.type === 'Bill').reduce((s, r) => s + r.fx_gain_loss, 0));
+      if (arAdj !== 0 && !arAccount) throw new Error('No Accounts Receivable account found to post to.');
+      if (apAdj !== 0 && !apAccount) throw new Error('No Accounts Payable account found to post to.');
       if (arAdj !== 0 && arAccount) {
         if (arAdj > 0) {
           journalLineItems.push({ account_id: arAccount.id, account_name: arAccount.account_name, account_code: arAccount.account_code, description: 'FX revaluation adjustment - AR', debit: arAdj, credit: 0 });
@@ -114,17 +130,16 @@ export default function FXRevaluation() {
           journalLineItems.push({ account_id: apAccount.id, account_name: apAccount.account_name, account_code: apAccount.account_code, description: 'FX revaluation adjustment - AP', debit: 0, credit: Math.abs(apAdj) });
         }
       }
+      if (journalLineItems.length === 0) throw new Error('The adjustments net to zero, so there is nothing to post.');
+      journalLineItems[0].fx_documents = revaluationResults.items.map(r => ({ id: r.id, rate: r.current_rate }));
       const totalDebits  = journalLineItems.reduce((s, l) => s + l.debit, 0);
       const totalCredits = journalLineItems.reduce((s, l) => s + l.credit, 0);
       await JournalEntry.create({ company_id: currentCompany.id, entry_number: `JE-FX-${Date.now()}`, entry_date: revaluationDate, reference: 'FX Revaluation', source_type: 'manual', description: `FX Revaluation as of ${format(new Date(revaluationDate), 'MMM d, yyyy')}`, status: 'posted', line_items: journalLineItems, total_debits: totalDebits, total_credits: totalCredits, posted_by: user?.email || 'system', posted_date: new Date().toISOString() });
       for (const line of journalLineItems) {
-        const account = accounts.find(a => a.id === line.account_id);
-        if (account) {
-          let newBalance = parseFloat(account.balance) || 0;
-          if (['asset', 'expense'].includes(account.account_type)) { newBalance += (line.debit - line.credit); }
-          else { newBalance += (line.credit - line.debit); }
-          await Account.update(account.id, { balance: newBalance });
-        }
+        const account = await Account.get(line.account_id);
+        const isDebitNormal = ['asset', 'expense', 'cost_of_goods_sold'].includes(account.account_type);
+        const change = isDebitNormal ? line.debit - line.credit : line.credit - line.debit;
+        await Account.update(account.id, { balance: (parseFloat(account.balance) || 0) + change, company_id: account.company_id });
       }
     },
     onSuccess: () => {
@@ -134,6 +149,8 @@ export default function FXRevaluation() {
       setRevaluationResults(null);
     }
   });
+
+  const postError = postRevaluationMutation.error;
 
   const RESULT_HEADERS = [{ label: 'Type' }, { label: 'Document' }, { label: 'Customer/Vendor' }, { label: 'Currency' }, { label: 'Balance (Foreign)', right: true }, { label: 'Original Rate', right: true }, { label: 'Current Rate', right: true }, { label: 'FX Gain/Loss', right: true }];
 
@@ -148,8 +165,8 @@ export default function FXRevaluation() {
 
       <StatBar stats={[
         { label: 'Exchange Rates',     value: exchangeRates.length, icon: TrendingUp, color: ACCENT },
-        { label: 'Foreign Invoices',   value: invoices.filter(inv => inv.currency !== baseCurrency && (inv.balance_due || 0) > 0).length, color: PRIMARY },
-        { label: 'Foreign Bills',      value: bills.filter(b => b.currency !== baseCurrency && (b.balance_due || 0) > 0).length, color: '#EF4444' },
+        { label: 'Foreign Invoices',   value: invoices.filter(isOpenForeign).length, color: PRIMARY },
+        { label: 'Foreign Bills',      value: bills.filter(isOpenForeign).length, color: '#EF4444' },
         ...(revaluationResults ? [
           { label: 'Net FX Adj.', value: `${revaluationResults.net_fx >= 0 ? '+' : ''}${revaluationResults.net_fx.toFixed(2)}`, color: revaluationResults.net_fx >= 0 ? ACCENT : '#EF4444' },
         ] : []),
@@ -188,6 +205,11 @@ export default function FXRevaluation() {
       {/* Results */}
       {revaluationResults && (
         <>
+          {revaluationResults.missing_rates.length > 0 && (
+            <div role="alert" style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 13 }}>
+              Skipped documents in {revaluationResults.missing_rates.join(', ')}: no exchange rate on or before this date.
+            </div>
+          )}
           {/* Summary cards */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
             {[
@@ -230,6 +252,12 @@ export default function FXRevaluation() {
             <AlertCircle style={{ width: 18, height: 18, color: '#F59E0B', flexShrink: 0, marginTop: 1 }} />
             <p style={{ fontSize: 13, color: '#92400E' }}><strong>Important:</strong> Posting will create a journal entry to adjust AR/AP balances and record unrealized FX gains/losses. Review carefully before posting.</p>
           </div>
+
+          {postError && (
+            <div role="alert" style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#B91C1C', borderRadius: 8, padding: '10px 14px', marginTop: 16, fontSize: 13 }}>
+              The revaluation was not posted: {postError.message}
+            </div>
+          )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
             <button

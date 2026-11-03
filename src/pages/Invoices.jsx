@@ -5,6 +5,7 @@ import { FileText, Plus, Pencil, DollarSign, Clock, CheckCircle, AlertCircle } f
 import { format } from "date-fns";
 import InvoiceForm from "../components/invoices/InvoiceForm";
 import { useCompany } from "../components/auth/CompanyContext";
+import { toBaseDocument } from "@/lib/currency";
 import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn, FilterSelect } from "../components/shared/PageShell";
 
 const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -18,7 +19,8 @@ export default function Invoices() {
   const [search, setSearch]         = useState("");
   const [statusFilter, setStatus]   = useState("all");
   const { currentCompany }          = useCompany();
-  const sym = currencySymbol(currentCompany?.base_currency || 'USD');
+  const baseCurrency = currentCompany?.base_currency || 'USD';
+  const sym = currencySymbol(baseCurrency);
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['invoices', currentCompany?.id],
@@ -39,14 +41,15 @@ export default function Invoices() {
   const open    = inv => { setEditing(inv); setShowForm(true); };
   const closeForm = () => { setShowForm(false); setEditing(null); };
 
-  const totalAmt  = invoices.reduce((s, i) => s + (i.total_amount || 0), 0);
-  const totalPaid = invoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total_amount || 0), 0);
+  const baseInvoices = invoices.map(i => toBaseDocument(i, baseCurrency));
+  const totalAmt  = baseInvoices.reduce((s, i) => s + (i.total_amount || 0), 0);
+  const totalPaid = baseInvoices.filter(i => i.status === 'paid').reduce((s, i) => s + (i.total_amount || 0), 0);
   const overdue   = invoices.filter(i => i.status === 'overdue').length;
-  const totalAR   = invoices.filter(i => !['paid','cancelled'].includes(i.status)).reduce((s, i) => s + (i.balance_due || 0), 0);
+  const totalAR   = baseInvoices.filter(i => !['paid','cancelled'].includes(i.status)).reduce((s, i) => s + (i.balance_due || 0), 0);
 
   const TABLE_HEADERS = [
     { label: 'Invoice #' }, { label: 'Customer' }, { label: 'Date' },
-    { label: 'Due Date' }, { label: `Amount (${currentCompany?.base_currency || 'USD'})`, right: true },
+    { label: 'Due Date' }, { label: 'Amount', right: true },
     { label: 'Balance Due', right: true }, { label: 'Status' }, { label: 'Actions' },
   ];
 
@@ -99,9 +102,9 @@ export default function Invoices() {
               <ERPTableCell bold>{inv.customer_name}</ERPTableCell>
               <ERPTableCell muted>{fmtDate(inv.invoice_date)}</ERPTableCell>
               <ERPTableCell muted>{fmtDate(inv.due_date)}</ERPTableCell>
-              <ERPTableCell right bold>{fmt(inv.total_amount, sym)}</ERPTableCell>
+              <ERPTableCell right bold>{fmt(inv.total_amount, currencySymbol(inv.currency || baseCurrency))}</ERPTableCell>
               <ERPTableCell right style={{ color: inv.balance_due > 0 ? '#EF4444' : '#00875A', fontWeight: 700 }}>
-                {fmt(inv.balance_due, sym)}
+                {fmt(inv.balance_due, currencySymbol(inv.currency || baseCurrency))}
               </ERPTableCell>
               <ERPTableCell><StatusBadge status={inv.status} /></ERPTableCell>
               <ERPTableCell>

@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { CreditCard, TrendingDown, TrendingUp, Save, Pencil, DollarSign, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../components/auth/CompanyContext";
+import { isForeignDocument, round2 } from "@/lib/currency";
 import PageShell, {
   PageHeader,
   StatBar,
@@ -45,6 +46,9 @@ export default function Payments() {
 
   const baseCurrency = currentCompany?.base_currency || 'USD';
   const currencySymbol = getCurrencySymbol(baseCurrency);
+  // Payments are entered in base currency. A foreign invoice tracks amount_paid in its own currency.
+  const toInvoiceCurrency = (invoice, baseAmount) =>
+    isForeignDocument(invoice, baseCurrency) ? round2(baseAmount * Number(invoice.exchange_rate)) : baseAmount;
 
   const initialPaymentFormState = {
     company_id: currentCompany?.id || '',
@@ -101,9 +105,11 @@ export default function Payments() {
     enabled: !!currentCompany,
   });
 
-  const bankAccounts = accounts.filter(acc => acc.account_type === 'asset' && (acc.account_name?.toLowerCase().includes('cash') || acc.account_name?.toLowerCase().includes('bank')));
-  const arAccounts   = accounts.filter(acc => acc.account_type === 'asset' && acc.account_name?.toLowerCase().includes('receivable'));
-  const apAccounts   = accounts.filter(acc => acc.account_type === 'liability' && acc.account_name?.toLowerCase().includes('payable'));
+  // Memoized because the effect below depends on them and sets state: new arrays on
+  // every render would re-run it forever and freeze the page.
+  const bankAccounts = React.useMemo(() => accounts.filter(acc => acc.account_type === 'asset' && (acc.account_name?.toLowerCase().includes('cash') || acc.account_name?.toLowerCase().includes('bank'))), [accounts]);
+  const arAccounts   = React.useMemo(() => accounts.filter(acc => acc.account_type === 'asset' && acc.account_name?.toLowerCase().includes('receivable')), [accounts]);
+  const apAccounts   = React.useMemo(() => accounts.filter(acc => acc.account_type === 'liability' && acc.account_name?.toLowerCase().includes('payable')), [accounts]);
 
   React.useEffect(() => {
     if (!editingPayment) {
@@ -241,21 +247,21 @@ export default function Payments() {
             const currentInvoice = await Invoice.get(savedPayment.invoice_id);
             let newPaid = parseFloat(currentInvoice.amount_paid) || 0;
             if (isEditing && oldPayment) {
-              if (oldPayment.invoice_id === savedPayment.invoice_id) { newPaid = newPaid - oldPayment.amount_base_currency + savedPayment.amount_base_currency; }
+              if (oldPayment.invoice_id === savedPayment.invoice_id) { newPaid = newPaid - toInvoiceCurrency(currentInvoice, oldPayment.amount_base_currency) + toInvoiceCurrency(currentInvoice, savedPayment.amount_base_currency); }
               else {
-                newPaid = newPaid + savedPayment.amount_base_currency;
+                newPaid = newPaid + toInvoiceCurrency(currentInvoice, savedPayment.amount_base_currency);
                 if (oldPayment.invoice_id) {
                   const oi = await Invoice.get(oldPayment.invoice_id);
-                  const op = (parseFloat(oi.amount_paid) || 0) - oldPayment.amount_base_currency;
+                  const op = (parseFloat(oi.amount_paid) || 0) - toInvoiceCurrency(oi, oldPayment.amount_base_currency);
                   await Invoice.update(oldPayment.invoice_id, { amount_paid: op, balance_due: oi.total_amount - op, status: oi.total_amount - op <= 0 ? 'paid' : op > 0 ? 'partial' : 'sent' });
                 }
               }
-            } else { newPaid = newPaid + savedPayment.amount_base_currency; }
-            const bd = currentInvoice.total_amount - newPaid;
+            } else { newPaid = newPaid + toInvoiceCurrency(currentInvoice, savedPayment.amount_base_currency); }
+            const bd = round2(currentInvoice.total_amount - newPaid);
             await Invoice.update(savedPayment.invoice_id, { amount_paid: newPaid, balance_due: bd, status: bd <= 0 ? 'paid' : newPaid > 0 ? 'partial' : 'sent' });
           } else if (isEditing && oldPayment && oldPayment.invoice_id) {
             const oi = await Invoice.get(oldPayment.invoice_id);
-            const op = (parseFloat(oi.amount_paid) || 0) - oldPayment.amount_base_currency;
+            const op = (parseFloat(oi.amount_paid) || 0) - toInvoiceCurrency(oi, oldPayment.amount_base_currency);
             await Invoice.update(oldPayment.invoice_id, { amount_paid: op, balance_due: oi.total_amount - op, status: oi.total_amount - op <= 0 ? 'paid' : op > 0 ? 'partial' : 'sent' });
           }
         } else {
@@ -488,10 +494,19 @@ export default function Payments() {
                   <SelectContent>
                     <SelectItem value={null}>-- No Invoice --</SelectItem>
                     {invoices.filter(inv => inv.customer_id === paymentForm.contact_id).map(inv => (
-                      <SelectItem key={inv.id} value={inv.id}>{inv.invoice_number} - {currencySymbol}{inv.balance_due?.toFixed(2)} due</SelectItem>
+                      <SelectItem key={inv.id} value={inv.id}>{inv.invoice_number} - {getCurrencySymbol(inv.currency || baseCurrency)}{inv.balance_due?.toFixed(2)} due</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {(() => {
+                  const linked = invoices.find(inv => inv.id === paymentForm.invoice_id);
+                  if (!isForeignDocument(linked, baseCurrency)) return null;
+                  return (
+                    <p className="text-xs text-amber-700">
+                      This invoice is in {linked.currency}. Enter the amount in {baseCurrency}; it is applied at the invoice's rate ({baseCurrency} {round2(linked.balance_due / Number(linked.exchange_rate)).toLocaleString()} clears it). Any exchange gain or loss on settlement is not recorded automatically.
+                    </p>
+                  );
+                })()}
               </div>
             )}
 

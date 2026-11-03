@@ -188,7 +188,19 @@ export const POSSale              = createEntity('pos_sales');
 
 // ─── System ───────────────────────────────────────────────────────────────────
 export const AppSettings     = createEntity('app_settings');
-export const Company         = createEntity('companies');
+// base_currency is the one the app reads. companies.currency is kept equal to it on every write.
+export const normalizeCompany = (company) =>
+  company ? { ...company, base_currency: company.base_currency || company.currency || 'USD' } : company;
+const withSyncedCurrency = (data) =>
+  data && 'base_currency' in data ? { ...data, currency: data.base_currency } : data;
+const companyTable = createEntity('companies');
+export const Company = {
+  ...companyTable,
+  list: async (options) => (await companyTable.list(options)).map(normalizeCompany),
+  get: async (id) => normalizeCompany(await companyTable.get(id)),
+  create: async (data) => normalizeCompany(await companyTable.create(withSyncedCurrency(data))),
+  update: async (id, data) => normalizeCompany(await companyTable.update(id, withSyncedCurrency(data))),
+};
 export const License         = createEntity('licenses');
 export const Role            = createEntity('roles');
 export const RecordLock      = createEntity('record_locks');

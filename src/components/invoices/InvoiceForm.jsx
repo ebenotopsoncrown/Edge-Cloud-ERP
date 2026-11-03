@@ -1,7 +1,8 @@
 
 import React, { useState, useEffect } from "react";
 import { safeFormatDate } from "@/lib/utils";
-import { Invoice, Customer, Product, Account, Job, JournalEntry, InventoryTransaction } from "@/api/entities";
+import { Invoice, Customer, Product, Account, Job, JournalEntry, InventoryTransaction, ExchangeRate } from "@/api/entities";
+import { CURRENCY_CODES, findExchangeRate, getBaseTotals, round2 } from "@/lib/currency";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,24 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
     balance_due: 0 // CRITICAL FIX: Add balance_due to initial state
   });
 
+  const baseCurrency = currentCompany?.base_currency || 'USD';
+  // Typed as "1 foreign = x base" because that's how people quote a rate.
+  const [basePerForeign, setBasePerForeign] = useState('');
+  const isForeign = !!formData.currency && formData.currency !== baseCurrency;
+  const exchangeRate = isForeign ? (Number(basePerForeign) > 0 ? 1 / Number(basePerForeign) : null) : 1;
+
+  const { data: exchangeRates = [] } = useQuery({
+    queryKey: ['exchange-rates', currentCompany?.id],
+    queryFn: () => ExchangeRate.list({ filters: { company_id: currentCompany.id }, orderBy: 'effective_date', ascending: false }),
+    enabled: !!currentCompany,
+  });
+
+  const handleCurrencyChange = (currency) => {
+    setFormData(prev => ({ ...prev, currency }));
+    const rate = currency === baseCurrency ? null : findExchangeRate(exchangeRates, currency, baseCurrency, formData.invoice_date);
+    setBasePerForeign(rate ? String(Math.round((1 / rate) * 1e6) / 1e6) : '');
+  };
+
   // Fetch existing invoice if editing
   const { data: existingInvoice } = useQuery({
     queryKey: ['invoice', invoiceId],
@@ -111,6 +130,9 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
   useEffect(() => {
     if (existingInvoice || invoice) {
       const invoiceData = existingInvoice || invoice;
+      if (invoiceData.currency && invoiceData.currency !== baseCurrency && Number(invoiceData.exchange_rate) > 0) {
+        setBasePerForeign(String(Math.round((1 / Number(invoiceData.exchange_rate)) * 1e6) / 1e6));
+      }
       setFormData({
         ...invoiceData,
         ar_account_id: invoiceData.ar_account_id || '',
@@ -190,7 +212,8 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
         ...newLineItems[index],
         product_id: productId,
         description: product.product_name,
-        unit_price: product.unit_price || 0,
+        // Product prices are held in base currency.
+        unit_price: isForeign && exchangeRate ? round2((product.unit_price || 0) * exchangeRate) : (product.unit_price || 0),
         tax_rate: product.tax_rate || 0,
         // gl_account_id: product.sales_account_id || formData.revenue_account_id // Removed
       };
@@ -245,11 +268,21 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
         };
       });
 
+      const baseTotals = getBaseTotals(data, exchangeRate);
+      const balanceDue = data.total_amount - (data.amount_paid || 0);
+
+      // The FX columns are only sent when needed, so base-currency invoices don't depend on them.
+      const fxFields = {};
+      if (isForeign || 'exchange_rate' in data) fxFields.exchange_rate = exchangeRate;
+      if (isForeign || 'total_amount_base_currency' in data) fxFields.total_amount_base_currency = baseTotals.total;
+      if (isForeign || 'balance_due_base_currency' in data) fxFields.balance_due_base_currency = round2(balanceDue / exchangeRate);
+
       const invoiceData = {
         ...data,
+        ...fxFields,
         invoice_number: data.invoice_number?.trim() || `INV-${Date.now()}`,
         line_items: updatedLineItems,
-        balance_due: data.total_amount - (data.amount_paid || 0)
+        balance_due: balanceDue
       };
 
       let savedInvoice;
@@ -382,7 +415,7 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
           account_name: arAccount.account_name,
           account_code: arAccount.account_code,
           description: `Invoice ${savedInvoice.invoice_number} - ${data.customer_name}`,
-          debit: data.total_amount,  // TOTAL including tax
+          debit: baseTotals.total,  // TOTAL including tax, in base currency
           credit: 0
         });
         console.log(`   DR: Accounts Receivable ₦${data.total_amount.toLocaleString()}`);
@@ -394,7 +427,7 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
           account_code: revenueAccount.account_code,
           description: `Revenue from Invoice ${savedInvoice.invoice_number}`,
           debit: 0,
-          credit: data.subtotal  // SUBTOTAL before tax
+          credit: baseTotals.subtotal  // SUBTOTAL before tax, in base currency
         });
         console.log(`   CR: Sales Revenue ₦${data.subtotal.toLocaleString()}`);
 
@@ -406,7 +439,7 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
             account_code: taxAccount.account_code,
             description: `Sales Tax on Invoice ${savedInvoice.invoice_number}`,
             debit: 0,
-            credit: data.tax_total
+            credit: baseTotals.tax
           });
           console.log(`   CR: Sales Tax Payable ₦${data.tax_total.toLocaleString()}`);
         } else if (data.tax_total > 0 && !taxAccount) {
@@ -421,11 +454,11 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
           reference: savedInvoice.invoice_number,
           source_type: 'invoice',
           source_id: savedInvoice.id,
-          description: `Sales Invoice ${savedInvoice.invoice_number} - ${data.customer_name}`,
+          description: `Sales Invoice ${savedInvoice.invoice_number} - ${data.customer_name}${isForeign ? ` (${data.currency} ${round2(data.total_amount)} at 1 ${data.currency} = ${basePerForeign} ${baseCurrency})` : ''}`,
           status: 'posted',
           line_items: journalLines1,
-          total_debits: data.total_amount,
-          total_credits: data.subtotal + data.tax_total,
+          total_debits: baseTotals.total,
+          total_credits: baseTotals.total,
           posted_by: 'system',
           posted_date: new Date().toISOString()
         };
@@ -436,14 +469,14 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
         // Update account balances for JE1
         const arCurrentBalance = parseFloat((await Account.get(arAccount.id)).balance) || 0;
         await Account.update(arAccount.id, {
-          balance: arCurrentBalance + data.total_amount,
+          balance: arCurrentBalance + baseTotals.total,
           company_id: arAccount.company_id
         });
         console.log(`   Updated ${arAccount.account_name}: +₦${data.total_amount.toLocaleString()}`);
 
         const revenueCurrentBalance = parseFloat((await Account.get(revenueAccount.id)).balance) || 0;
         await Account.update(revenueAccount.id, {
-          balance: revenueCurrentBalance + data.subtotal,
+          balance: revenueCurrentBalance + baseTotals.subtotal,
           company_id: revenueAccount.company_id
         });
         console.log(`   Updated ${revenueAccount.account_name}: +₦${data.subtotal.toLocaleString()}`);
@@ -451,7 +484,7 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
         if (taxAccount && data.tax_total > 0) {
           const taxCurrentBalance = parseFloat((await Account.get(taxAccount.id)).balance) || 0;
           await Account.update(taxAccount.id, {
-            balance: taxCurrentBalance + data.tax_total,
+            balance: taxCurrentBalance + baseTotals.tax,
             company_id: taxAccount.company_id
           });
           console.log(`   Updated ${taxAccount.account_name}: +₦${data.tax_total.toLocaleString()}`);
@@ -853,6 +886,11 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
       return;
     }
 
+    if (isForeign && !exchangeRate) {
+      alert(`Enter an exchange rate: how much ${baseCurrency} is 1 ${formData.currency} worth?`);
+      return;
+    }
+
     saveMutation.mutate(formData);
   };
 
@@ -985,7 +1023,7 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
                     <td className="p-1 text-right">{safeToFixed(formData.tax_total)}</td>
                   </tr>
                   <tr className="bg-gray-900 text-white font-bold">
-                    <td className="p-1 text-right">TOTAL</td>
+                    <td className="p-1 text-right">TOTAL ({formData.currency || baseCurrency})</td>
                     <td className="p-1 text-right">{safeToFixed(formData.total_amount)}</td>
                   </tr>
                 </tbody>
@@ -1134,6 +1172,39 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
               </Select>
               <p className="text-xs text-gray-500">To mark as paid, use Payments → Receive Payment.</p>
             </div>
+
+            <div className="space-y-2">
+              <Label>Currency</Label>
+              <Select value={formData.currency || baseCurrency} onValueChange={handleCurrencyChange}>
+                <SelectTrigger aria-label="Invoice currency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...new Set([baseCurrency, ...CURRENCY_CODES])].map(code => (
+                    <SelectItem key={code} value={code}>{code}{code === baseCurrency ? ' (base)' : ''}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {isForeign && (
+              <div className="space-y-2">
+                <Label htmlFor="invoice-rate">Exchange Rate: 1 {formData.currency} = ? {baseCurrency} *</Label>
+                <Input
+                  id="invoice-rate"
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={basePerForeign}
+                  onChange={(e) => setBasePerForeign(e.target.value)}
+                />
+                <p className="text-xs text-gray-500">
+                  {exchangeRate
+                    ? `Posts to the ledger as ${baseCurrency} ${getBaseTotals(formData, exchangeRate).total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.`
+                    : 'No saved rate for this date. Enter one here or add it under Exchange Rates.'}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* CRITICAL: GL Account Selectors */}
@@ -1244,7 +1315,7 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
                     </div>
 
                     <div className="space-y-2">
-                      <Label>Unit Price</Label>
+                      <Label>Unit Price ({formData.currency || baseCurrency})</Label>
                       <Input
                         type="number"
                         value={item.unit_price}
@@ -1298,9 +1369,15 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
                   <span className="font-semibold">{safeToFixed(formData.tax_total)}</span>
                 </div>
                 <div className="flex justify-between text-lg font-bold border-t pt-2">
-                  <span>Total:</span>
+                  <span>Total ({formData.currency || baseCurrency}):</span>
                   <span>{safeToFixed(formData.total_amount)}</span>
                 </div>
+                {isForeign && exchangeRate && (
+                  <div className="flex justify-between text-sm text-gray-600">
+                    <span>Total ({baseCurrency}):</span>
+                    <span>{safeToFixed(getBaseTotals(formData, exchangeRate).total)}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 
 import React, { useState } from "react";
 import { Vendor, Product, ExchangeRate, PurchaseOrder } from "@/api/entities";
+import { findExchangeRate } from "@/lib/currency";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,15 +54,8 @@ export default function PurchaseOrderForm({ purchaseOrder, onClose }) {
   const getCurrentExchangeRate = (currency) => {
     if (currency === (currentCompany?.base_currency || 'USD')) return 1;
     
-    const latestRate = exchangeRates
-      .filter(r => 
-        r.from_currency === (currentCompany?.base_currency || 'USD') && 
-        r.to_currency === currency &&
-        new Date(r.effective_date) <= new Date(formData.po_date)
-      )
-      .sort((a, b) => new Date(b.effective_date) - new Date(a.effective_date))[0];
-    
-    return latestRate?.exchange_rate || 1;
+    // Without a rate the PO is valued 1:1, and the form says so.
+    return findExchangeRate(exchangeRates, currency, currentCompany?.base_currency || 'USD', formData.po_date) ?? 1;
   };
 
   const handleCurrencyChange = (currency) => {
@@ -260,7 +254,9 @@ export default function PurchaseOrderForm({ purchaseOrder, onClose }) {
                 </Select>
                 {formData.currency !== (currentCompany?.base_currency || 'USD') && (
                   <p className="text-xs text-gray-500 mt-1">
-                    Rate: 1 {currentCompany?.base_currency} = {formData.exchange_rate.toFixed(4)} {formData.currency}
+                    {findExchangeRate(exchangeRates, formData.currency, currentCompany?.base_currency || 'USD', formData.po_date)
+                      ? <>Rate: 1 {currentCompany?.base_currency} = {formData.exchange_rate.toFixed(4)} {formData.currency}</>
+                      : <span className="text-red-600">No exchange rate found for {formData.currency}. Add one under Exchange Rates before relying on the base total.</span>}
                   </p>
                 )}
               </div>

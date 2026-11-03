@@ -5,6 +5,7 @@ import { ShoppingCart, Pencil, Trash2, FileText, DollarSign, CheckCircle } from 
 import { format } from "date-fns";
 import PurchaseOrderForm from "../components/purchaseOrders/PurchaseOrderForm";
 import { useCompany } from "../components/auth/CompanyContext";
+import { toBaseDocument } from "@/lib/currency";
 import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn, FilterSelect } from "../components/shared/PageShell";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -39,7 +40,9 @@ export default function PurchaseOrders() {
 
   const convertToBillMutation = useMutation({
     mutationFn: async (po) => {
-      const bill = {
+      const { currency: _poCurrency, exchange_rate: _poRate, ...bill } = toBaseDocument({
+        currency: po.currency,
+        exchange_rate: po.exchange_rate,
         company_id: currentCompany.id,
         bill_number: `BILL-${po.po_number}`,
         vendor_id: po.vendor_id, vendor_name: po.vendor_name,
@@ -50,7 +53,7 @@ export default function PurchaseOrders() {
         subtotal: po.subtotal, tax_total: po.tax_total, total_amount: po.total_amount,
         amount_paid: 0, balance_due: po.total_amount, reference: po.po_number,
         notes: `Converted from PO ${po.po_number}`,
-      };
+      }, currentCompany.base_currency || 'USD');
       const createdBill = await Bill.create(bill);
       await PurchaseOrder.update(po.id, { converted_to_bill: true, bill_id: createdBill.id, status: 'fully_received' });
       return createdBill;

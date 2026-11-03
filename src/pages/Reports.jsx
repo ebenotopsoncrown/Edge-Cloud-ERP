@@ -8,6 +8,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { useCompany } from "../components/auth/CompanyContext";
+import { toBaseDocument } from "@/lib/currency";
 import ReportHeader from "../components/reports/ReportHeader";
 import ReportActions from "../components/reports/ReportActions";
 import AccountLedger from "../components/reports/AccountLedger";
@@ -106,7 +107,7 @@ export default function Reports() {
   } = metrics;
 
   // Sales and purchase reports only count documents that reached the ledger.
-  const invoices = allInvoices.filter(i => !['draft', 'cancelled'].includes(i.status));
+  const invoices = allInvoices.filter(i => !['draft', 'cancelled'].includes(i.status)).map(i => toBaseDocument(i, baseCurrency));
   const bills    = allBills.filter(b => !['draft', 'cancelled'].includes(b.status));
 
   // Date Range drives the period statement. The balance sheet and trial balance stay

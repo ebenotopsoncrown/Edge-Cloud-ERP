@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users, Pencil, Trash2, DollarSign, UserCheck, UserX } from "lucide-react";
 import CustomerForm from "../components/customers/CustomerForm";
 import { useCompany } from "../components/auth/CompanyContext";
+import { toBaseAmount } from "@/lib/currency";
 import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn } from "../components/shared/PageShell";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
@@ -42,7 +43,7 @@ export default function Customers() {
   const enriched = customers.map(c => {
     const outstanding = invoices
       .filter(i => i.customer_id === c.id && ['sent','viewed','partial','overdue'].includes(i.status))
-      .reduce((s, i) => s + (i.balance_due || 0), 0);
+      .reduce((s, i) => s + toBaseAmount(i.balance_due, i, currentCompany?.base_currency || 'USD'), 0);
     return { ...c, outstanding };
   });
 

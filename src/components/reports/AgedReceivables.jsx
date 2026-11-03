@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 import { formatCurrency } from "../shared/FinancialCalculations";
+import { toBaseAmount } from "@/lib/currency";
 
 const COLORS = ['#10B981', '#FBBF24', '#F97316', '#EF4444'];
 
@@ -23,7 +24,7 @@ export default function AgedReceivables({ invoices, baseCurrency = 'USD' }) {
       .forEach(invoice => {
         const dueDate = new Date(invoice.due_date);
         const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
-        const outstandingAmount = invoice.balance_due || invoice.total_amount;
+        const outstandingAmount = toBaseAmount(invoice.balance_due || invoice.total_amount, invoice, baseCurrency);
 
         if (daysOverdue <= 30) {
           categories.current.amount += outstandingAmount;

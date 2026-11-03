@@ -9,6 +9,7 @@ import AccountLedger from "../components/reports/AccountLedger";
 import DrillableKPI from "../components/shared/DrillableKPI";
 import { useFinancialMetrics, formatCurrency, getCurrencySymbol, getMonthlyRevenueAndExpenses } from "../components/shared/FinancialCalculations";
 import GoogleReviewRequest from "../components/shared/GoogleReviewRequest";
+import { toBaseAmount } from "@/lib/currency";
 import {
   DollarSign, TrendingUp, TrendingDown, FileText, Users, Package,
   ShoppingCart, AlertCircle, Receipt, ArrowUpRight, ArrowDownRight,
@@ -419,7 +420,7 @@ export default function Dashboard() {
           { label: 'Total Invoices',  value: invoices.length,  icon: FileText, color: '#F59E0B' },
           {
             label: 'Avg Invoice Value',
-            value: formatCurrency(postedInvoices.length > 0 ? postedInvoices.reduce((sum, i) => sum + (parseFloat(i.total_amount) || 0), 0) / postedInvoices.length : 0, baseCurrency),
+            value: formatCurrency(postedInvoices.length > 0 ? postedInvoices.reduce((sum, i) => sum + toBaseAmount(i.total_amount, i, baseCurrency), 0) / postedInvoices.length : 0, baseCurrency),
             icon: DollarSign,
             color: '#8B5CF6',
           },
@@ -465,7 +466,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: 13.5, fontWeight: 700, color: '#0F172A' }}>{formatCurrency(invoice.total_amount || 0, baseCurrency)}</p>
+                  <p style={{ fontSize: 13.5, fontWeight: 700, color: '#0F172A' }}>{formatCurrency(invoice.total_amount || 0, invoice.currency || baseCurrency)}</p>
                   <StatusBadge status={invoice.status} />
                 </div>
               </div>
