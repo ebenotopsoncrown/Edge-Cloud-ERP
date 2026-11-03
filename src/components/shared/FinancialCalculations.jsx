@@ -1,5 +1,6 @@
 
 import { useMemo } from "react";
+import { format, subMonths } from "date-fns";
 
 /**
  * CRITICAL: Centralized Financial Calculations
@@ -52,6 +53,33 @@ export function calculateAccountBalances(accounts, journalEntries) {
   });
 
   return accountBalances;
+}
+
+/**
+ * Revenue and expenses (including COGS) per calendar month, from posted journal
+ * entries, oldest month first. Months with no activity come back as zero.
+ */
+export function getMonthlyRevenueAndExpenses(accounts, journalEntries, monthCount = 6, today = new Date()) {
+  const months = Array.from({ length: monthCount }, (_, i) => {
+    const date = subMonths(today, monthCount - 1 - i);
+    return { key: format(date, 'yyyy-MM'), month: format(date, 'MMM yy'), Revenue: 0, Expenses: 0 };
+  });
+  const byKey = new Map(months.map(m => [m.key, m]));
+  const accountTypes = new Map(accounts.map(a => [a.id, a.account_type]));
+
+  journalEntries.forEach(entry => {
+    const bucket = byKey.get((entry.entry_date || '').slice(0, 7));
+    if (entry.status !== 'posted' || !bucket) return;
+    (entry.line_items || []).forEach(line => {
+      const type = accountTypes.get(line.account_id);
+      const debit = parseFloat(line.debit) || 0;
+      const credit = parseFloat(line.credit) || 0;
+      if (type === 'revenue') bucket.Revenue += credit - debit;
+      if (type === 'expense' || type === 'cost_of_goods_sold') bucket.Expenses += debit - credit;
+    });
+  });
+
+  return months.map(m => ({ ...m, Revenue: Math.round(m.Revenue * 100) / 100, Expenses: Math.round(m.Expenses * 100) / 100 }));
 }
 
 /**

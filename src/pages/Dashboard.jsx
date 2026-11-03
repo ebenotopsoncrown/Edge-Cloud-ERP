@@ -7,7 +7,7 @@ import InvoiceForm from "../components/invoices/InvoiceForm";
 import BillForm from "../components/bills/BillForm";
 import AccountLedger from "../components/reports/AccountLedger";
 import DrillableKPI from "../components/shared/DrillableKPI";
-import { useFinancialMetrics, formatCurrency } from "../components/shared/FinancialCalculations";
+import { useFinancialMetrics, formatCurrency, getCurrencySymbol, getMonthlyRevenueAndExpenses } from "../components/shared/FinancialCalculations";
 import GoogleReviewRequest from "../components/shared/GoogleReviewRequest";
 import {
   DollarSign, TrendingUp, TrendingDown, FileText, Users, Package,
@@ -29,7 +29,7 @@ const ACCENT    = '#00A86B';
 const COLORS    = [PRIMARY, ACCENT, '#F59E0B', '#EF4444', '#8B5CF6'];
 
 // ── Custom tooltip for charts ────────────────────────────────
-function ChartTooltip({ active, payload, label }) {
+function ChartTooltip({ active, payload, label, currencySymbol = '' }) {
   if (!active || !payload?.length) return null;
   return (
     <div style={{
@@ -43,7 +43,7 @@ function ChartTooltip({ active, payload, label }) {
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: p.color }} />
           <span style={{ color: '#475569', fontWeight: 500 }}>{p.name}:</span>
           <span style={{ color: '#0F172A', fontWeight: 700 }}>
-            {typeof p.value === 'number' ? `$${p.value.toLocaleString()}` : p.value}
+            {typeof p.value === 'number' ? `${currencySymbol}${p.value.toLocaleString()}` : p.value}
           </span>
         </div>
       ))}
@@ -189,14 +189,11 @@ export default function Dashboard() {
   const lowStockProducts  = products.filter(p => p.product_type === 'inventory' && p.quantity_on_hand <= p.reorder_level).length;
   const paidInvoices      = invoices.filter(i => i.status === 'paid').length;
 
-  const revenueTrend = [
-    { month: 'Jan', Revenue: 45000, Expenses: 32000 },
-    { month: 'Feb', Revenue: 52000, Expenses: 35000 },
-    { month: 'Mar', Revenue: 48000, Expenses: 33000 },
-    { month: 'Apr', Revenue: 61000, Expenses: 38000 },
-    { month: 'May', Revenue: 55000, Expenses: 36000 },
-    { month: 'Jun', Revenue: Math.max(metrics.totalRevenue, 58000), Expenses: Math.max(metrics.totalExpenses, 37000) },
-  ];
+  const currencySymbol = getCurrencySymbol(baseCurrency);
+  const revenueTrend = getMonthlyRevenueAndExpenses(accounts, journalEntries);
+  const hasTrendData = revenueTrend.some(m => m.Revenue !== 0 || m.Expenses !== 0);
+  const compactAmount = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
+  const postedInvoices = invoices.filter(i => !['draft', 'cancelled'].includes(i.status));
 
   const invoiceStatusData = [
     { name: 'Paid',    value: paidInvoices },
@@ -279,7 +276,6 @@ export default function Dashboard() {
           subtitle="From revenue accounts"
           icon={DollarSign}
           accentColor={PRIMARY}
-          trend={8.2}
           onClick={() => metrics.revenueAccounts.length > 0 && setSelectedAccount(metrics.revenueAccounts[0])}
         />
         <KPICard
@@ -288,12 +284,11 @@ export default function Dashboard() {
           subtitle={`Margin: ${metrics.netProfitMargin.toFixed(1)}%`}
           icon={TrendingUp}
           accentColor={ACCENT}
-          trend={metrics.netProfitMargin}
         />
         <KPICard
           title="Accounts Receivable"
           value={formatCurrency(metrics.totalAccountsReceivable, baseCurrency)}
-          subtitle={`${invoices.filter(i => !['paid','cancelled'].includes(i.status)).length} unpaid invoices`}
+          subtitle={`${invoices.filter(i => !['draft','paid','cancelled'].includes(i.status)).length} unpaid invoices`}
           icon={FileText}
           accentColor="#F59E0B"
           onClick={() => metrics.arAccounts.length > 0 && setSelectedAccount(metrics.arAccounts[0])}
@@ -301,7 +296,7 @@ export default function Dashboard() {
         <KPICard
           title="Accounts Payable"
           value={formatCurrency(metrics.totalAccountsPayable, baseCurrency)}
-          subtitle={`${bills.filter(b => !['paid','cancelled'].includes(b.status)).length} unpaid bills`}
+          subtitle={`${bills.filter(b => !['draft','paid','cancelled'].includes(b.status)).length} unpaid bills`}
           icon={Receipt}
           accentColor="#8B5CF6"
           onClick={() => metrics.apAccounts.length > 0 && setSelectedAccount(metrics.apAccounts[0])}
@@ -355,8 +350,15 @@ export default function Dashboard() {
         {/* Revenue & Expenses trend */}
         <Card>
           <SectionHeader title="Revenue & Expenses Trend" icon={TrendingUp} action="View Reports" actionUrl={createPageUrl("Reports")} />
+          {!hasTrendData ? (
+            <div style={{ height: 260, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', color: '#94A3B8' }}>
+              <TrendingUp style={{ width: 32, height: 32, marginBottom: 8, opacity: 0.4 }} />
+              <p style={{ fontSize: 13.5, fontWeight: 500 }}>No posted revenue or expenses in the last 6 months</p>
+              <p style={{ fontSize: 12.5, marginTop: 4 }}>This chart fills in as invoices and bills are posted.</p>
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height={260}>
-            <AreaChart data={revenueTrend} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+            <AreaChart data={revenueTrend} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
               <defs>
                 <linearGradient id="gRevenue" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%"  stopColor={PRIMARY} stopOpacity={0.25} />
@@ -369,13 +371,14 @@ export default function Dashboard() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
               <XAxis dataKey="month" stroke="#CBD5E1" tick={{ fill: '#94A3B8', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis stroke="#CBD5E1" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `$${(v/1000).toFixed(0)}k`} />
-              <Tooltip content={<ChartTooltip />} />
+              <YAxis stroke="#CBD5E1" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${currencySymbol}${compactAmount.format(v)}`} />
+              <Tooltip content={<ChartTooltip currencySymbol={currencySymbol} />} />
               <Legend wrapperStyle={{ fontSize: 12, color: '#64748B', paddingTop: 8 }} />
               <Area type="monotone" dataKey="Revenue" stroke={PRIMARY} strokeWidth={2.5} fillOpacity={1} fill="url(#gRevenue)" dot={false} activeDot={{ r: 5, strokeWidth: 0 }} />
               <Area type="monotone" dataKey="Expenses" stroke="#EF4444" strokeWidth={2.5} fillOpacity={1} fill="url(#gExpenses)" dot={false} activeDot={{ r: 5, strokeWidth: 0 }} />
             </AreaChart>
           </ResponsiveContainer>
+          )}
         </Card>
 
         {/* Invoice Status donut */}
@@ -416,7 +419,7 @@ export default function Dashboard() {
           { label: 'Total Invoices',  value: invoices.length,  icon: FileText, color: '#F59E0B' },
           {
             label: 'Avg Invoice Value',
-            value: formatCurrency(invoices.length > 0 ? metrics.totalRevenue / invoices.length : 0, baseCurrency),
+            value: formatCurrency(postedInvoices.length > 0 ? postedInvoices.reduce((sum, i) => sum + (parseFloat(i.total_amount) || 0), 0) / postedInvoices.length : 0, baseCurrency),
             icon: DollarSign,
             color: '#8B5CF6',
           },

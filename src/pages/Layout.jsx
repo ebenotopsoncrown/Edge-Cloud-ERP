@@ -1,5 +1,5 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { User } from "@/api/supabaseClient";
 import { CompanyProvider, useCompany } from "../components/auth/CompanyContext";
@@ -351,6 +351,7 @@ function NavGroup({ group, isExpanded, onToggle, currentPath }) {
 // ── Main Layout Content ─────────────────────────────────────
 function LayoutContent({ children }) {
   const location = useLocation();
+  const navigate = useNavigate();
   const { currentCompany, switchCompany, clearCompany, user, isLoadingCompany, networkError, retryConnection, hasNetworkError } = useCompany();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
@@ -631,7 +632,7 @@ function LayoutContent({ children }) {
             </div>
             <div style={{ padding: '4px' }}>
               <DropdownMenuItem
-                onClick={() => window.location.href = createPageUrl("Settings")}
+                onClick={() => navigate(createPageUrl("Settings"))}
                 className="rounded-lg text-sm font-medium"
               >
                 <UserIcon className="w-4 h-4 mr-2 text-gray-400" />

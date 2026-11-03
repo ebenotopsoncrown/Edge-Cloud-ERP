@@ -135,25 +135,6 @@ export default function LandingPage({ onSignIn }) {
         </div>
       </section>
 
-      {/* DEMO CTA */}
-      <section style={{ background: "linear-gradient(135deg, #00A86B, #008f5a)", padding: "60px 2rem", textAlign: "center", color: "white" }}>
-        <div style={{ maxWidth: 700, margin: "0 auto" }}>
-          <h2 style={{ fontSize: "clamp(1.5rem, 3vw, 2rem)", fontWeight: 800, marginBottom: 16 }}>See it live before signing up</h2>
-          <p style={{ fontSize: "1.1rem", opacity: 0.9, marginBottom: 32 }}>Explore the full ERP with our demo account — no signup required</p>
-          <div style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)", borderRadius: 12, padding: "20px 32px", display: "inline-block", marginBottom: 24 }}>
-            <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 8 }}>Demo Account Credentials</div>
-            <div style={{ display: "flex", gap: 32, justifyContent: "center", flexWrap: "wrap" }}>
-              <div><span style={{ opacity: 0.7, fontSize: 13 }}>Email: </span><strong style={{ fontSize: 15 }}>demo@edgeclouderp.com</strong></div>
-              <div><span style={{ opacity: 0.7, fontSize: 13 }}>Password: </span><strong style={{ fontSize: 15 }}>EdgeDemo2024!</strong></div>
-            </div>
-          </div>
-          <br />
-          <button onClick={onSignIn} style={{ background: "white", border: "none", color: "#00A86B", padding: "14px 36px", borderRadius: 10, cursor: "pointer", fontSize: 15, fontWeight: 700 }}>
-            Open Demo Account →
-          </button>
-        </div>
-      </section>
-
       {/* PRICING */}
       <section id="pricing" style={{ padding: "80px 2rem", background: "#f8faff" }}>
         <div style={{ maxWidth: 1100, margin: "0 auto" }}>
