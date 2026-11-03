@@ -1,0 +1,13 @@
+{
+  "name": "edge-cloud-seed-mlu",
+  "private": true,
+  "type": "module",
+  "description": "MLU demo seed and end-to-end test. Separate from the app so its dependencies stay out of the app build.",
+  "scripts": {
+    "seed": "node seed.mjs",
+    "e2e": "node e2e.mjs"
+  },
+  "dependencies": {
+    "puppeteer-core": "^23.11.1"
+  }
+}

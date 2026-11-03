@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 
 .env
+# Seed tooling: holds a service-role key
+.env.seed
+scripts/seed-mlu/output/
