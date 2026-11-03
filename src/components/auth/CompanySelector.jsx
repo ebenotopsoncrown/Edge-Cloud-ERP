@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { pluralize } from "@/lib/utils";
 import { User } from '@/api/supabaseClient';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -238,7 +239,7 @@ export default function CompanySelector() {
                           )}
                           {company.is_evaluation && company.evaluation_days_remaining !== undefined && (
                             <Badge className="bg-purple-100 text-purple-800">
-                              {company.evaluation_days_remaining} days left
+                              {pluralize(company.evaluation_days_remaining, 'day')} left
                             </Badge>
                           )}
                         </div>

@@ -1,4 +1,5 @@
 import React from "react";
+import { pluralize } from "@/lib/utils";
 import { Employee, PayrollRun } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -30,20 +31,13 @@ export default function PayrollDashboard() {
   const pendingRuns      = payrollRuns.filter(pr => pr.status === 'draft' || pr.status === 'processing').length;
   const totalGross       = payrollRuns.reduce((s, pr) => s + (parseFloat(pr.total_gross) || 0), 0);
 
-  const quickActions = [
-    { label: 'Run Payroll',      icon: Calendar, href: createPageUrl('Payroll'), color: '#8B5CF6' },
-    { label: 'New Employee',     icon: Plus,     href: createPageUrl('Payroll'), color: '#00A86B' },
-    { label: 'Import Employees', icon: Upload,   href: createPageUrl('Payroll'), color: '#1B4F8A' },
-    { label: 'Payroll Reports',  icon: FileText, href: createPageUrl('Payroll'), color: '#F59E0B' },
-  ];
-
   const HEADERS = [{ label: 'Payroll #' }, { label: 'Pay Period' }, { label: 'Pay Date' }, { label: 'Employees' }, { label: 'Gross Pay', right: true }, { label: 'Net Pay', right: true }, { label: 'Status' }];
 
   return (
     <PageShell>
       <PageHeader
         title="Payroll Dashboard"
-        subtitle={`${activeEmployees} active employees · ${payrollRuns.length} payroll runs`}
+        subtitle={`${pluralize(activeEmployees, 'active employee')} · ${pluralize(payrollRuns.length, 'payroll run')}`}
         icon={Users}
         accentColor="#8B5CF6"
         actions={
@@ -60,21 +54,6 @@ export default function PayrollDashboard() {
         { label: 'Payroll Runs',     value: payrollRuns.length,     icon: Calendar,   color: '#1B4F8A' },
         { label: 'Pending Runs',     value: pendingRuns,            color: '#F59E0B' },
       ]} />
-
-      {/* Quick Actions */}
-      <div style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94A3B8', marginBottom: 10 }}>Quick Actions</p>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {quickActions.map((qa, i) => (
-            <Link key={i} to={qa.href} style={{ textDecoration: 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', background: 'white', border: '1.5px solid #E2E8F0', borderRadius: 9, fontSize: 13.5, fontWeight: 600, color: qa.color, cursor: 'pointer', boxShadow: '0 1px 3px rgba(15,43,91,0.05)' }}>
-                <qa.icon style={{ width: 15, height: 15 }} />
-                {qa.label}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
 
       {/* Recent Payroll Runs */}
       <div style={{ marginBottom: 8 }}>

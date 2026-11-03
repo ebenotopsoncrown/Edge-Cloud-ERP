@@ -12,3 +12,8 @@ export function safeFormatDate(value, pattern = 'MMM d, yyyy', fallback = '—')
   const date = new Date(value)
   return Number.isNaN(date.getTime()) ? fallback : format(date, pattern)
 }
+
+// "1 invoice", "2 invoices", "0 invoices".
+export function pluralize(count, singular, plural = `${singular}s`) {
+  return `${count} ${Number(count) === 1 ? singular : plural}`
+}

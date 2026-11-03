@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Invoice, Bill, Customer, Product, Account, JournalEntry } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "../components/auth/CompanyContext";
@@ -274,7 +275,7 @@ export default function Dashboard() {
         <KPICard
           title="Total Revenue"
           value={formatCurrency(metrics.totalRevenue, baseCurrency)}
-          subtitle="From revenue accounts"
+          subtitle="All time · From revenue accounts"
           icon={DollarSign}
           accentColor={PRIMARY}
           onClick={() => metrics.revenueAccounts.length > 0 && setSelectedAccount(metrics.revenueAccounts[0])}
@@ -282,14 +283,14 @@ export default function Dashboard() {
         <KPICard
           title="Net Profit"
           value={formatCurrency(metrics.netIncome, baseCurrency)}
-          subtitle={`Margin: ${metrics.netProfitMargin.toFixed(1)}%`}
+          subtitle={`All time · Margin: ${metrics.netProfitMargin.toFixed(1)}%`}
           icon={TrendingUp}
           accentColor={ACCENT}
         />
         <KPICard
           title="Accounts Receivable"
           value={formatCurrency(metrics.totalAccountsReceivable, baseCurrency)}
-          subtitle={`${invoices.filter(i => !['draft','paid','cancelled'].includes(i.status)).length} unpaid invoices`}
+          subtitle={`All time · ${pluralize(invoices.filter(i => !['draft','paid','cancelled'].includes(i.status)).length, 'unpaid invoice')}`}
           icon={FileText}
           accentColor="#F59E0B"
           onClick={() => metrics.arAccounts.length > 0 && setSelectedAccount(metrics.arAccounts[0])}
@@ -297,7 +298,7 @@ export default function Dashboard() {
         <KPICard
           title="Accounts Payable"
           value={formatCurrency(metrics.totalAccountsPayable, baseCurrency)}
-          subtitle={`${bills.filter(b => !['draft','paid','cancelled'].includes(b.status)).length} unpaid bills`}
+          subtitle={`All time · ${pluralize(bills.filter(b => !['draft','paid','cancelled'].includes(b.status)).length, 'unpaid bill')}`}
           icon={Receipt}
           accentColor="#8B5CF6"
           onClick={() => metrics.apAccounts.length > 0 && setSelectedAccount(metrics.apAccounts[0])}
@@ -372,7 +373,7 @@ export default function Dashboard() {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
               <XAxis dataKey="month" stroke="#CBD5E1" tick={{ fill: '#94A3B8', fontSize: 12 }} axisLine={false} tickLine={false} />
-              <YAxis stroke="#CBD5E1" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${currencySymbol}${compactAmount.format(v)}`} />
+              <YAxis stroke="#CBD5E1" tick={{ fill: '#94A3B8', fontSize: 11 }} axisLine={false} tickLine={false} tickFormatter={v => `${v < 0 ? '-' : ''}${currencySymbol}${compactAmount.format(Math.abs(v))}`} />
               <Tooltip content={<ChartTooltip currencySymbol={currencySymbol} />} />
               <Legend wrapperStyle={{ fontSize: 12, color: '#64748B', paddingTop: 8 }} />
               <Area type="monotone" dataKey="Revenue" stroke={PRIMARY} strokeWidth={2.5} fillOpacity={1} fill="url(#gRevenue)" dot={false} activeDot={{ r: 5, strokeWidth: 0 }} />

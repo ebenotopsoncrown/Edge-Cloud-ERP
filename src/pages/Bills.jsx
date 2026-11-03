@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Bill } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Receipt, DollarSign, Clock, AlertCircle, CheckCircle } from "lucide-react";
@@ -52,7 +53,7 @@ export default function Bills() {
 
       <PageHeader
         title="Purchase Bills"
-        subtitle={`${bills.length} bills · accounts payable`}
+        subtitle={`${pluralize(bills.length, 'bill')} · accounts payable`}
         icon={Receipt}
         accentColor="#F59E0B"
         actions={<NewBtn onClick={() => { setEditing(null); setShowForm(true); }} label="New Bill" />}

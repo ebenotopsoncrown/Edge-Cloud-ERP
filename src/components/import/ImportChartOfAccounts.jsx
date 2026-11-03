@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Account, JournalEntry } from "@/api/entities";
 import { UploadFile, ExtractDataFromUploadedFile } from "@/api/integrations";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -338,7 +339,7 @@ export default function ImportChartOfAccounts() {
           <AlertDescription className="text-blue-900">
             <strong>Import Complete!</strong>
             <p className="mt-2">
-              Successfully imported: {importResults.success} accounts<br />
+              Successfully imported: {pluralize(importResults.success, 'account')}<br />
               Failed: {importResults.failed} accounts
             </p>
             {importResults.errors.length > 0 && (

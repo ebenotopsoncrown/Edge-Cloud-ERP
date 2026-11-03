@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { FixedAsset, Account, JournalEntry } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Package, Pencil, TrendingDown, AlertCircle, Play, DollarSign } from "lucide-react";
@@ -108,7 +109,7 @@ export default function FixedAssets() {
 
       <PageHeader
         title="Fixed Assets"
-        subtitle={`${assets.length} assets · depreciation management`}
+        subtitle={`${pluralize(assets.length, 'asset')} · depreciation management`}
         icon={Package}
         accentColor="#8B5CF6"
         actions={

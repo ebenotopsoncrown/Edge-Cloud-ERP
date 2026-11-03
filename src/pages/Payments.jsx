@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Payment, Customer, Vendor, Invoice, Bill, Account, JournalEntry } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -350,7 +351,7 @@ export default function Payments() {
     <PageShell>
       <PageHeader
         title="Payments"
-        subtitle={`${baseCurrency} · ${payments.length} total transactions`}
+        subtitle={`${baseCurrency} · ${pluralize(payments.length, 'total transaction')}`}
         icon={CreditCard}
         accentColor="#1B4F8A"
         actions={

@@ -18,20 +18,27 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar
+  ResponsiveContainer
 } from "recharts";
 import { TrendingUp, Download, RefreshCw, FileText, BarChart3 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useCompany } from "../components/auth/CompanyContext";
-import { useFinancialMetrics, formatCurrency, getCurrencySymbol } from "../components/shared/FinancialCalculations";
+import { useFinancialMetrics, formatCurrency, getCurrencySymbol, getMonthlyRevenueAndExpenses } from "../components/shared/FinancialCalculations";
 import PageShell, { PageHeader, StatBar, ActionBtn } from "../components/shared/PageShell";
 
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
+
+function NoDataMessage({ title, detail }) {
+  return (
+    <div className="text-center py-12">
+      <BarChart3 className="w-12 h-12 mx-auto text-gray-300 mb-3" />
+      <p className="text-gray-500 font-medium">{title}</p>
+      <p className="text-gray-400 text-sm mt-1">{detail}</p>
+    </div>
+  );
+}
+
+const NO_POSTED_DATA = 'These figures appear once invoices, bills or journals are posted.';
 
 export default function ManagementDashboard() {
   const [generatingReport, setGeneratingReport] = useState(false);
@@ -93,46 +100,42 @@ export default function ManagementDashboard() {
     .filter(a => a.account_category === 'current_liability')
     .reduce((sum, a) => sum + a.calculatedBalance, 0);
 
-  const currentRatio = currentLiabilities ? currentAssets / currentLiabilities : 0;
+  // A ratio with nothing to divide by has no honest value, so it shows as a dash.
+  const hasCurrentRatio = currentLiabilities > 0;
+  const currentRatio = hasCurrentRatio ? currentAssets / currentLiabilities : 0;
+  const currentRatioText = hasCurrentRatio ? currentRatio.toFixed(2) : '—';
+  const inventoryValue = metrics.inventoryAccounts
+    .filter(a => a.account_category === 'current_asset')
+    .reduce((sum, a) => sum + a.calculatedBalance, 0);
+  const quickRatioText = hasCurrentRatio ? ((currentAssets - inventoryValue) / currentLiabilities).toFixed(2) : '—';
 
   const totalAssets = metrics.totalAssets;
   const totalLiabilities = metrics.totalLiabilities;
   const totalEquity = metrics.totalEquity;
   
-  const debtToEquity = totalEquity ? totalLiabilities / totalEquity : 0;
+  const hasDebtToEquity = totalEquity > 0;
+  const debtToEquity = hasDebtToEquity ? totalLiabilities / totalEquity : 0;
+  const debtToEquityText = hasDebtToEquity ? debtToEquity.toFixed(2) : '—';
   const returnOnAssets = totalAssets ? (netProfit / totalAssets) * 100 : 0;
   const returnOnEquity = totalEquity ? (netProfit / totalEquity) * 100 : 0;
 
-  // Revenue trend (using actual data when available)
-  const revenueTrend = [
-    { month: 'Jan', revenue: 0, expenses: 0, profit: 0 },
-    { month: 'Feb', revenue: 0, expenses: 0, profit: 0 },
-    { month: 'Mar', revenue: 0, expenses: 0, profit: 0 },
-    { month: 'Apr', revenue: 0, expenses: 0, profit: 0 },
-    { month: 'May', revenue: 0, expenses: 0, profit: 0 },
-    { month: 'Current', revenue: totalRevenue, expenses: totalExpenses, profit: netProfit }
-  ];
-
-  // KPI data for radar chart
-  const kpiData = [
-    { metric: 'Profitability', value: Math.min(Math.abs(profitMargin) / 10, 10) },
-    { metric: 'Liquidity', value: Math.min(currentRatio * 2, 10) },
-    { metric: 'Efficiency', value: totalRevenue && totalAssets ? Math.min((totalRevenue / totalAssets) * 2, 10) : 5 },
-    { metric: 'Growth', value: 5 },
-    { metric: 'Leverage', value: Math.max(10 - debtToEquity, 0) }
-  ];
+  const hasPostedData = journalEntries.length > 0;
+  const revenueTrend = getMonthlyRevenueAndExpenses(accounts, journalEntries)
+    .map(month => ({ ...month, Profit: Math.round((month.Revenue - month.Expenses) * 100) / 100 }));
+  const hasTrendData = revenueTrend.some(month => month.Revenue !== 0 || month.Expenses !== 0);
+  const compactAmount = new Intl.NumberFormat('en', { notation: 'compact', maximumFractionDigits: 1 });
 
   const generateExecutiveSummary = useMutation({
     mutationFn: async () => {
       const prompt = `You are a senior financial analyst. Analyze the following business performance data and provide an executive summary with insights, recommendations, and strategic advice.
 
-Financial Data:
+Financial Data (all-time totals):
 - Total Revenue: ${currencySymbol}${totalRevenue.toLocaleString()}
 - Total Expenses: ${currencySymbol}${totalExpenses.toLocaleString()}
 - Net Profit: ${currencySymbol}${netProfit.toLocaleString()}
 - Profit Margin: ${profitMargin.toFixed(2)}%
-- Current Ratio: ${currentRatio.toFixed(2)}
-- Debt-to-Equity Ratio: ${debtToEquity.toFixed(2)}
+- Current Ratio: ${currentRatioText}
+- Debt-to-Equity Ratio: ${debtToEquityText}
 - Return on Assets: ${returnOnAssets.toFixed(2)}%
 - Return on Equity: ${returnOnEquity.toFixed(2)}%
 - Total Assets: ${currencySymbol}${totalAssets.toLocaleString()}
@@ -158,7 +161,8 @@ Format the response in markdown with clear headers.`;
     onSuccess: (data) => {
       setExecutiveSummary(data);
       setGeneratingReport(false);
-    }
+    },
+    onError: () => setGeneratingReport(false),
   });
 
   const handleGenerateReport = () => {
@@ -179,15 +183,15 @@ Format the response in markdown with clear headers.`;
             icon={RefreshCw}
             label={generatingReport ? 'Generating…' : 'Generate AI Report'}
             variant="outline"
-            disabled={generatingReport}
+            disabled={generatingReport || !hasPostedData}
           />
         }
       />
       <StatBar stats={[
-        { label: 'Total Revenue',  value: formatCurrency(totalRevenue, baseCurrency),  icon: TrendingUp, color: '#00A86B' },
-        { label: 'Net Profit',     value: formatCurrency(netProfit, baseCurrency),      icon: TrendingUp, color: netProfit >= 0 ? '#00A86B' : '#EF4444' },
-        { label: 'Profit Margin',  value: `${profitMargin.toFixed(1)}%`,              color: '#1B4F8A' },
-        { label: 'Current Ratio',  value: currentRatio.toFixed(2),                   color: currentRatio >= 1.5 ? '#00A86B' : '#F59E0B' },
+        { label: 'Revenue (All time)',  value: formatCurrency(totalRevenue, baseCurrency),  icon: TrendingUp, color: '#00A86B' },
+        { label: 'Net Profit (All time)',     value: formatCurrency(netProfit, baseCurrency),      icon: TrendingUp, color: netProfit >= 0 ? '#00A86B' : '#EF4444' },
+        { label: 'Margin (All time)',  value: `${profitMargin.toFixed(1)}%`,              color: '#1B4F8A' },
+        { label: 'Current Ratio',  value: currentRatioText,                   color: !hasCurrentRatio ? '#64748B' : currentRatio >= 1.5 ? '#00A86B' : '#F59E0B' },
         { label: 'ROA',            value: `${returnOnAssets.toFixed(1)}%`,           color: '#8B5CF6' },
       ]} />
       <div>
@@ -210,7 +214,7 @@ Format the response in markdown with clear headers.`;
               <CardContent>
                 <div className="text-3xl font-bold text-blue-900">{formatCurrency(totalRevenue, baseCurrency)}</div>
                 <div className="flex items-center mt-2 text-gray-600 text-sm">
-                  <span>Current Period</span>
+                  <span>All time</span>
                 </div>
               </CardContent>
             </Card>
@@ -222,7 +226,7 @@ Format the response in markdown with clear headers.`;
               <CardContent>
                 <div className="text-3xl font-bold text-green-900">{formatCurrency(netProfit, baseCurrency)}</div>
                 <div className="text-sm text-green-700 mt-2">
-                  Margin: {profitMargin.toFixed(2)}%
+                  All time · Margin: {profitMargin.toFixed(2)}%
                 </div>
               </CardContent>
             </Card>
@@ -232,9 +236,9 @@ Format the response in markdown with clear headers.`;
                 <CardTitle className="text-sm text-purple-900">Current Ratio</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-3xl font-bold text-purple-900">{currentRatio.toFixed(2)}</div>
+                <div className="text-3xl font-bold text-purple-900">{currentRatioText}</div>
                 <div className="text-sm text-purple-700 mt-2">
-                  {currentRatio >= 1.5 ? 'Healthy' : 'Needs attention'}
+                  {!hasCurrentRatio ? 'No current liabilities yet' : currentRatio >= 1.5 ? 'Healthy' : 'Needs attention'}
                 </div>
               </CardContent>
             </Card>
@@ -246,7 +250,7 @@ Format the response in markdown with clear headers.`;
               <CardContent>
                 <div className="text-3xl font-bold text-orange-900">{returnOnAssets.toFixed(2)}%</div>
                 <div className="text-sm text-orange-700 mt-2">
-                  Return on Assets
+                  All time · Return on Assets
                 </div>
               </CardContent>
             </Card>
@@ -255,44 +259,33 @@ Format the response in markdown with clear headers.`;
           {/* Revenue & Profitability Trend */}
           <Card>
             <CardHeader>
-              <CardTitle>Revenue & Profitability Trend</CardTitle>
+              <CardTitle>Revenue & Profitability Trend (Last 6 Months)</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={revenueTrend}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
-                  <XAxis dataKey="month" stroke="#6B7280" />
-                  <YAxis stroke="#6B7280" />
-                  <Tooltip />
-                  <Legend />
-                  <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={3} name="Revenue" />
-                  <Line type="monotone" dataKey="expenses" stroke="#EF4444" strokeWidth={3} name="Expenses" />
-                  <Line type="monotone" dataKey="profit" stroke="#10B981" strokeWidth={3} name="Profit" />
-                </LineChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-
-          {/* Business Health Radar */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Business Health Score</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ResponsiveContainer width="100%" height={400}>
-                <RadarChart data={kpiData}>
-                  <PolarGrid stroke="#E5E7EB" />
-                  <PolarAngleAxis dataKey="metric" stroke="#6B7280" />
-                  <PolarRadiusAxis angle={90} domain={[0, 10]} stroke="#6B7280" />
-                  <Radar name="Performance" dataKey="value" stroke="#3B82F6" fill="#3B82F6" fillOpacity={0.6} />
-                  <Legend />
-                </RadarChart>
-              </ResponsiveContainer>
+              {hasTrendData ? (
+                <ResponsiveContainer width="100%" height={400}>
+                  <LineChart data={revenueTrend}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                    <XAxis dataKey="month" stroke="#6B7280" />
+                    <YAxis stroke="#6B7280" tickFormatter={value => `${value < 0 ? '-' : ''}${currencySymbol}${compactAmount.format(Math.abs(value))}`} />
+                    <Tooltip formatter={value => formatCurrency(value, baseCurrency)} />
+                    <Legend />
+                    <Line type="monotone" dataKey="Revenue" stroke="#3B82F6" strokeWidth={3} />
+                    <Line type="monotone" dataKey="Expenses" stroke="#EF4444" strokeWidth={3} />
+                    <Line type="monotone" dataKey="Profit" stroke="#10B981" strokeWidth={3} />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <NoDataMessage title="No posted revenue or expenses in the last 6 months" detail="This chart fills in as invoices and bills are posted." />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
 
         <TabsContent value="financial" className="space-y-6">
+          {!hasPostedData ? (
+            <Card><CardContent><NoDataMessage title="No financial ratios yet" detail={NO_POSTED_DATA} /></CardContent></Card>
+          ) : (
           <Card>
             <CardHeader>
               <CardTitle>Financial Ratios Analysis</CardTitle>
@@ -311,20 +304,20 @@ Format the response in markdown with clear headers.`;
               <div className="border-b pb-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700 font-medium">Current Ratio</span>
-                  <span className="text-2xl font-bold text-blue-600">{currentRatio.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-blue-600">{currentRatioText}</span>
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
-                  {currentRatio >= 1.5 ? '✓ Strong liquidity position' : '⚠ Consider improving liquidity'}
+                  {!hasCurrentRatio ? 'No current liabilities yet' : currentRatio >= 1.5 ? '✓ Strong liquidity position' : '⚠ Consider improving liquidity'}
                 </p>
               </div>
 
               <div className="border-b pb-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-700 font-medium">Debt-to-Equity</span>
-                  <span className="text-2xl font-bold text-purple-600">{debtToEquity.toFixed(2)}</span>
+                  <span className="text-2xl font-bold text-purple-600">{debtToEquityText}</span>
                 </div>
                 <p className="text-sm text-gray-600 mt-1">
-                  {debtToEquity <= 1 ? '✓ Conservative leverage' : '⚠ High leverage'}
+                  {!hasDebtToEquity ? 'No equity balance yet' : debtToEquity <= 1 ? '✓ Conservative leverage' : '⚠ High leverage'}
                 </p>
               </div>
 
@@ -339,9 +332,13 @@ Format the response in markdown with clear headers.`;
               </div>
             </CardContent>
           </Card>
+          )}
         </TabsContent>
 
         <TabsContent value="kpis" className="space-y-6">
+          {!hasPostedData ? (
+            <Card><CardContent><NoDataMessage title="No key metrics yet" detail={NO_POSTED_DATA} /></CardContent></Card>
+          ) : (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card>
               <CardHeader>
@@ -352,12 +349,6 @@ Format the response in markdown with clear headers.`;
                   <div className="flex justify-between">
                     <span className="text-gray-600">Gross Profit Margin</span>
                     <span className="font-semibold">{metrics.grossProfitMargin.toFixed(2)}%</span>
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Operating Margin</span>
-                    <span className="font-semibold">{(profitMargin * 0.85).toFixed(2)}%</span>
                   </div>
                 </div>
                 <div>
@@ -383,13 +374,13 @@ Format the response in markdown with clear headers.`;
                 <div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Current Ratio</span>
-                    <span className="font-semibold">{currentRatio.toFixed(2)}</span>
+                    <span className="font-semibold">{currentRatioText}</span>
                   </div>
                 </div>
                 <div>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Quick Ratio</span>
-                    <span className="font-semibold">{(currentRatio * 0.8).toFixed(2)}</span>
+                    <span className="font-semibold">{quickRatioText}</span>
                   </div>
                 </div>
                 <div>
@@ -412,15 +403,10 @@ Format the response in markdown with clear headers.`;
                     <span className="font-semibold">{totalAssets && totalRevenue ? (totalRevenue / totalAssets).toFixed(2) : '0.00'}</span>
                   </div>
                 </div>
-                <div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Revenue per Asset</span>
-                    <span className="font-semibold">{formatCurrency(totalAssets && totalRevenue ? (totalRevenue / totalAssets) : 0, baseCurrency)}</span>
-                  </div>
-                </div>
               </CardContent>
             </Card>
           </div>
+          )}
         </TabsContent>
 
         <TabsContent value="executive" className="space-y-6">
@@ -431,12 +417,17 @@ Format the response in markdown with clear headers.`;
                 Executive Summary & Strategic Analysis
               </CardTitle>
               {!executiveSummary && (
-                <Button onClick={handleGenerateReport} disabled={generatingReport}>
+                <Button onClick={handleGenerateReport} disabled={generatingReport || !hasPostedData}>
                   {generatingReport ? 'Generating...' : 'Generate AI Report'}
                 </Button>
               )}
             </CardHeader>
             <CardContent>
+              {generateExecutiveSummary.error && (
+                <div role="alert" className="mb-4 bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">
+                  The report could not be generated: {generateExecutiveSummary.error.message}
+                </div>
+              )}
               {executiveSummary ? (
                 <div className="prose max-w-none">
                   <ReactMarkdown>{executiveSummary}</ReactMarkdown>
@@ -445,7 +436,9 @@ Format the response in markdown with clear headers.`;
                 <div className="text-center py-12">
                   <FileText className="w-16 h-16 mx-auto text-gray-300 mb-4" />
                   <p className="text-gray-500 mb-4">
-                    Click "Generate AI Report" to create an executive summary with AI-powered insights and recommendations
+                    {hasPostedData
+                      ? 'Click "Generate AI Report" to create an executive summary with AI-powered insights and recommendations'
+                      : NO_POSTED_DATA}
                   </p>
                 </div>
               )}

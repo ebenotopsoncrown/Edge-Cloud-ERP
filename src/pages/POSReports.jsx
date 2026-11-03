@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { POSSale, POSSession, Store } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "../components/auth/CompanyContext";
@@ -354,7 +355,7 @@ export default function POSReports() {
                     <div>
                       <p className="font-semibold capitalize">{method}</p>
                       <p className="text-sm text-gray-600">
-                        {sales.filter(s => s.payments?.some(p => p.payment_method === method)).length} transactions
+                        {pluralize(sales.filter(s => s.payments?.some(p => p.payment_method === method)).length, 'transaction')}
                       </p>
                     </div>
                     <div className="text-right">
@@ -471,7 +472,7 @@ export default function POSReports() {
                           <StoreIcon className="w-5 h-5 text-blue-600" />
                           <h3 className="font-semibold text-lg">{store.store_name}</h3>
                         </div>
-                        <p className="text-sm text-gray-600">{store.transactions} transactions</p>
+                        <p className="text-sm text-gray-600">{pluralize(store.transactions, 'transaction')}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-3xl font-bold text-green-600">${store.sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>

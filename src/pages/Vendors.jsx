@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Vendor } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Building2, Pencil, Trash2, DollarSign, Globe } from "lucide-react";
@@ -64,7 +65,7 @@ export default function Vendors() {
 
       <PageHeader
         title="Vendors"
-        subtitle={`${vendors.length} vendors · supplier management`}
+        subtitle={`${pluralize(vendors.length, 'vendor')} · supplier management`}
         icon={Building2}
         accentColor="#8B5CF6"
         actions={<NewBtn onClick={() => { setEditing(null); setShowForm(true); }} label="New Vendor" />}

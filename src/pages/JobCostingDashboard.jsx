@@ -35,18 +35,6 @@ export default function JobCostingDashboard() {
   const totalProfit     = totalContractValue - totalCosts;
   const profitMargin    = totalContractValue ? ((totalProfit / totalContractValue) * 100).toFixed(1) : '0.0';
 
-  const quickActions = [
-    { label: 'Record Job Cost', icon: Plus,      color: ACCENT },
-    // Hidden until time sheet tracking is built.
-    // { label: 'Time Sheet',      icon: Clock,     color: '#1B4F8A' },
-    { label: 'Job Invoice',     icon: FileText,  color: '#00A86B' },
-    { label: 'Job Report',      icon: TrendingUp,color: '#F59E0B' },
-    { label: 'New Job',         icon: Plus,      color: ACCENT },
-    { label: 'Import Jobs',     icon: Upload,    color: '#64748B' },
-    { label: 'Cost Codes',      icon: DollarSign,color: '#EF4444' },
-    { label: 'Phases',          icon: Briefcase, color: '#8B5CF6' },
-  ];
-
   const HEADERS = [{ label: 'Job #' }, { label: 'Job Name' }, { label: 'Customer' }, { label: 'Contract', right: true }, { label: 'Actual Cost', right: true }, { label: 'Profit', right: true }, { label: 'Complete' }, { label: 'Status' }];
   const activeJobsList = jobs.filter(j => j.status === 'in_progress');
 
@@ -61,7 +49,7 @@ export default function JobCostingDashboard() {
           <Link to={createPageUrl('JobCosting')} style={{ textDecoration: 'none' }}>
             <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', border: 'none', borderRadius: 8, background: ACCENT, color: 'white', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Plus style={{ width: 15, height: 15 }} />
-              New Job
+              Jobs & Costs
             </button>
           </Link>
         }
@@ -77,21 +65,6 @@ export default function JobCostingDashboard() {
           color: totalProfit >= 0 ? '#00A86B' : '#EF4444' },
         { label: 'Margin',           value: `${profitMargin}%`,      color: '#F59E0B' },
       ]} />
-
-      {/* Quick Actions */}
-      <div style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94A3B8', marginBottom: 10 }}>Quick Actions</p>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {quickActions.map((qa, i) => (
-            <Link key={i} to={createPageUrl('JobCosting')} style={{ textDecoration: 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', background: 'white', border: '1.5px solid #E2E8F0', borderRadius: 9, fontSize: 13.5, fontWeight: 600, color: qa.color, boxShadow: '0 1px 3px rgba(15,43,91,0.05)' }}>
-                <qa.icon style={{ width: 15, height: 15 }} />
-                {qa.label}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
 
       <ERPTable headers={HEADERS} emptyIcon={Briefcase} emptyTitle="No active jobs" emptyDesc="Create your first job to start tracking costs.">
         {activeJobsList.map(job => {

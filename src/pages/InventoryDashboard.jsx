@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Product, InventoryTransaction } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "../components/auth/CompanyContext";
@@ -162,7 +163,7 @@ export default function InventoryDashboard() {
         <KpiCard
           title="Stock Value"
           value={formatCurrency(totalValue, baseCurrency)}
-          subtitle={`${totalQuantity.toFixed(0)} total units`}
+          subtitle={pluralize(totalQuantity.toFixed(0), 'total unit')}
           icon={DollarSign}
           accentColor="#00A86B"
         />

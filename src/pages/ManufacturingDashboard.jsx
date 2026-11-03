@@ -38,17 +38,6 @@ export default function ManufacturingDashboard() {
   const totalProduction = workOrders.filter(wo => wo.status === 'completed').reduce((s, wo) => s + (wo.quantity_produced || 0), 0);
   const activeBOMs   = boms.filter(b => b.is_active).length;
 
-  const quickActions = [
-    { label: 'New Work Order',    icon: Plus,       color: ACCENT },
-    { label: 'Start Production',  icon: Play,       color: '#00A86B' },
-    { label: 'Material Issue',    icon: Package,    color: '#F59E0B' },
-    { label: 'Production Report', icon: TrendingUp, color: '#8B5CF6' },
-    { label: 'New BOM',           icon: Plus,       color: '#00A86B' },
-    { label: 'Import BOMs',       icon: Upload,     color: '#64748B' },
-    { label: 'Work Centers',      icon: Factory,    color: '#EF4444' },
-    { label: 'Routings',          icon: FileText,   color: '#F59E0B' },
-  ];
-
   const HEADERS = [
     { label: 'WO #' }, { label: 'Product' }, { label: 'Qty to Produce', right: true },
     { label: 'Produced', right: true }, { label: 'Progress' }, { label: 'Status' }
@@ -65,7 +54,7 @@ export default function ManufacturingDashboard() {
           <Link to={createPageUrl('Manufacturing')} style={{ textDecoration: 'none' }}>
             <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', border: 'none', borderRadius: 8, background: ACCENT, color: 'white', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
               <Plus style={{ width: 15, height: 15 }} />
-              New Work Order
+              Production
             </button>
           </Link>
         }
@@ -78,21 +67,6 @@ export default function ManufacturingDashboard() {
         { label: 'Active BOMs',        value: activeBOMs,       icon: FileText,  color: '#F59E0B' },
         { label: 'Total BOMs',         value: boms.length,      color: '#64748B' },
       ]} />
-
-      {/* Quick Actions */}
-      <div style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94A3B8', marginBottom: 10 }}>Quick Actions</p>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {quickActions.map((qa, i) => (
-            <Link key={i} to={createPageUrl('Manufacturing')} style={{ textDecoration: 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', background: 'white', border: '1.5px solid #E2E8F0', borderRadius: 9, fontSize: 13.5, fontWeight: 600, color: qa.color, boxShadow: '0 1px 3px rgba(15,43,91,0.05)' }}>
-                <qa.icon style={{ width: 15, height: 15 }} />
-                {qa.label}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
 
       <ERPTable headers={HEADERS} emptyIcon={Factory} emptyTitle="No work orders yet" emptyDesc="Create your first work order to begin production.">
         {workOrders.slice(0, 15).map(wo => {

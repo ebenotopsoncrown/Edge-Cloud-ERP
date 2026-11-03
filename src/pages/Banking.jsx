@@ -41,12 +41,9 @@ export default function Banking() {
   const totalPaid        = madePayments.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
 
   const quickActions = [
-    { label: 'Receive Payment', icon: TrendingUp,      href: createPageUrl('Payments'),      color: '#00A86B' },
-    { label: 'Make Payment',    icon: TrendingDown,     href: createPageUrl('Payments'),      color: '#EF4444' },
-    { label: 'Add Bank Account',icon: Plus,             href: createPageUrl('ChartOfAccounts'), color: '#1B4F8A' },
-    { label: 'Bank Transfer',   icon: ArrowRightLeft,   href: createPageUrl('Banking'),       color: '#8B5CF6' },
-    { label: 'Reconciliation',  icon: CreditCard,       href: createPageUrl('Banking'),       color: '#F59E0B' },
-    { label: 'Bank Charges',    icon: Receipt,          href: createPageUrl('JournalEntries'),color: '#64748B' },
+    { label: 'Payments',          icon: CreditCard, href: createPageUrl('Payments'),        color: '#00A86B' },
+    { label: 'Chart of Accounts', icon: Plus,       href: createPageUrl('ChartOfAccounts'), color: '#1B4F8A' },
+    { label: 'Journal Entries',   icon: Receipt,    href: createPageUrl('JournalEntries'),  color: '#64748B' },
   ];
 
   const ACCT_HEADERS = [

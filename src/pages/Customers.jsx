@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Customer, Invoice } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Users, Pencil, Trash2, DollarSign, UserCheck, UserX } from "lucide-react";
@@ -80,7 +81,7 @@ export default function Customers() {
 
       <PageHeader
         title="Customers"
-        subtitle={`${customers.length} customers · ${activeCount} active`}
+        subtitle={`${pluralize(customers.length, 'customer')} · ${activeCount} active`}
         icon={Users}
         actions={<NewBtn onClick={() => { setEditing(null); setShowForm(true); }} label="New Customer" />}
       />

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Store, InventoryLocation } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -66,7 +67,7 @@ export default function StoreManagement() {
     <PageShell>
       <PageHeader
         title="Store Management"
-        subtitle={`${stores.length} stores · ${storeTypes.length} types`}
+        subtitle={`${pluralize(stores.length, 'store')} · ${pluralize(storeTypes.length, 'type')}`}
         icon={StoreIcon}
         accentColor="#1B4F8A"
         actions={<NewBtn label="New Store" onClick={() => setShowForm(true)} />}

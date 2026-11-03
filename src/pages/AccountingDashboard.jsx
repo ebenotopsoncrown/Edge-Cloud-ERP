@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Account, JournalEntry } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -169,7 +170,7 @@ export default function AccountingDashboard() {
         <KpiCard
           title="Total Assets"
           value={formatCurrency(metrics.totalAssets, baseCurrency)}
-          subtitle={`${metrics.assetAccounts.length} accounts`}
+          subtitle={pluralize(metrics.assetAccounts.length, 'account')}
           icon={TrendingUp}
           accentColor="#1B4F8A"
           onClick={handleAssetsClick}
@@ -177,7 +178,7 @@ export default function AccountingDashboard() {
         <KpiCard
           title="Total Liabilities"
           value={formatCurrency(metrics.totalLiabilities, baseCurrency)}
-          subtitle={`${metrics.liabilityAccounts.length} accounts`}
+          subtitle={pluralize(metrics.liabilityAccounts.length, 'account')}
           icon={TrendingDown}
           accentColor="#EF4444"
           onClick={handleLiabilitiesClick}
@@ -229,10 +230,7 @@ export default function AccountingDashboard() {
             <Plus size={14} /> New Journal Entry
           </ActionBtn>
           <ActionBtn to={createPageUrl("Banking")}>
-            <CreditCard size={14} /> Bank Transaction
-          </ActionBtn>
-          <ActionBtn to={createPageUrl("JournalEntries")}>
-            <FileText size={14} /> Adjusting Entry
+            <CreditCard size={14} /> Banking
           </ActionBtn>
           <ActionBtn to={createPageUrl("Reports")}>
             <BarChart3 size={14} /> Financial Reports

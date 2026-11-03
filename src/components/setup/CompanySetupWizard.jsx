@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Account, Company } from "@/api/entities";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -129,7 +130,7 @@ export default function CompanySetupWizard({ company, onComplete }) {
                       <Building2 className="w-5 h-5 text-blue-600" />
                       <div>
                         <p className="font-semibold">{template.name}</p>
-                        <p className="text-xs text-gray-500">{template.accounts.length} accounts included</p>
+                        <p className="text-xs text-gray-500">{pluralize(template.accounts.length, 'account')} included</p>
                       </div>
                     </div>
                   </SelectItem>

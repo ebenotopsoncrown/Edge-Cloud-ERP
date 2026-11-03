@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { InventoryReceipt, PurchaseOrder } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Package, Truck, CheckCircle, Clock } from "lucide-react";
@@ -46,7 +47,7 @@ export default function ReceiveInventory() {
 
       <PageHeader
         title="Receive Inventory"
-        subtitle={`${receipts.length} receipts · goods receiving`}
+        subtitle={`${pluralize(receipts.length, 'receipt')} · goods receiving`}
         icon={Truck}
         accentColor="#00A86B"
         actions={<NewBtn onClick={() => setShowForm(true)} label="Receive Goods" />}

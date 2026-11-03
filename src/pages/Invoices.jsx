@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Invoice } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Plus, Pencil, DollarSign, Clock, CheckCircle, AlertCircle } from "lucide-react";
@@ -59,7 +60,7 @@ export default function Invoices() {
 
       <PageHeader
         title="Sales Invoices"
-        subtitle={`${invoices.length} total invoices · ${currentCompany?.base_currency || 'USD'}`}
+        subtitle={`${pluralize(invoices.length, 'total invoice')} · ${currentCompany?.base_currency || 'USD'}`}
         icon={FileText}
         actions={<NewBtn onClick={() => { setEditing(null); setShowForm(true); }} label="New Invoice" />}
       />

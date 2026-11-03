@@ -42,17 +42,6 @@ export default function NonProfitDashboard() {
   const totalGrants    = grants.filter(g => g.status === 'active').reduce((s, g) => s + (parseFloat(g.grant_amount) || 0), 0);
   const activePrograms = programs.filter(p => p.status === 'active').length;
 
-  const quickActions = [
-    { label: 'Enter Donation',   icon: Receipt,    color: ACCENT },
-    { label: 'Enter Pledge',     icon: FileText,   color: '#8B5CF6' },
-    { label: 'Receive Payment',  icon: CreditCard, color: '#1B4F8A' },
-    { label: 'Budget Setup',     icon: TrendingUp, color: '#F59E0B' },
-    { label: 'New Donor',        icon: Plus,       color: '#00A86B' },
-    { label: 'New Program',      icon: Briefcase,  color: '#EF4444' },
-    { label: 'New Grant',        icon: Plus,       color: '#8B5CF6' },
-    { label: 'NP Reports',       icon: FileText,   color: '#64748B' },
-  ];
-
   const HEADERS = [{ label: 'Donor' }, { label: 'Program' }, { label: 'Date' }, { label: 'Amount', right: true }, { label: 'Status' }];
 
   return (
@@ -62,14 +51,6 @@ export default function NonProfitDashboard() {
         subtitle={`Donations, grants & programs · ${currentCompany?.company_name || ''}`}
         icon={Heart}
         accentColor={ACCENT}
-        actions={
-          <Link to={createPageUrl('NonProfit')} style={{ textDecoration: 'none' }}>
-            <button style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', border: 'none', borderRadius: 8, background: ACCENT, color: 'white', fontSize: 13.5, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
-              <Plus style={{ width: 15, height: 15 }} />
-              Enter Donation
-            </button>
-          </Link>
-        }
       />
 
       <StatBar stats={[
@@ -79,21 +60,6 @@ export default function NonProfitDashboard() {
         { label: 'Active Programs',  value: activePrograms,      icon: Target,      color: '#00A86B' },
         { label: 'Total Programs',   value: programs.length,     color: '#64748B' },
       ]} />
-
-      {/* Quick Actions */}
-      <div style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94A3B8', marginBottom: 10 }}>Quick Actions</p>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {quickActions.map((qa, i) => (
-            <Link key={i} to={createPageUrl(i === 7 ? 'Reports' : 'NonProfit')} style={{ textDecoration: 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', background: 'white', border: '1.5px solid #E2E8F0', borderRadius: 9, fontSize: 13.5, fontWeight: 600, color: qa.color, boxShadow: '0 1px 3px rgba(15,43,91,0.05)' }}>
-                <qa.icon style={{ width: 15, height: 15 }} />
-                {qa.label}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
 
       {/* Program Summary */}
       {programs.length > 0 && (

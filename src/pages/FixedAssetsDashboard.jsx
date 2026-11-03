@@ -1,4 +1,5 @@
 import React from "react";
+import { pluralize } from "@/lib/utils";
 import { FixedAsset } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -37,19 +38,13 @@ export default function FixedAssetsDashboard() {
   const totalBookValue  = totalCost - totalDepreciation;
   const categories      = [...new Set(assets.map(a => a.category).filter(Boolean))];
 
-  const quickActions = [
-    { label: 'New Asset',        icon: Plus,        href: createPageUrl('FixedAssets'), color: '#8B5CF6' },
-    { label: 'Run Depreciation', icon: Play,        href: createPageUrl('FixedAssets'), color: '#1B4F8A' },
-    { label: 'Asset Register',   icon: Package,     href: createPageUrl('FixedAssets'), color: '#00A86B' },
-  ];
-
   const HEADERS = [{ label: 'Code' }, { label: 'Asset Name' }, { label: 'Category' }, { label: 'Cost', right: true }, { label: 'Book Value', right: true }, { label: 'Status' }];
 
   return (
     <PageShell>
       <PageHeader
         title="Fixed Assets Dashboard"
-        subtitle={`${assets.length} assets · ${categories.length} categories`}
+        subtitle={`${pluralize(assets.length, 'asset')} · ${pluralize(categories.length, 'category', 'categories')}`}
         icon={Package}
         accentColor="#8B5CF6"
         actions={
@@ -66,21 +61,6 @@ export default function FixedAssetsDashboard() {
         { label: 'Accumulated Dep',value: fmt(totalDepreciation, sym), icon: TrendingDown, color: '#EF4444' },
         { label: 'Net Book Value', value: fmt(totalBookValue, sym), icon: DollarSign, color: '#8B5CF6' },
       ]} />
-
-      {/* Quick Actions */}
-      <div style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: '#94A3B8', marginBottom: 10 }}>Quick Actions</p>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-          {quickActions.map((qa, i) => (
-            <Link key={i} to={qa.href} style={{ textDecoration: 'none' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', background: 'white', border: '1.5px solid #E2E8F0', borderRadius: 9, fontSize: 13.5, fontWeight: 600, color: qa.color, boxShadow: '0 1px 3px rgba(15,43,91,0.05)' }}>
-                <qa.icon style={{ width: 15, height: 15 }} />
-                {qa.label}
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
 
       {/* Category Summary */}
       {categories.length > 0 && (

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Product } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Package, Pencil, Trash2, AlertTriangle, DollarSign, Boxes } from "lucide-react";
@@ -72,7 +73,7 @@ export default function Products() {
 
       <PageHeader
         title="Products & Inventory"
-        subtitle={`${products.length} products · ${inventoryProducts.length} inventory items`}
+        subtitle={`${pluralize(products.length, 'product')} · ${pluralize(inventoryProducts.length, 'inventory item')}`}
         icon={Package}
         accentColor="#00A86B"
         actions={<NewBtn onClick={() => { setEditing(null); setShowForm(true); }} label="New Product" />}

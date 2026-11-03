@@ -132,7 +132,6 @@ const navigationGroups = [
     icon: Heart,
     items: [
       { title: "Non-Profit Dashboard", url: createPageUrl("NonProfitDashboard"), icon: LayoutDashboard },
-      { title: "Donations & Programs", url: createPageUrl("NonProfit"),           icon: Heart },
     ]
   },
   {

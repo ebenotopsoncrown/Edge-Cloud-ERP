@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Account } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Book, Pencil, Trash2 } from "lucide-react";
@@ -84,7 +85,7 @@ export default function ChartOfAccounts() {
 
       <PageHeader
         title="Chart of Accounts"
-        subtitle={`${accounts.length} accounts · double-entry bookkeeping`}
+        subtitle={`${pluralize(accounts.length, 'account')} · double-entry bookkeeping`}
         icon={Book}
         actions={<NewBtn onClick={() => { setEditing(null); setShowForm(true); }} label="New Account" />}
       />

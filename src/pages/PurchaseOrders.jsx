@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { PurchaseOrder, Bill } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { ShoppingCart, Pencil, Trash2, FileText, DollarSign, CheckCircle } from "lucide-react";
@@ -97,7 +98,7 @@ export default function PurchaseOrders() {
 
       <PageHeader
         title="Purchase Orders"
-        subtitle={`${purchaseOrders.length} orders · vendor procurement`}
+        subtitle={`${pluralize(purchaseOrders.length, 'order')} · vendor procurement`}
         icon={ShoppingCart}
         accentColor="#F59E0B"
         actions={<NewBtn onClick={() => { setEditing(null); setShowForm(true); }} label="New Purchase Order" />}

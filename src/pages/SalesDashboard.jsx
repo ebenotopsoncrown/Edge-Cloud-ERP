@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Invoice, Customer, Account, JournalEntry } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -226,7 +227,7 @@ export default function SalesDashboard() {
         <KpiCard
           title="Accounts Receivable"
           value={formatCurrency(metrics.totalAccountsReceivable, baseCurrency)}
-          subtitle={`${pendingInvoices} unpaid invoices`}
+          subtitle={pluralize(pendingInvoices, 'unpaid invoice')}
           icon={FileText}
           accentColor="#F59E0B"
           onClick={handleARClick}
@@ -251,9 +252,6 @@ export default function SalesDashboard() {
           </ActionBtn>
           <ActionBtn to={createPageUrl("Payments")}>
             <CreditCard size={14} /> Receive Payment
-          </ActionBtn>
-          <ActionBtn to={createPageUrl("Invoices")}>
-            <ShoppingCart size={14} /> Sales Order
           </ActionBtn>
         </ActionCard>
 

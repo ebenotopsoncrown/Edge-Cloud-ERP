@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { pluralize } from "@/lib/utils";
 import { Bill, Vendor, Account, JournalEntry } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -244,7 +245,7 @@ export default function PurchaseDashboard() {
         <KpiCard
           title="Accounts Payable"
           value={formatCurrency(metrics.totalAccountsPayable, baseCurrency)}
-          subtitle={`${pendingBills} unpaid bills`}
+          subtitle={pluralize(pendingBills, 'unpaid bill')}
           icon={Receipt}
           accentColor="#F59E0B"
           onClick={handleAPClick}
