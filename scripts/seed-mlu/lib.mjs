@@ -131,6 +131,19 @@ export async function updateCompany(changes) {
 
 export const envValue = (name) => env[name];
 
+// Unscoped service-role access, for the few things that aren't one company's rows.
+// Callers must apply their own guards.
+export const serviceRest = async (path, options = {}) => {
+  const { body, response } = await request(path, options);
+  return { rows: body ? JSON.parse(body) : [], response };
+};
+export async function serviceAuth(path, options = {}) {
+  const response = await fetch(`${baseUrl}/auth/v1/${path}`, { ...options, headers: { ...headers, ...options.headers } });
+  const text = await response.text();
+  if (!response.ok) throw new Error(scrub(`auth ${response.status}: ${text.slice(0, 200)}`));
+  return text ? JSON.parse(text) : {};
+}
+
 // One row, and only if it belongs to MLU.
 export async function deleteRowById(table, id) {
   const { body } = await request(`${table}?company_id=eq.${COMPANY_ID}&id=eq.${id}`, { method: 'DELETE', headers: { Prefer: 'return=representation' } });
