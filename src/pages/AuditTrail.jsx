@@ -38,7 +38,7 @@ export default function AuditTrail() {
     queryKey: ['audit-logs', currentCompany?.id],
     queryFn: async () => {
       if (!currentCompany) return [];
-      const logs = await AuditLog.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_date', ascending: false });
+      const logs = await AuditLog.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_at', ascending: false });
       return logs;
     },
     enabled: !!currentCompany,
@@ -80,7 +80,7 @@ export default function AuditTrail() {
                   ['Entity Type', selectedLog.entity_type],
                   ['Entity ID',   <span style={{ fontFamily: 'monospace', fontSize: 11.5 }}>{selectedLog.entity_id}</span>],
                   ['User',        selectedLog.user_email || selectedLog.user_name || '—'],
-                  ['Date',        fmtDate(selectedLog.created_date)],
+                  ['Date',        fmtDate(selectedLog.created_at)],
                   ['IP Address',  selectedLog.ip_address || '—'],
                 ].map(([k, v]) => (
                   <React.Fragment key={k}>
@@ -157,7 +157,7 @@ export default function AuditTrail() {
                 <span style={{ fontSize: 13, color: '#475569' }}>{log.user_email || log.user_name || '—'}</span>
               </div>
             </ERPTableCell>
-            <ERPTableCell muted style={{ fontSize: 12.5 }}>{fmtDate(log.created_date)}</ERPTableCell>
+            <ERPTableCell muted style={{ fontSize: 12.5 }}>{fmtDate(log.created_at)}</ERPTableCell>
             <ERPTableCell>
               <ActionBtn
                 onClick={() => { setSelectedLog(log); setDetailsOpen(true); }}

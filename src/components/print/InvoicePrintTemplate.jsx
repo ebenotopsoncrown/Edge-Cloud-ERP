@@ -1,4 +1,5 @@
 import React from "react";
+import { safeFormatDate } from "@/lib/utils";
 import { format } from "date-fns";
 
 export default function InvoicePrintTemplate({ invoice, company }) {
@@ -55,8 +56,8 @@ export default function InvoicePrintTemplate({ invoice, company }) {
             <h2 style={{fontSize: '24px', fontWeight: 'bold', margin: 0}}>INVOICE</h2>
             <div style={{fontSize: '10px', marginTop: '4px'}}>
               <p style={{margin: 0}}><strong>Invoice #:</strong> {invoice.invoice_number}</p>
-              <p style={{margin: 0}}><strong>Date:</strong> {format(new Date(invoice.invoice_date), 'MMM d, yyyy')}</p>
-              <p style={{margin: 0}}><strong>Due:</strong> {format(new Date(invoice.due_date), 'MMM d, yyyy')}</p>
+              <p style={{margin: 0}}><strong>Date:</strong> {safeFormatDate(invoice.invoice_date, 'MMM d, yyyy')}</p>
+              <p style={{margin: 0}}><strong>Due:</strong> {safeFormatDate(invoice.due_date, 'MMM d, yyyy')}</p>
             </div>
           </div>
         </div>

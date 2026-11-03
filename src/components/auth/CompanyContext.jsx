@@ -3,6 +3,7 @@ import { supabase } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 
 const CompanyContext = createContext(null);
+const PICKER_FLAG = 'company_picker_requested';
 
 export function CompanyProvider({ children }) {
   const [currentCompany, setCurrentCompany] = useState(null);
@@ -13,14 +14,15 @@ export function CompanyProvider({ children }) {
     queryKey: ['current-user'],
     queryFn: async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      return user;
+      // Supabase keeps the display name in user_metadata, the app reads user.full_name.
+      return user ? { ...user, full_name: user.user_metadata?.full_name || user.email } : null;
     },
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
 
   // Get ALL active companies - no strict email filtering
-  const { data: accessibleCompanies = [], refetch: refetchCompanies } = useQuery({
+  const { data: accessibleCompanies = [], refetch: refetchCompanies, error: companiesError } = useQuery({
     queryKey: ['companies'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -55,6 +57,13 @@ export function CompanyProvider({ children }) {
         }
       }
 
+      // "Switch Company" reloads the page, so remember to show the picker afterwards.
+      if (accessibleCompanies.length > 1 && sessionStorage.getItem(PICKER_FLAG)) {
+        setIsLoadingCompany(false);
+        return;
+      }
+      sessionStorage.removeItem(PICKER_FLAG);
+
       // Auto-select the first company if no valid stored selection
       setCurrentCompany(accessibleCompanies[0]);
       sessionStorage.setItem('current_company_id', accessibleCompanies[0].id);
@@ -69,7 +78,9 @@ export function CompanyProvider({ children }) {
     if (company === null) {
       setCurrentCompany(null);
       sessionStorage.removeItem('current_company_id');
+      sessionStorage.setItem(PICKER_FLAG, '1');
     } else {
+      sessionStorage.removeItem(PICKER_FLAG);
       setCurrentCompany(company);
       sessionStorage.setItem('current_company_id', company.id);
     }
@@ -79,6 +90,7 @@ export function CompanyProvider({ children }) {
     setCurrentCompany(null);
     sessionStorage.removeItem('current_company_id');
     localStorage.removeItem('current_company_id');
+    sessionStorage.removeItem(PICKER_FLAG);
   };
 
   const isEvaluationExpired = () => {
@@ -116,6 +128,7 @@ export function CompanyProvider({ children }) {
       hasNetworkError: false,
       refetchCompanies,
       accessibleCompanies,
+      companiesError,
     }}>
       {children}
     </CompanyContext.Provider>

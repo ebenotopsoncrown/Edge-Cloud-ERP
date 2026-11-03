@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Job, JobPhase } from "@/api/entities";
+import { useCompany } from "../auth/CompanyContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Save } from "lucide-react";
 
 export default function JobPhaseForm({ phase, onClose }) {
+  const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     phase_code: '',
@@ -22,8 +24,9 @@ export default function JobPhaseForm({ phase, onClose }) {
   });
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ['jobs'],
-    queryFn: () => Job.list()
+    queryKey: ['jobs', currentCompany?.id],
+    queryFn: () => Job.list({ filters: { company_id: currentCompany.id } }),
+    enabled: !!currentCompany
   });
 
   const saveMutation = useMutation({

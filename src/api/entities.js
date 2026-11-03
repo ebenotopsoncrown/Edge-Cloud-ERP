@@ -15,6 +15,16 @@
 
 import { supabase } from './supabaseClient';
 
+// Forms keep unset dropdowns and date pickers as ''. Postgres rejects '' for uuid
+// and date columns, so send NULL instead. JSON columns (line_items etc.) are untouched.
+function cleanEmptyRefs(record) {
+  const cleaned = { ...record };
+  Object.keys(cleaned).forEach((key) => {
+    if (cleaned[key] === '' && /(^id|_id|_date)$/.test(key)) cleaned[key] = null;
+  });
+  return cleaned;
+}
+
 // ─── Entity Factory ────────────────────────────────────────────────────────────
 // Creates a standard CRUD interface for any Supabase table.
 
@@ -72,7 +82,7 @@ export function createEntity(tableName) {
       const now = new Date().toISOString();
       const { data, error } = await supabase
         .from(tableName)
-        .insert([{ ...recordData, created_at: now, updated_at: now }])
+        .insert([{ ...cleanEmptyRefs(recordData), created_at: now, updated_at: now }])
         .select()
         .single();
       if (error) throw error;
@@ -85,7 +95,7 @@ export function createEntity(tableName) {
     update: async (id, recordData) => {
       const { data, error } = await supabase
         .from(tableName)
-        .update({ ...recordData, updated_at: new Date().toISOString() })
+        .update({ ...cleanEmptyRefs(recordData), updated_at: new Date().toISOString() })
         .eq('id', id)
         .select()
         .single();

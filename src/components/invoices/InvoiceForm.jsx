@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { safeFormatDate } from "@/lib/utils";
 import { Invoice, Customer, Product, Account, Job, JournalEntry, InventoryTransaction } from "@/api/entities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,6 +12,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Plus, Trash2, Save, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../auth/CompanyContext";
+
+// Statuses that have journal entries and stock movements behind them.
+const POSTED_INVOICE_STATUSES = ['sent', 'viewed', 'partial', 'overdue', 'paid'];
 
 export default function InvoiceForm({ invoice, invoiceId, onClose }) {
   const { currentCompany, canPerformAction } = useCompany();
@@ -243,6 +247,7 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
 
       const invoiceData = {
         ...data,
+        invoice_number: data.invoice_number?.trim() || `INV-${Date.now()}`,
         line_items: updatedLineItems,
         balance_due: data.total_amount - (data.amount_paid || 0)
       };
@@ -260,89 +265,106 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
         savedInvoice = await Invoice.create(invoiceData);
       }
 
-      // CRITICAL: Post journal entries when invoice is sent or paid
-      if (data.status === 'sent' || data.status === 'paid') {
+      const wasPosted = isEditing && POSTED_INVOICE_STATUSES.includes(oldInvoice?.status);
+      const willPost = POSTED_INVOICE_STATUSES.includes(data.status);
+
+      const arAccount = accounts.find(a => a.id === data.ar_account_id);
+      const revenueAccount = accounts.find(a => a.id === data.revenue_account_id);
+      const taxAccount = accounts.find(a => a.id === data.tax_account_id);
+
+      // Checked before any reversal so a failure can't leave the ledger half-updated.
+      if (willPost && (!arAccount || !revenueAccount)) {
+        alert('ERROR: Required GL accounts not found. Please select valid Accounts Receivable and Revenue accounts.');
+        setIsLoading(false);
+        return;
+      }
+
+      // Reverse whatever the previous version posted, including when it moves back to draft.
+      if (wasPosted) {
+        console.log('🔄 EDITING MODE - Reversing old journal entries first...');
+
+        // Reverse old journal entries by finding ALL related entries
+        const relatedEntries = await JournalEntry.list({ filters: {
+          company_id: oldInvoice.company_id,
+          source_type: 'invoice',
+          source_id: oldInvoice.id
+        } });
+
+        console.log(`Found ${relatedEntries.length} journal entries to reverse`);
+
+        for (const je of relatedEntries) {
+          if (je.line_items) {
+            for (const line of je.line_items) {
+              try {
+                const account = await Account.get(line.account_id);
+                if (account) {
+                  const currentBalance = parseFloat(account.balance) || 0;
+                  const lineDebit = parseFloat(line.debit) || 0;
+                  const lineCredit = parseFloat(line.credit) || 0;
+
+                  let newBalance;
+                  if (['asset', 'expense', 'cost_of_goods_sold'].includes(account.account_type)) {
+                    newBalance = currentBalance - lineDebit + lineCredit;
+                  } else {
+                    newBalance = currentBalance + lineDebit - lineCredit;
+                  }
+
+                  await Account.update(account.id, {
+                    balance: newBalance,
+                    company_id: account.company_id
+                  });
+
+                  console.log(`   Reversed ${account.account_name}: ${currentBalance.toFixed(2)} → ${newBalance.toFixed(2)}`);
+                }
+              } catch (error) {
+                console.warn(`Could not reverse account ${line.account_id}:`, error);
+              }
+            }
+          }
+
+          await JournalEntry.delete(je.id);
+          console.log(`   Deleted journal entry: ${je.entry_number}`);
+        }
+
+        // Restore inventory quantities
+        if (oldInvoice.line_items) {
+          for (const item of oldInvoice.line_items) {
+            if (item.product_id) {
+              try {
+                const product = await Product.get(item.product_id);
+                if (product && product.product_type === 'inventory') {
+                  const restoredQty = (product.quantity_on_hand || 0) + item.quantity;
+                  await Product.update(product.id, {
+                    quantity_on_hand: restoredQty
+                  });
+                  console.log(`   Restored inventory for ${product.product_name}: +${item.quantity}`);
+                }
+
+                // The re-post below writes fresh movements, so remove the old ones.
+                const oldTransactions = await InventoryTransaction.list({ filters: {
+                  reference_id: oldInvoice.id,
+                  product_id: item.product_id,
+                  transaction_type: 'sale'
+                } });
+                for (const trans of oldTransactions) {
+                  await InventoryTransaction.delete(trans.id);
+                }
+              } catch (error) {
+                console.warn(`Could not restore inventory:`, error);
+              }
+            }
+          }
+        }
+      }
+
+
+      // CRITICAL: Post journal entries for any status that should be on the ledger
+      if (willPost) {
         console.log('📊 POSTING SALES INVOICE JOURNAL ENTRIES');
         console.log('Invoice:', savedInvoice.invoice_number);
         console.log('Total Sale Amount:', data.total_amount);
         console.log('Subtotal (before tax):', data.subtotal);
         console.log('Tax:', data.tax_total);
-
-        const arAccount = accounts.find(a => a.id === data.ar_account_id);
-        const revenueAccount = accounts.find(a => a.id === data.revenue_account_id);
-        const taxAccount = accounts.find(a => a.id === data.tax_account_id);
-
-        if (!arAccount || !revenueAccount) {
-          alert('ERROR: Required GL accounts not found. Please select valid Accounts Receivable and Revenue accounts.');
-          setIsLoading(false);
-          return;
-        }
-
-        if (isEditing && oldInvoice) {
-          console.log('🔄 EDITING MODE - Reversing old journal entries first...');
-
-          // Reverse old journal entries by finding ALL related entries
-          const allJournalEntries = await JournalEntry.list();
-          const relatedEntries = allJournalEntries.filter(je =>
-            je.source_id === oldInvoice.id && je.source_type === 'invoice'
-          );
-
-          console.log(`Found ${relatedEntries.length} journal entries to reverse`);
-
-          for (const je of relatedEntries) {
-            if (je.line_items) {
-              for (const line of je.line_items) {
-                try {
-                  const account = await Account.get(line.account_id);
-                  if (account) {
-                    const currentBalance = parseFloat(account.balance) || 0;
-                    const lineDebit = parseFloat(line.debit) || 0;
-                    const lineCredit = parseFloat(line.credit) || 0;
-
-                    let newBalance;
-                    if (['asset', 'expense', 'cost_of_goods_sold'].includes(account.account_type)) {
-                      newBalance = currentBalance - lineDebit + lineCredit;
-                    } else {
-                      newBalance = currentBalance + lineDebit - lineCredit;
-                    }
-
-                    await Account.update(account.id, {
-                      balance: newBalance,
-                      company_id: account.company_id
-                    });
-
-                    console.log(`   Reversed ${account.account_name}: ${currentBalance.toFixed(2)} → ${newBalance.toFixed(2)}`);
-                  }
-                } catch (error) {
-                  console.warn(`Could not reverse account ${line.account_id}:`, error);
-                }
-              }
-            }
-
-            await JournalEntry.delete(je.id);
-            console.log(`   Deleted journal entry: ${je.entry_number}`);
-          }
-
-          // Restore inventory quantities
-          if (oldInvoice.line_items) {
-            for (const item of oldInvoice.line_items) {
-              if (item.product_id) {
-                try {
-                  const product = await Product.get(item.product_id);
-                  if (product && product.product_type === 'inventory') {
-                    const restoredQty = (product.quantity_on_hand || 0) + item.quantity;
-                    await Product.update(product.id, {
-                      quantity_on_hand: restoredQty
-                    });
-                    console.log(`   Restored inventory for ${product.product_name}: +${item.quantity}`);
-                  }
-                } catch (error) {
-                  console.warn(`Could not restore inventory:`, error);
-                }
-              }
-            }
-          }
-        }
 
         // ============================================
         // JOURNAL ENTRY 1: RECORD THE SALE
@@ -412,14 +434,14 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
         console.log(`✅ Journal Entry 1 posted: ${je1.entry_number}`);
 
         // Update account balances for JE1
-        const arCurrentBalance = parseFloat(arAccount.balance) || 0;
+        const arCurrentBalance = parseFloat((await Account.get(arAccount.id)).balance) || 0;
         await Account.update(arAccount.id, {
           balance: arCurrentBalance + data.total_amount,
           company_id: arAccount.company_id
         });
         console.log(`   Updated ${arAccount.account_name}: +₦${data.total_amount.toLocaleString()}`);
 
-        const revenueCurrentBalance = parseFloat(revenueAccount.balance) || 0;
+        const revenueCurrentBalance = parseFloat((await Account.get(revenueAccount.id)).balance) || 0;
         await Account.update(revenueAccount.id, {
           balance: revenueCurrentBalance + data.subtotal,
           company_id: revenueAccount.company_id
@@ -427,7 +449,7 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
         console.log(`   Updated ${revenueAccount.account_name}: +₦${data.subtotal.toLocaleString()}`);
 
         if (taxAccount && data.tax_total > 0) {
-          const taxCurrentBalance = parseFloat(taxAccount.balance) || 0;
+          const taxCurrentBalance = parseFloat((await Account.get(taxAccount.id)).balance) || 0;
           await Account.update(taxAccount.id, {
             balance: taxCurrentBalance + data.tax_total,
             company_id: taxAccount.company_id
@@ -553,7 +575,7 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
           console.log(`✅ Journal Entry 2 posted: ${je2.entry_number}`);
 
           // Update COGS account balance
-          const cogsCurrentBalance = parseFloat(cogsAccount.balance) || 0;
+          const cogsCurrentBalance = parseFloat((await Account.get(cogsAccount.id)).balance) || 0;
           await Account.update(cogsAccount.id, {
             balance: cogsCurrentBalance + totalCOGS,
             company_id: cogsAccount.company_id
@@ -561,7 +583,7 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
           console.log(`   Updated ${cogsAccount.account_name}: +₦${totalCOGS.toLocaleString()}`);
 
           // Update Inventory account balance
-          const invCurrentBalance = parseFloat(inventoryAccount.balance) || 0;
+          const invCurrentBalance = parseFloat((await Account.get(inventoryAccount.id)).balance) || 0;
           await Account.update(inventoryAccount.id, {
             balance: invCurrentBalance - totalCOGS,
             company_id: inventoryAccount.company_id
@@ -625,21 +647,11 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
       // STEP 1: Find ALL journal entries - use multiple search methods
       console.log('🔍 Searching for ALL journal entries...');
 
-      const allJournalEntries = await JournalEntry.list();
-      console.log(`📊 Total journal entries in system: ${allJournalEntries.length}`);
-
-      // Filter for this invoice's entries
-      const relatedEntries = allJournalEntries.filter(je => {
-        const matchesSourceId = je.source_id === fullInvoice.id;
-        const matchesReference = je.reference && (
-          je.reference.includes(fullInvoice.invoice_number) ||
-          je.reference === fullInvoice.invoice_number
-        );
-        const matchesJEId = je.id === fullInvoice.journal_entry_id;
-        const matchesEntryNumber = je.entry_number && je.entry_number.includes(fullInvoice.id);
-
-        return matchesSourceId || matchesReference || matchesJEId || matchesEntryNumber;
-      });
+      const companyEntries = await JournalEntry.list({ filters: { company_id: fullInvoice.company_id } });
+      const relatedEntries = companyEntries.filter(je =>
+        (je.source_type === 'invoice' && je.source_id === fullInvoice.id) ||
+        je.id === fullInvoice.journal_entry_id
+      );
 
       console.log(`🎯 Found ${relatedEntries.length} journal entries to DELETE:`, relatedEntries.map(je => ({
         id: je.id,
@@ -716,7 +728,7 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
       }
 
       // STEP 4: Restore inventory and delete inventory transactions
-      if (fullInvoice.line_items && fullInvoice.line_items.length > 0) {
+      if (POSTED_INVOICE_STATUSES.includes(fullInvoice.status) && fullInvoice.line_items && fullInvoice.line_items.length > 0) {
         console.log('\n📦 Restoring inventory and deleting inventory transactions...');
 
         for (const item of fullInvoice.line_items) {
@@ -891,8 +903,8 @@ export default function InvoiceForm({ invoice, invoiceId, onClose }) {
               <h2 className="text-3xl font-bold text-gray-900">INVOICE</h2>
               <div className="mt-2 text-xs">
                 <p><span className="font-semibold">Invoice #:</span> {formData.invoice_number}</p>
-                <p><span className="font-semibold">Date:</span> {format(new Date(formData.invoice_date), 'MMM d, yyyy')}</p>
-                <p><span className="font-semibold">Due:</span> {format(new Date(formData.due_date), 'MMM d, yyyy')}</p>
+                <p><span className="font-semibold">Date:</span> {safeFormatDate(formData.invoice_date, 'MMM d, yyyy')}</p>
+                <p><span className="font-semibold">Due:</span> {safeFormatDate(formData.due_date, 'MMM d, yyyy')}</p>
                 {formData.job_name && ( // Display job name if available
                   <p><span className="font-semibold">Job:</span> {formData.job_name}</p>
                 )}

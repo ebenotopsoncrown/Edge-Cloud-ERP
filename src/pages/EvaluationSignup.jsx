@@ -68,6 +68,7 @@ export default function EvaluationSignup() {
       { company_id: companyId, account_code: '1000', account_name: 'Cash', account_type: 'asset', account_category: 'current_asset', balance: 0, is_active: true },
       { company_id: companyId, account_code: '1010', account_name: 'Bank Account', account_type: 'asset', account_category: 'current_asset', balance: 0, is_active: true },
       { company_id: companyId, account_code: '1100', account_name: 'Accounts Receivable', account_type: 'asset', account_category: 'current_asset', balance: 0, is_active: true },
+      { company_id: companyId, account_code: '1150', account_name: 'Input VAT Receivable', account_type: 'asset', account_category: 'current_asset', balance: 0, is_active: true },
       { company_id: companyId, account_code: '1200', account_name: 'Inventory', account_type: 'asset', account_category: 'current_asset', balance: 0, is_active: true },
       { company_id: companyId, account_code: '1500', account_name: 'Fixed Assets', account_type: 'asset', account_category: 'fixed_asset', balance: 0, is_active: true },
       { company_id: companyId, account_code: '1510', account_name: 'Accumulated Depreciation', account_type: 'asset', account_category: 'fixed_asset', balance: 0, is_active: true },

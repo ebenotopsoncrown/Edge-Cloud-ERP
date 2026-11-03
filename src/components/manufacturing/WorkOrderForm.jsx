@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Product, WorkOrder } from "@/api/entities";
+import { useCompany } from "../auth/CompanyContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Save } from "lucide-react";
 
 export default function WorkOrderForm({ workOrder, onClose }) {
+  const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     work_order_number: '',
@@ -29,8 +31,9 @@ export default function WorkOrderForm({ workOrder, onClose }) {
   });
 
   const { data: products = [] } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => Product.list()
+    queryKey: ['products', currentCompany?.id],
+    queryFn: () => Product.list({ filters: { company_id: currentCompany.id } }),
+    enabled: !!currentCompany
   });
 
   const saveMutation = useMutation({
@@ -47,7 +50,7 @@ export default function WorkOrderForm({ workOrder, onClose }) {
       if (workOrder?.id) {
         return WorkOrder.update(workOrder.id, finalData);
       }
-      return WorkOrder.create(finalData);
+      return WorkOrder.create({ ...finalData, company_id: currentCompany?.id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['work-orders']);

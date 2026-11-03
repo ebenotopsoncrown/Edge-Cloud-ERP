@@ -26,7 +26,7 @@ export default function Products() {
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', currentCompany?.id],
-    queryFn: () => currentCompany ? Product.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_date', ascending: false }) : [],
+    queryFn: () => currentCompany ? Product.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_at', ascending: false }) : [],
     enabled: !!currentCompany,
   });
 

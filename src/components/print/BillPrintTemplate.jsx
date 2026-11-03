@@ -1,4 +1,5 @@
 import React from "react";
+import { safeFormatDate } from "@/lib/utils";
 import { format } from "date-fns";
 
 export default function BillPrintTemplate({ bill, company }) {
@@ -33,8 +34,8 @@ export default function BillPrintTemplate({ bill, company }) {
         <div className="text-right">
           <h2 className="text-3xl font-bold text-gray-900">BILL</h2>
           <p className="text-lg font-semibold mt-2">#{bill.bill_number}</p>
-          <p className="text-sm text-gray-600 mt-2">Date: {format(new Date(bill.bill_date), 'MMM dd, yyyy')}</p>
-          <p className="text-sm text-gray-600">Due: {format(new Date(bill.due_date), 'MMM dd, yyyy')}</p>
+          <p className="text-sm text-gray-600 mt-2">Date: {safeFormatDate(bill.bill_date, 'MMM dd, yyyy')}</p>
+          <p className="text-sm text-gray-600">Due: {safeFormatDate(bill.due_date, 'MMM dd, yyyy')}</p>
         </div>
       </div>
 

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Product, BillOfMaterials } from "@/api/entities";
+import { useCompany } from "../auth/CompanyContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { X, Save, Plus, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function BOMForm({ bom, onClose }) {
+  const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     bom_number: '',
@@ -25,8 +27,9 @@ export default function BOMForm({ bom, onClose }) {
   });
 
   const { data: products = [] } = useQuery({
-    queryKey: ['products'],
-    queryFn: () => Product.list()
+    queryKey: ['products', currentCompany?.id],
+    queryFn: () => Product.list({ filters: { company_id: currentCompany.id } }),
+    enabled: !!currentCompany
   });
 
   const saveMutation = useMutation({
@@ -46,7 +49,7 @@ export default function BOMForm({ bom, onClose }) {
       if (bom?.id) {
         return BillOfMaterials.update(bom.id, finalData);
       }
-      return BillOfMaterials.create(finalData);
+      return BillOfMaterials.create({ ...finalData, company_id: currentCompany?.id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['boms']);

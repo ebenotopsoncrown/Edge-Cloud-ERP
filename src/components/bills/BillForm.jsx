@@ -12,6 +12,9 @@ import { X, Plus, Trash2, Save } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../auth/CompanyContext";
 
+// Statuses that have a journal entry and stock movement behind them.
+const POSTED_BILL_STATUSES = ['pending', 'approved', 'partial', 'overdue', 'paid'];
+
 export default function BillForm({ bill, billId, onClose }) {
   const { currentCompany, canPerformAction } = useCompany();
   const queryClient = useQueryClient();
@@ -296,6 +299,7 @@ export default function BillForm({ bill, billId, onClose }) {
 
       const billData = {
         ...data,
+        bill_number: data.bill_number?.trim() || `BILL-${Date.now()}`,
         line_items: updatedLineItems,
         balance_due: data.total_amount - (data.amount_paid || 0)
       };
@@ -312,8 +316,82 @@ export default function BillForm({ bill, billId, onClose }) {
         savedBill = await Bill.create(billData);
       }
 
+      const wasPosted = isEditing && POSTED_BILL_STATUSES.includes(oldBill?.status);
+      const willPost = POSTED_BILL_STATUSES.includes(data.status);
+
+      // Reverse whatever the previous version posted, including when it moves back to draft.
+      if (wasPosted) {
+        console.log('🔄 EDITING BILL - Reversing old journal entry and posting new one');
+
+        // Reverse old entries
+        if (oldBill.journal_entry_id) {
+          try {
+            const oldJE = await JournalEntry.get(oldBill.journal_entry_id);
+            
+            if (oldJE && oldJE.line_items) {
+              for (const line of oldJE.line_items) {
+                try {
+                  const account = await Account.get(line.account_id);
+                  if (account) {
+                    const currentBalance = parseFloat(account.balance) || 0;
+                    const lineDebit = parseFloat(line.debit) || 0;
+                    const lineCredit = parseFloat(line.credit) || 0;
+                    
+                    const isAccDebitType = ['asset', 'expense', 'cost_of_goods_sold'].includes(account.account_type);
+                    let newBalance;
+                    
+                    if (isAccDebitType) {
+                      newBalance = currentBalance - lineDebit + lineCredit; // Reverse debit by subtracting, reverse credit by adding
+                    } else { // Credit accounts (Liability, Equity, Revenue)
+                      newBalance = currentBalance - lineCredit + lineDebit; // Reverse credit by subtracting, reverse debit by adding
+                    }
+                    
+                    await Account.update(account.id, {
+                      balance: newBalance,
+                      company_id: account.company_id
+                    });
+                    
+                    console.log(`   Reversed ${account.account_name}: ${currentBalance} → ${newBalance}`);
+                  }
+                } catch (error) {
+                  console.warn(`Could not reverse account ${line.account_id}:`, error);
+                }
+              }
+            }
+
+            await JournalEntry.delete(oldBill.journal_entry_id);
+            console.log('   ✅ Old journal entry deleted');
+          } catch (error) {
+            console.warn('   ⚠️ Could not delete old journal entry:', error);
+          }
+        }
+
+        // Reverse inventory quantities if it was an inventory purchase
+        if (oldBill.line_items) {
+          for (const item of oldBill.line_items) {
+            if (item.product_id) {
+              try {
+                const product = await Product.get(item.product_id);
+                if (product && product.product_type === 'inventory') {
+                  const newQty = (product.quantity_on_hand || 0) - item.quantity;
+                  await Product.update(product.id, {
+                    quantity_on_hand: newQty
+                  });
+                  console.log(`   Reversed inventory for ${product.product_name}: -${item.quantity}`);
+                }
+              } catch (error) {
+                console.warn(`Could not reverse inventory for product ${item.product_id}:`, error);
+              }
+            }
+          }
+        }
+
+        console.log('📊 Step 2: Posting new journal entry with updated accounts');
+      }
+
+
       // CRITICAL: Post journal entry with proper edit handling
-      if (data.status === 'pending' || data.status === 'approved') { // Should be 'pending' or 'approved'
+      if (willPost) {
         // CRITICAL FIX: Determine if this is an inventory purchase or expense
         let isInventoryPurchase = false;
         
@@ -360,77 +438,12 @@ export default function BillForm({ bill, billId, onClose }) {
                               a.account_name?.toLowerCase().includes('vat input')
                             );
 
-        if (isEditing && oldBill) {
-          console.log('🔄 EDITING BILL - Reversing old journal entry and posting new one');
-
-          // Reverse old entries
-          if (oldBill.journal_entry_id) {
-            try {
-              const oldJE = await JournalEntry.get(oldBill.journal_entry_id);
-              
-              if (oldJE && oldJE.line_items) {
-                for (const line of oldJE.line_items) {
-                  try {
-                    const account = await Account.get(line.account_id);
-                    if (account) {
-                      const currentBalance = parseFloat(account.balance) || 0;
-                      const lineDebit = parseFloat(line.debit) || 0;
-                      const lineCredit = parseFloat(line.credit) || 0;
-                      
-                      const isAccDebitType = ['asset', 'expense', 'cost_of_goods_sold'].includes(account.account_type);
-                      let newBalance;
-                      
-                      if (isAccDebitType) {
-                        newBalance = currentBalance - lineDebit + lineCredit; // Reverse debit by subtracting, reverse credit by adding
-                      } else { // Credit accounts (Liability, Equity, Revenue)
-                        newBalance = currentBalance - lineCredit + lineDebit; // Reverse credit by subtracting, reverse debit by adding
-                      }
-                      
-                      await Account.update(account.id, {
-                        balance: newBalance,
-                        company_id: account.company_id
-                      });
-                      
-                      console.log(`   Reversed ${account.account_name}: ${currentBalance} → ${newBalance}`);
-                    }
-                  } catch (error) {
-                    console.warn(`Could not reverse account ${line.account_id}:`, error);
-                  }
-                }
-              }
-
-              await JournalEntry.delete(oldBill.journal_entry_id);
-              console.log('   ✅ Old journal entry deleted');
-            } catch (error) {
-              console.warn('   ⚠️ Could not delete old journal entry:', error);
-            }
-          }
-
-          // Reverse inventory quantities if it was an inventory purchase
-          if (oldBill.line_items) {
-            for (const item of oldBill.line_items) {
-              if (item.product_id) {
-                try {
-                  const product = await Product.get(item.product_id);
-                  if (product && product.product_type === 'inventory') {
-                    const newQty = (product.quantity_on_hand || 0) - item.quantity;
-                    await Product.update(product.id, {
-                      quantity_on_hand: newQty
-                    });
-                    console.log(`   Reversed inventory for ${product.product_name}: -${item.quantity}`);
-                  }
-                } catch (error) {
-                  console.warn(`Could not reverse inventory for product ${item.product_id}:`, error);
-                }
-              }
-            }
-          }
-
-          console.log('📊 Step 2: Posting new journal entry with updated accounts');
-        }
-
         // Post new journal entry (whether creating or editing)
         const journalLines = [];
+
+        // No input-tax account to post to (the default chart has none): the tax becomes
+        // part of the cost, otherwise the entry can't balance against the payable.
+        const unallocatedTax = taxAccount ? 0 : (data.tax_total || 0);
 
         // DR: Expense/COGS Account (Subtotal before tax)
         if (debitAccount) {
@@ -439,7 +452,7 @@ export default function BillForm({ bill, billId, onClose }) {
             account_name: debitAccount.account_name,
             account_code: debitAccount.account_code,
             description: `Bill ${savedBill.bill_number} - ${data.vendor_name}`,
-            debit: data.subtotal,
+            debit: data.subtotal + unallocatedTax,
             credit: 0
           });
         }
@@ -498,16 +511,16 @@ export default function BillForm({ bill, billId, onClose }) {
         // Note: The debit account balance is updated by its DR, and AP by its CR.
         // Tax is already debited from taxAccount. So DR is sum of debitAccount and taxAccount.
         if (debitAccount) {
-          const currentBalance = parseFloat(debitAccount.balance) || 0;
+          const currentBalance = parseFloat((await Account.get(debitAccount.id)).balance) || 0;
           await Account.update(debitAccount.id, {
-            balance: currentBalance + data.subtotal, // Debit for subtotal
+            balance: currentBalance + data.subtotal + unallocatedTax, // Debit for subtotal
             company_id: debitAccount.company_id
           });
           console.log(`   Posted to ${debitAccount.account_name}: +${data.subtotal}`);
         }
 
         if (taxAccount && data.tax_total > 0) {
-          const currentBalance = parseFloat(taxAccount.balance) || 0;
+          const currentBalance = parseFloat((await Account.get(taxAccount.id)).balance) || 0;
           await Account.update(taxAccount.id, {
             balance: currentBalance + data.tax_total, // Debit for tax
             company_id: taxAccount.company_id
@@ -516,7 +529,7 @@ export default function BillForm({ bill, billId, onClose }) {
         }
 
         if (apAccount) {
-          const currentBalance = parseFloat(apAccount.balance) || 0;
+          const currentBalance = parseFloat((await Account.get(apAccount.id)).balance) || 0;
           await Account.update(apAccount.id, {
             balance: currentBalance + data.total_amount, // Credit for total amount
             company_id: apAccount.company_id
@@ -603,7 +616,6 @@ export default function BillForm({ bill, billId, onClose }) {
 
       const relatedEntries = allJournalEntries.filter(je => 
         je.source_id === fullBill.id || 
-        je.reference?.includes(fullBill.bill_number) ||
         je.id === fullBill.journal_entry_id
       );
 
@@ -622,7 +634,7 @@ export default function BillForm({ bill, billId, onClose }) {
       }
 
       // STEP 3: Restore inventory quantities (reverse of purchase)
-      if (fullBill.line_items && fullBill.line_items.length > 0) {
+      if (POSTED_BILL_STATUSES.includes(fullBill.status) && fullBill.line_items && fullBill.line_items.length > 0) {
         console.log('📦 Reversing inventory quantities...');
         
         for (const item of fullBill.line_items) {
@@ -709,7 +721,7 @@ export default function BillForm({ bill, billId, onClose }) {
       return;
     }
 
-    if (formData.tax_total > 0 && !formData.tax_account_id) {
+    if (formData.tax_total > 0 && !formData.tax_account_id && taxAccounts.length > 0) {
       alert('Please select a Tax Receivable/Input VAT account');
       return;
     }

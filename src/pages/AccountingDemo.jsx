@@ -31,7 +31,7 @@ export default function AccountingDemo() {
 
   const { data: journalEntries = [] } = useQuery({
     queryKey: ['journal-entries', currentCompany?.id],
-    queryFn: () => currentCompany ? JournalEntry.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_date', ascending: false }) : [],
+    queryFn: () => currentCompany ? JournalEntry.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_at', ascending: false }) : [],
     enabled: !!currentCompany
   });
 

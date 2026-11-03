@@ -1,5 +1,7 @@
 import React, { useState } from "react";
+import { safeFormatDate } from "@/lib/utils";
 import { WorkOrder, BillOfMaterials } from "@/api/entities";
+import { useCompany } from "../components/auth/CompanyContext";
 import { useQuery } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import {
@@ -30,6 +32,7 @@ const TABS = [
 ];
 
 export default function Manufacturing() {
+  const { currentCompany } = useCompany();
   const [activeTab, setActiveTab] = useState("work-orders");
   const [showWOForm, setShowWOForm] = useState(false);
   const [showBOMForm, setShowBOMForm] = useState(false);
@@ -38,13 +41,15 @@ export default function Manufacturing() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: workOrders = [], isLoading: loadingWO } = useQuery({
-    queryKey: ['work-orders'],
-    queryFn: () => WorkOrder.list({ orderBy: 'start_date', ascending: false })
+    queryKey: ['work-orders', currentCompany?.id],
+    queryFn: () => WorkOrder.list({ filters: { company_id: currentCompany.id }, orderBy: 'start_date', ascending: false }),
+    enabled: !!currentCompany
   });
 
   const { data: boms = [], isLoading: loadingBOM } = useQuery({
-    queryKey: ['boms'],
-    queryFn: () => BillOfMaterials.list()
+    queryKey: ['boms', currentCompany?.id],
+    queryFn: () => BillOfMaterials.list({ filters: { company_id: currentCompany.id } }),
+    enabled: !!currentCompany
   });
 
   const filteredWOs = workOrders.filter(wo =>
@@ -180,7 +185,7 @@ export default function Manufacturing() {
                       <TableCell>{wo.product_name}</TableCell>
                       <TableCell>{wo.quantity_to_produce}</TableCell>
                       <TableCell>{wo.quantity_produced || 0}</TableCell>
-                      <TableCell>{format(new Date(wo.start_date), 'MMM d, yyyy')}</TableCell>
+                      <TableCell>{safeFormatDate(wo.start_date, 'MMM d, yyyy')}</TableCell>
                       <TableCell><StatusBadge status={wo.status} /></TableCell>
                       <TableCell style={{ fontWeight: 600 }}>${wo.total_cost?.toFixed(2)}</TableCell>
                       <TableCell>

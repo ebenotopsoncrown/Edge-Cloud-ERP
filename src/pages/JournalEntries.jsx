@@ -4,10 +4,11 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileText, Eye, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../components/auth/CompanyContext";
+import { getCurrencySymbol } from "../components/shared/FinancialCalculations";
 import TransactionDetails from "../components/reports/TransactionDetails";
 import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, ActionBtn } from "../components/shared/PageShell";
 
-const fmt = (n) => `$${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return '—'; } };
 
 export default function JournalEntries() {
@@ -15,6 +16,7 @@ export default function JournalEntries() {
   const [search, setSearch]                   = useState("");
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
+  const sym = getCurrencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ['journal-entries', currentCompany?.id],
@@ -34,8 +36,11 @@ export default function JournalEntries() {
           try {
             const account = await Account.get(line.account_id);
             if (account) {
-              const newBalance = (parseFloat(account.balance) || 0) - (parseFloat(line.debit) || 0) - (parseFloat(line.credit) || 0);
-              await Account.update(account.id, { balance: newBalance });
+              const debit = parseFloat(line.debit) || 0;
+              const credit = parseFloat(line.credit) || 0;
+              const isDebitNormal = ['asset', 'expense', 'cost_of_goods_sold'].includes(account.account_type);
+              const newBalance = (parseFloat(account.balance) || 0) + (isDebitNormal ? credit - debit : debit - credit);
+              await Account.update(account.id, { balance: newBalance, company_id: account.company_id });
             }
           } catch {}
         }
@@ -79,7 +84,7 @@ export default function JournalEntries() {
         { label: 'Total Entries', value: entries.length, icon: FileText, color: '#1B4F8A' },
         { label: 'Posted',        value: posted,          color: '#00A86B' },
         { label: 'Draft',         value: entries.filter(e => e.status === 'draft').length, color: '#F59E0B' },
-        { label: 'Total Posted Debits', value: fmt(totalDebits), color: '#8B5CF6' },
+        { label: 'Total Posted Debits', value: fmt(totalDebits, sym), color: '#8B5CF6' },
       ]} />
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search entry number, description or reference…" />
@@ -91,8 +96,8 @@ export default function JournalEntries() {
             <ERPTableCell muted>{fmtDate(entry.entry_date)}</ERPTableCell>
             <ERPTableCell bold>{entry.description}</ERPTableCell>
             <ERPTableCell muted style={{ fontSize: 12 }}>{entry.reference}</ERPTableCell>
-            <ERPTableCell right style={{ color: '#00875A', fontWeight: 700 }}>{fmt(entry.total_debits)}</ERPTableCell>
-            <ERPTableCell right style={{ color: '#1B4F8A', fontWeight: 700 }}>{fmt(entry.total_credits)}</ERPTableCell>
+            <ERPTableCell right style={{ color: '#00875A', fontWeight: 700 }}>{fmt(entry.total_debits, sym)}</ERPTableCell>
+            <ERPTableCell right style={{ color: '#1B4F8A', fontWeight: 700 }}>{fmt(entry.total_credits, sym)}</ERPTableCell>
             <ERPTableCell><StatusBadge status={entry.status} /></ERPTableCell>
             <ERPTableCell>
               {entry.source_type && (

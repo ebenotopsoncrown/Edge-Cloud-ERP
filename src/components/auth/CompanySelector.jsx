@@ -1,8 +1,6 @@
 
 import React, { useState } from 'react';
-import { Company } from '@/api/entities';
 import { User } from '@/api/supabaseClient';
-import { useQuery } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,49 +9,18 @@ import { useCompany } from './CompanyContext';
 import CompanySetupWizard from '../setup/CompanySetupWizard';
 
 export default function CompanySelector() {
-  const { switchCompany, user, clearCompany } = useCompany();
+  // Same list the context selects from. user.company_id / accessible_companies don't
+  // exist on the Supabase auth user, so filtering on them always returned nothing.
+  const {
+    switchCompany, user, clearCompany,
+    accessibleCompanies: companies,
+    isLoadingCompany: isLoading,
+    companiesError,
+    refetchCompanies: refetch,
+  } = useCompany();
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [showSetupWizard, setShowSetupWizard] = useState(false);
   const [setupCompany, setSetupCompany] = useState(null);
-
-  // CRITICAL: Only fetch companies the current user has access to
-  const { data: companies = [], isLoading, error: companiesError, refetch } = useQuery({
-    queryKey: ['companies', user?.id],
-    queryFn: async () => {
-      if (!user) return [];
-      
-      try {
-        // If super admin, show all companies
-        if (user.is_super_admin) {
-          return await Company.list();
-        }
-
-        // Regular users: only show companies they have access to
-        const allCompanies = await Company.list();
-        
-        // Filter by accessible_companies array OR company_id (primary company)
-        const accessibleCompanies = allCompanies.filter(company => {
-          // Check if this is user's primary company
-          if (user.company_id === company.id) return true;
-          
-          // Check if company is in user's accessible_companies list
-          if (user.accessible_companies && user.accessible_companies.includes(company.id)) {
-            return true;
-          }
-          
-          return false;
-        });
-        
-        return accessibleCompanies;
-      } catch (error) {
-        console.error('Error loading companies:', error);
-        throw error;
-      }
-    },
-    enabled: !!user,
-    retry: 3,
-    retryDelay: 1000
-  });
 
   const handleSelectCompany = (company) => {
     // Check if company needs setup

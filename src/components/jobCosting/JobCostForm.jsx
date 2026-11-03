@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Job, JobPhase, CostCode, JobCost } from "@/api/entities";
+import { useCompany } from "../auth/CompanyContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { X, Save } from "lucide-react";
 
 export default function JobCostForm({ jobCost, onClose }) {
+  const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     job_id: '',
@@ -28,8 +30,9 @@ export default function JobCostForm({ jobCost, onClose }) {
   });
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ['jobs'],
-    queryFn: () => Job.list()
+    queryKey: ['jobs', currentCompany?.id],
+    queryFn: () => Job.list({ filters: { company_id: currentCompany.id } }),
+    enabled: !!currentCompany
   });
 
   const { data: phases = [] } = useQuery({
@@ -50,7 +53,7 @@ export default function JobCostForm({ jobCost, onClose }) {
       if (jobCost?.id) {
         return JobCost.update(jobCost.id, finalData);
       }
-      return JobCost.create(finalData);
+      return JobCost.create({ ...finalData, company_id: currentCompany?.id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['job-costs']);

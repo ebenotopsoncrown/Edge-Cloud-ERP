@@ -21,7 +21,7 @@ export default function Vendors() {
 
   const { data: vendors = [], isLoading } = useQuery({
     queryKey: ['vendors', currentCompany?.id],
-    queryFn: () => currentCompany ? Vendor.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_date', ascending: false }) : [],
+    queryFn: () => currentCompany ? Vendor.list({ filters: { company_id: currentCompany.id }, orderBy: 'created_at', ascending: false }) : [],
     enabled: !!currentCompany,
   });
 

@@ -27,6 +27,13 @@ const getCurrencySymbol = (code) =>
 const fmt = (n, sym) => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return '—'; } };
 
+// Always read the current balance: the cached account list goes stale as soon as
+// a reversal has been written, which would overwrite that reversal.
+const adjustBalance = async (accountId, delta) => {
+  const account = await Account.get(accountId);
+  await Account.update(accountId, { balance: (parseFloat(account.balance) || 0) + delta, company_id: account.company_id });
+};
+
 export default function Payments() {
   const { currentCompany, canPerformAction } = useCompany();
   const queryClient = useQueryClient();
@@ -77,13 +84,13 @@ export default function Payments() {
   });
 
   const { data: invoices = [] } = useQuery({
-    queryKey: ['invoices', currentCompany?.id],
+    queryKey: ['invoices', 'open', currentCompany?.id],
     queryFn: () => currentCompany ? Invoice.list({ filters: { company_id: currentCompany.id, status: ['sent', 'viewed', 'partial', 'overdue'] } }) : Promise.resolve([]),
     enabled: !!currentCompany && paymentForm.payment_type === 'received',
   });
 
   const { data: bills = [] } = useQuery({
-    queryKey: ['bills', currentCompany?.id],
+    queryKey: ['bills', 'open', currentCompany?.id],
     queryFn: () => currentCompany ? Bill.list({ filters: { company_id: currentCompany.id, status: ['pending', 'approved', 'partial', 'overdue'] } }) : Promise.resolve([]),
     enabled: !!currentCompany && paymentForm.payment_type === 'made',
   });
@@ -187,11 +194,11 @@ export default function Payments() {
           const oldArApAccount = accounts.find(a => a.id === oldPayment.ar_ap_account_id);
 
           if (oldPayment.payment_type === 'received') {
-            if (oldBankAccount) await Account.update(oldBankAccount.id, { balance: (parseFloat(oldBankAccount.balance) || 0) - oldPayment.amount_base_currency, company_id: oldBankAccount.company_id });
-            if (oldArApAccount) await Account.update(oldArApAccount.id, { balance: (parseFloat(oldArApAccount.balance) || 0) + oldPayment.amount_base_currency, company_id: oldArApAccount.company_id });
+            if (oldBankAccount) await adjustBalance(oldBankAccount.id, -oldPayment.amount_base_currency);
+            if (oldArApAccount) await adjustBalance(oldArApAccount.id, oldPayment.amount_base_currency);
           } else {
-            if (oldArApAccount) await Account.update(oldArApAccount.id, { balance: (parseFloat(oldArApAccount.balance) || 0) + oldPayment.amount_base_currency, company_id: oldArApAccount.company_id });
-            if (oldBankAccount) await Account.update(oldBankAccount.id, { balance: (parseFloat(oldBankAccount.balance) || 0) + oldPayment.amount_base_currency, company_id: oldBankAccount.company_id });
+            if (oldArApAccount) await adjustBalance(oldArApAccount.id, oldPayment.amount_base_currency);
+            if (oldBankAccount) await adjustBalance(oldBankAccount.id, oldPayment.amount_base_currency);
           }
 
           if (oldPayment.journal_entry_id) {
@@ -227,8 +234,8 @@ export default function Payments() {
         const je = await JournalEntry.create(journalEntry);
 
         if (savedPayment.payment_type === 'received') {
-          if (bankAccount) await Account.update(bankAccount.id, { balance: (parseFloat(bankAccount.balance) || 0) + amountToPost, company_id: bankAccount.company_id });
-          if (arApAccount) await Account.update(arApAccount.id, { balance: (parseFloat(arApAccount.balance) || 0) - amountToPost, company_id: arApAccount.company_id });
+          if (bankAccount) await adjustBalance(bankAccount.id, amountToPost);
+          if (arApAccount) await adjustBalance(arApAccount.id, -amountToPost);
 
           if (savedPayment.invoice_id) {
             const currentInvoice = await Invoice.get(savedPayment.invoice_id);
@@ -252,8 +259,8 @@ export default function Payments() {
             await Invoice.update(oldPayment.invoice_id, { amount_paid: op, balance_due: oi.total_amount - op, status: oi.total_amount - op <= 0 ? 'paid' : op > 0 ? 'partial' : 'sent' });
           }
         } else {
-          if (arApAccount) await Account.update(arApAccount.id, { balance: (parseFloat(arApAccount.balance) || 0) - amountToPost, company_id: arApAccount.company_id });
-          if (bankAccount) await Account.update(bankAccount.id, { balance: (parseFloat(bankAccount.balance) || 0) - amountToPost, company_id: bankAccount.company_id });
+          if (arApAccount) await adjustBalance(arApAccount.id, -amountToPost);
+          if (bankAccount) await adjustBalance(bankAccount.id, -amountToPost);
 
           if (savedPayment.bill_id) {
             const currentBill = await Bill.get(savedPayment.bill_id);

@@ -200,5 +200,6 @@ export function getCurrencySymbol(currencyCode) {
  */
 export function formatCurrency(amount, currencyCode = 'USD') {
   const symbol = getCurrencySymbol(currencyCode);
-  return `${symbol}${Math.abs(amount).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+  const value = Number(amount) || 0;
+  return `${value < 0 ? '-' : ''}${symbol}${Math.abs(value).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
 }

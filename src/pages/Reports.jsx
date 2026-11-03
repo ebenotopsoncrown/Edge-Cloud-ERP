@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { safeFormatDate } from "@/lib/utils";
 import { Account, Customer, Vendor, Invoice, Bill, Product, JournalEntry, InventoryTransaction, Payment } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -15,14 +16,30 @@ import {
   FileText, TrendingUp, DollarSign, BarChart3,
   Package, ShoppingCart, Building2,
 } from "lucide-react";
-import { format } from "date-fns";
+import { format, startOfMonth, startOfQuarter, startOfYear } from "date-fns";
 import PageShell, { PageHeader, StatBar, FilterSelect } from "../components/shared/PageShell";
+
+const DATE_RANGE_LABELS = {
+  'current-month': 'Current Month',
+  'current-quarter': 'Current Quarter',
+  'current-year': 'Current Year',
+  'ytd': 'Year to Date',
+  'all-time': 'All Time',
+};
+
+const getPeriodStart = (range) => {
+  const now = new Date();
+  if (range === 'current-month') return format(startOfMonth(now), 'yyyy-MM-dd');
+  if (range === 'current-quarter') return format(startOfQuarter(now), 'yyyy-MM-dd');
+  if (range === 'current-year' || range === 'ytd') return format(startOfYear(now), 'yyyy-MM-dd');
+  return null;
+};
 
 export default function Reports() {
   const { currentCompany } = useCompany();
   const [selectedReportGroup, setSelectedReportGroup] = useState('financial');
   const [selectedReport, setSelectedReport]           = useState('financial-performance');
-  const [dateRange, setDateRange]                     = useState('current-month');
+  const [dateRange, setDateRange]                     = useState('all-time');
   const [selectedAccount, setSelectedAccount]         = useState(null);
 
   const baseCurrency = currentCompany?.base_currency || 'USD';
@@ -45,13 +62,13 @@ export default function Reports() {
     enabled: !!currentCompany, staleTime: 2 * 60 * 1000, cacheTime: 5 * 60 * 1000, refetchOnWindowFocus: false,
   });
 
-  const { data: invoices = [] } = useQuery({
+  const { data: allInvoices = [] } = useQuery({
     queryKey: ['invoices', currentCompany?.id],
     queryFn: () => currentCompany ? Invoice.list({ filters: { company_id: currentCompany.id } }) : [],
     enabled: !!currentCompany, staleTime: 1 * 60 * 1000, cacheTime: 3 * 60 * 1000, refetchOnWindowFocus: false,
   });
 
-  const { data: bills = [] } = useQuery({
+  const { data: allBills = [] } = useQuery({
     queryKey: ['bills', currentCompany?.id],
     queryFn: () => currentCompany ? Bill.list({ filters: { company_id: currentCompany.id } }) : [],
     enabled: !!currentCompany, staleTime: 1 * 60 * 1000, cacheTime: 3 * 60 * 1000, refetchOnWindowFocus: false,
@@ -87,6 +104,22 @@ export default function Reports() {
     assetAccounts, totalAssets, liabilityAccounts, totalLiabilities, equityAccounts, totalEquity,
     totalCash, totalAccountsReceivable, totalAccountsPayable,
   } = metrics;
+
+  // Sales and purchase reports only count documents that reached the ledger.
+  const invoices = allInvoices.filter(i => !['draft', 'cancelled'].includes(i.status));
+  const bills    = allBills.filter(b => !['draft', 'cancelled'].includes(b.status));
+
+  // Date Range drives the period statement. The balance sheet and trial balance stay
+  // cumulative, because they only balance when every posted entry is included.
+  const periodEntries = useMemo(() => {
+    const start = getPeriodStart(dateRange);
+    if (!start) return journalEntries;
+    return journalEntries.filter(e => (e.entry_date || '').slice(0, 10) >= start);
+  }, [journalEntries, dateRange]);
+  const {
+    revenueAccounts: pRevenueAccounts, totalRevenue: pTotalRevenue,
+    expenseAccounts: pExpenseAccounts, totalExpenses: pTotalExpenses, netIncome: pNetIncome,
+  } = useFinancialMetrics(accounts, periodEntries);
 
   const inventoryItems       = products.filter(p => p.product_type === 'inventory');
   const totalInventoryValue  = inventoryItems.reduce((s, p) => s + ((p.quantity_on_hand || 0) * (p.cost_price || 0)), 0);
@@ -145,9 +178,9 @@ export default function Reports() {
       />
 
       <StatBar stats={[
-        { label: 'Total Revenue',  value: formatCurrency(totalRevenue, baseCurrency),  icon: TrendingUp,  color: '#00A86B' },
-        { label: 'Total Expenses', value: formatCurrency(totalExpenses, baseCurrency), icon: TrendingUp,  color: '#EF4444' },
-        { label: 'Net Profit',     value: formatCurrency(netIncome, baseCurrency),     icon: DollarSign,  color: netIncome >= 0 ? '#00A86B' : '#EF4444' },
+        { label: 'Total Revenue',  value: formatCurrency(pTotalRevenue, baseCurrency),  icon: TrendingUp,  color: '#00A86B' },
+        { label: 'Total Expenses', value: formatCurrency(pTotalExpenses, baseCurrency), icon: TrendingUp,  color: '#EF4444' },
+        { label: 'Net Profit',     value: formatCurrency(pNetIncome, baseCurrency),     icon: DollarSign,  color: pNetIncome >= 0 ? '#00A86B' : '#EF4444' },
         { label: 'Total Assets',   value: formatCurrency(totalAssets, baseCurrency),   icon: BarChart3,   color: '#1B4F8A' },
       ]} />
 
@@ -203,7 +236,7 @@ export default function Reports() {
       {selectedReport === 'financial-performance' && (
         <Card>
           <CardHeader>
-            <ReportHeader reportTitle="Statement of Financial Performance" reportDate={`For the Period Ending ${format(new Date(), 'MMMM dd, yyyy')}`} additionalInfo={`Reporting Currency: ${baseCurrency} | IFRS Compliant | Synchronized with All Dashboards in Real-Time`} />
+            <ReportHeader reportTitle="Statement of Financial Performance" reportDate={`${DATE_RANGE_LABELS[dateRange]} · Period Ending ${format(new Date(), 'MMMM dd, yyyy')}`} additionalInfo={`Reporting Currency: ${baseCurrency} | IFRS Compliant | Synchronized with All Dashboards in Real-Time`} />
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
@@ -211,7 +244,7 @@ export default function Reports() {
                 <h3 className="font-bold text-lg mb-3 border-b-2 border-gray-800 pb-2">Revenue</h3>
                 <Table>
                   <TableBody>
-                    {revenueAccounts.map(account => (
+                    {pRevenueAccounts.map(account => (
                       <TableRow key={account.id} className="cursor-pointer hover:bg-blue-50" onClick={() => setSelectedAccount(account)}>
                         <TableCell className="w-32">{account.account_code}</TableCell>
                         <TableCell>{account.account_name}</TableCell>
@@ -220,7 +253,7 @@ export default function Reports() {
                     ))}
                     <TableRow className="bg-blue-50 font-bold border-t-2 border-gray-800">
                       <TableCell colSpan={2}>Total Revenue</TableCell>
-                      <TableCell className="text-right font-mono">{formatCurrency(totalRevenue, baseCurrency)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatCurrency(pTotalRevenue, baseCurrency)}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -229,7 +262,7 @@ export default function Reports() {
                 <h3 className="font-bold text-lg mb-3 border-b-2 border-gray-800 pb-2">Expenses</h3>
                 <Table>
                   <TableBody>
-                    {expenseAccounts.map(account => (
+                    {pExpenseAccounts.map(account => (
                       <TableRow key={account.id} className="cursor-pointer hover:bg-blue-50" onClick={() => setSelectedAccount(account)}>
                         <TableCell className="w-32">{account.account_code}</TableCell>
                         <TableCell>{account.account_name}</TableCell>
@@ -238,7 +271,7 @@ export default function Reports() {
                     ))}
                     <TableRow className="bg-red-50 font-bold border-t-2 border-gray-800">
                       <TableCell colSpan={2}>Total Expenses</TableCell>
-                      <TableCell className="text-right font-mono">{formatCurrency(totalExpenses, baseCurrency)}</TableCell>
+                      <TableCell className="text-right font-mono">{formatCurrency(pTotalExpenses, baseCurrency)}</TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
@@ -246,11 +279,11 @@ export default function Reports() {
               <div className="border-t-4 border-gray-900 pt-4">
                 <div className="flex justify-between items-center text-2xl font-bold">
                   <span>Net Profit/Loss</span>
-                  <span className={`font-mono ${netIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(netIncome, baseCurrency)}</span>
+                  <span className={`font-mono ${pNetIncome >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatCurrency(pNetIncome, baseCurrency)}</span>
                 </div>
               </div>
             </div>
-            <ReportActions reportTitle="Statement of Financial Performance" data={{ revenueAccounts, expenseAccounts, totalRevenue, totalExpenses, netIncome, currency: baseCurrency, currencySymbol: formatCurrency(0, baseCurrency).charAt(0) }} />
+            <ReportActions reportTitle="Statement of Financial Performance" data={{ revenueAccounts: pRevenueAccounts, expenseAccounts: pExpenseAccounts, totalRevenue: pTotalRevenue, totalExpenses: pTotalExpenses, netIncome: pNetIncome, currency: baseCurrency, currencySymbol: formatCurrency(0, baseCurrency).charAt(0) }} />
           </CardContent>
         </Card>
       )}
@@ -418,7 +451,7 @@ export default function Reports() {
                         </TableRow>
                         {transactionsWithBalance.map((entry) => (
                           <TableRow key={entry.id} className="cursor-pointer hover:bg-blue-50" onClick={() => setSelectedAccount(account)}>
-                            <TableCell className="text-sm">{format(new Date(entry.entry_date), 'M/d/yy')}</TableCell>
+                            <TableCell className="text-sm">{safeFormatDate(entry.entry_date, 'M/d/yy')}</TableCell>
                             <TableCell className="text-sm">{entry.reference || entry.entry_number}</TableCell>
                             <TableCell className="text-sm">{entry.source_type === 'invoice' ? 'CRJ' : entry.source_type === 'bill' ? 'PRJ' : entry.source_type === 'payment' ? 'CRJ' : 'JE'}</TableCell>
                             <TableCell className="text-sm">{entry.description}</TableCell>
@@ -911,7 +944,7 @@ export default function Reports() {
                     .sort((a, b) => new Date(b.transaction_date) - new Date(a.transaction_date))
                     .map(transaction => (
                       <TableRow key={transaction.id}>
-                        <TableCell>{format(new Date(transaction.transaction_date), 'MMM d, yyyy')}</TableCell>
+                        <TableCell>{safeFormatDate(transaction.transaction_date, 'MMM d, yyyy')}</TableCell>
                         <TableCell className="font-medium">{transaction.transaction_number}</TableCell>
                         <TableCell><span className="px-2 py-1 rounded text-xs font-semibold bg-blue-100 text-blue-800 capitalize">{transaction.transaction_type.replace(/_/g, ' ')}</span></TableCell>
                         <TableCell>{transaction.product_name}</TableCell>

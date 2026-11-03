@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Job, Customer } from "@/api/entities";
+import { useCompany } from "../auth/CompanyContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { X, Save } from "lucide-react";
 
 export default function JobForm({ job, onClose }) {
+  const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     job_number: '',
@@ -32,8 +34,9 @@ export default function JobForm({ job, onClose }) {
   });
 
   const { data: customers = [] } = useQuery({
-    queryKey: ['customers'],
-    queryFn: () => Customer.list()
+    queryKey: ['customers', currentCompany?.id],
+    queryFn: () => Customer.list({ filters: { company_id: currentCompany.id } }),
+    enabled: !!currentCompany
   });
 
   const saveMutation = useMutation({
@@ -41,7 +44,7 @@ export default function JobForm({ job, onClose }) {
       if (job?.id) {
         return Job.update(job.id, data);
       }
-      return Job.create(data);
+      return Job.create({ ...data, company_id: currentCompany?.id });
     },
     onSuccess: () => {
       queryClient.invalidateQueries(['jobs']);

@@ -26,7 +26,7 @@ export default function GoogleReviewRequest() {
     if (!currentCompany.is_evaluation) return;
 
     // Check if company was created recently (within last 7 days)
-    const companyCreatedDate = new Date(currentCompany.created_date);
+    const companyCreatedDate = new Date(currentCompany.created_at);
     const daysSinceCreation = Math.floor((Date.now() - companyCreatedDate.getTime()) / (1000 * 60 * 60 * 24));
     
     // Show dialog if company is between 1-7 days old

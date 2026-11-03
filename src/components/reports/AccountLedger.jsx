@@ -66,7 +66,7 @@ export default function AccountLedger({ account, onClose, onTransactionClick }) 
       const allEntries = await JournalEntry.list({ filters: {
         company_id: currentCompany.id,
         status: 'posted'
-      }, orderBy: 'entry_date', ascending: false });
+      }, orderBy: 'entry_date', ascending: true }); // oldest first, so the running balance reads correctly
 
       console.log(`📊 Total posted entries in system: ${allEntries.length}`);
 
@@ -172,7 +172,7 @@ export default function AccountLedger({ account, onClose, onTransactionClick }) 
           }
         }
       } else if (entry.source_type === 'payment' && entry.source_id) {
-        alert('💡 Payment drill-down coming soon!\n\nYou can view payment details on the Payments page.');
+        setSelectedEntryId(entry.id);
       } else {
         console.log('Opening journal entry details:', entry.id);
         setSelectedEntryId(entry.id);

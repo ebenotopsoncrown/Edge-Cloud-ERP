@@ -86,7 +86,7 @@ export default function CustomerForm({ customer, onClose, companyId }) {
         if (!customer && openingBalance > 0) {
           const arAccount = accounts.find(a => 
             a.account_type === 'asset' && 
-            (a.account_category === 'current_asset' || a.account_name?.toLowerCase().includes('receivable'))
+            a.account_name?.toLowerCase().includes('receivable')
           );
           
           const equityAccount = accounts.find(a => 

@@ -1,4 +1,5 @@
 import React from "react";
+import { safeFormatDate } from "@/lib/utils";
 import { useCompany } from "../auth/CompanyContext";
 import { format } from "date-fns";
 
@@ -79,11 +80,11 @@ export default function InvoiceTemplate({ invoice, customer }) {
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-4 text-sm">
               <span className="font-semibold text-gray-700">Invoice Date:</span>
-              <span className="text-gray-900">{format(new Date(invoice.invoice_date), 'MMM dd, yyyy')}</span>
+              <span className="text-gray-900">{safeFormatDate(invoice.invoice_date, 'MMM dd, yyyy')}</span>
             </div>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <span className="font-semibold text-gray-700">Due Date:</span>
-              <span className="text-gray-900">{format(new Date(invoice.due_date), 'MMM dd, yyyy')}</span>
+              <span className="text-gray-900">{safeFormatDate(invoice.due_date, 'MMM dd, yyyy')}</span>
             </div>
             {invoice.balance_due > 0 && (
               <div className="grid grid-cols-2 gap-4 text-sm mt-4 pt-4 border-t">

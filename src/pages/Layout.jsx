@@ -351,7 +351,7 @@ function NavGroup({ group, isExpanded, onToggle, currentPath }) {
 // ── Main Layout Content ─────────────────────────────────────
 function LayoutContent({ children }) {
   const location = useLocation();
-  const { currentCompany, switchCompany, user, networkError, retryConnection, hasNetworkError } = useCompany();
+  const { currentCompany, switchCompany, clearCompany, user, isLoadingCompany, networkError, retryConnection, hasNetworkError } = useCompany();
   const [mobileOpen, setMobileOpen] = React.useState(false);
 
   const [expandedGroups, setExpandedGroups] = React.useState({
@@ -405,9 +405,7 @@ function LayoutContent({ children }) {
     setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }));
 
   const handleLogout = () => {
-    switchCompany(null);
-    localStorage.removeItem('current_company_id');
-    sessionStorage.removeItem('current_company_id');
+    clearCompany();
     User.logout();
   };
 
@@ -485,9 +483,8 @@ function LayoutContent({ children }) {
   if (location.pathname === '/EvaluationSignup') return children;
   if (location.pathname === '/SetupSuperAdmin') return children;
 
-  const hasStoredCompany = sessionStorage.getItem('current_company_id');
-  if (!currentCompany && !hasStoredCompany) return <CompanySelector />;
-  if (!currentCompany && hasStoredCompany) return <LoadingScreen />;
+  // Wait for the company list first, otherwise login flashes "No Company Access".
+  if (!currentCompany) return isLoadingCompany ? <LoadingScreen /> : <CompanySelector />;
 
   // ── User initials ─────────────────────────────────────────
   const userInitials = user?.full_name
@@ -778,7 +775,7 @@ function AuthWrapper({ children }) {
   if (!isAuthenticated) {
     return (
       <LandingPage
-        onLogin={() => {
+        onSignIn={() => {
           sessionStorage.setItem('returnUrl', window.location.pathname);
           window.location.href = '/';
         }}

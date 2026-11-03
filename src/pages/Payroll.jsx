@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { Employee, PayrollItem, PayrollRun } from "@/api/entities";
+import { useCompany } from "../components/auth/CompanyContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -41,6 +42,7 @@ const TABS = [
 ];
 
 export default function Payroll() {
+  const { currentCompany } = useCompany();
   const [activeTab, setActiveTab] = useState("payroll-runs");
   const [searchTerm, setSearchTerm] = useState("");
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
@@ -53,8 +55,9 @@ export default function Payroll() {
   const queryClient = useQueryClient();
 
   const { data: employees = [] } = useQuery({
-    queryKey: ['employees'],
-    queryFn: () => Employee.list({ orderBy: 'hire_date', ascending: false })
+    queryKey: ['employees', currentCompany?.id],
+    queryFn: () => Employee.list({ filters: { company_id: currentCompany.id }, orderBy: 'hire_date', ascending: false }),
+    enabled: !!currentCompany
   });
 
   const { data: payrollItems = [] } = useQuery({
@@ -63,8 +66,9 @@ export default function Payroll() {
   });
 
   const { data: payrollRuns = [] } = useQuery({
-    queryKey: ['payroll-runs'],
-    queryFn: () => PayrollRun.list({ orderBy: 'pay_date', ascending: false })
+    queryKey: ['payroll-runs', currentCompany?.id],
+    queryFn: () => PayrollRun.list({ filters: { company_id: currentCompany.id }, orderBy: 'pay_date', ascending: false }),
+    enabled: !!currentCompany
   });
 
   const totalGross = payrollRuns.reduce((s, r) => s + (r.total_gross || 0), 0);
@@ -77,7 +81,6 @@ export default function Payroll() {
     fontSize: 13.5,
     fontWeight: activeTab === id ? 700 : 500,
     color: activeTab === id ? '#1B4F8A' : '#64748B',
-    borderBottom: activeTab === id ? '2.5px solid #1B4F8A' : '2.5px solid transparent',
     background: 'none',
     border: 'none',
     borderBottom: activeTab === id ? '2.5px solid #1B4F8A' : '2.5px solid transparent',
@@ -345,6 +348,7 @@ export default function Payroll() {
 
 // Employee Form Component
 function EmployeeForm({ employee, onClose }) {
+  const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     employee_code: '',
@@ -368,7 +372,7 @@ function EmployeeForm({ employee, onClose }) {
   const saveMutation = useMutation({
     mutationFn: (data) => {
       if (employee?.id) return Employee.update(employee.id, data);
-      return Employee.create(data);
+      return Employee.create({ ...data, company_id: currentCompany?.id });
     },
     onSuccess: () => { queryClient.invalidateQueries(['employees']); onClose(); }
   });
@@ -554,6 +558,7 @@ function PayrollItemForm({ payrollItem, onClose }) {
 
 // Payroll Run Form Component
 function PayrollRunForm({ payrollRun, employees, payrollItems, onClose }) {
+  const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
     payroll_number: `PAY-${Date.now()}`,
@@ -614,7 +619,7 @@ function PayrollRunForm({ payrollRun, employees, payrollItems, onClose }) {
   const saveMutation = useMutation({
     mutationFn: (data) => {
       if (payrollRun?.id) return PayrollRun.update(payrollRun.id, data);
-      return PayrollRun.create(data);
+      return PayrollRun.create({ ...data, company_id: currentCompany?.id });
     },
     onSuccess: () => { queryClient.invalidateQueries(['payroll-runs']); onClose(); }
   });

@@ -121,7 +121,7 @@ export default function ImportCustomers() {
 
       const arAccount = accounts.find(a => 
         a.account_type === 'asset' && 
-        (a.account_category === 'current_asset' || a.account_name?.toLowerCase().includes('receivable'))
+        a.account_name?.toLowerCase().includes('receivable')
       );
       
       const equityAccount = accounts.find(a => 

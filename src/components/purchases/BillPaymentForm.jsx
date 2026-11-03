@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { safeFormatDate } from "@/lib/utils";
 import { Vendor, Bill, Account, JournalEntry, Payment } from "@/api/entities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -483,7 +484,7 @@ export default function BillPaymentForm({ onClose }) {
                           />
                         </TableCell>
                         <TableCell className="font-medium">{bill.bill_number}</TableCell>
-                        <TableCell>{format(new Date(bill.due_date), 'MMM d, yyyy')}</TableCell>
+                        <TableCell>{safeFormatDate(bill.due_date, 'MMM d, yyyy')}</TableCell>
                         <TableCell className="text-right font-mono">
                           ${bill.outstanding_amount.toFixed(2)}
                         </TableCell>

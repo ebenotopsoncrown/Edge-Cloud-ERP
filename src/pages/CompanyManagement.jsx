@@ -55,7 +55,7 @@ export default function CompanyManagement() {
 
   const { data: companies = [], isLoading } = useQuery({
     queryKey: ['companies'],
-    queryFn: () => Company.list({ orderBy: 'created_date', ascending: false }),
+    queryFn: () => Company.list({ orderBy: 'created_at', ascending: false }),
     enabled: isSuperAdmin
   });
 

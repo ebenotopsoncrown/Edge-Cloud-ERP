@@ -1,5 +1,7 @@
 import React, { useState } from "react";
+import { safeFormatDate } from "@/lib/utils";
 import { Job, JobPhase, CostCode, JobCost } from "@/api/entities";
+import { useCompany } from "../components/auth/CompanyContext";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -35,6 +37,7 @@ const TABS = [
 ];
 
 export default function JobCosting() {
+  const { currentCompany } = useCompany();
   const [activeTab, setActiveTab] = useState("jobs");
   const [showJobForm, setShowJobForm] = useState(false);
   const [showPhaseForm, setShowPhaseForm] = useState(false);
@@ -44,8 +47,9 @@ export default function JobCosting() {
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ['jobs'],
-    queryFn: () => Job.list({ orderBy: 'start_date', ascending: false })
+    queryKey: ['jobs', currentCompany?.id],
+    queryFn: () => Job.list({ filters: { company_id: currentCompany.id }, orderBy: 'start_date', ascending: false }),
+    enabled: !!currentCompany
   });
 
   const { data: phases = [] } = useQuery({
@@ -59,8 +63,9 @@ export default function JobCosting() {
   });
 
   const { data: jobCosts = [] } = useQuery({
-    queryKey: ['job-costs'],
-    queryFn: () => JobCost.list({ orderBy: 'transaction_date', ascending: false })
+    queryKey: ['job-costs', currentCompany?.id],
+    queryFn: () => JobCost.list({ filters: { company_id: currentCompany.id }, orderBy: 'transaction_date', ascending: false }),
+    enabled: !!currentCompany
   });
 
   const filteredJobs = jobs.filter(job =>
@@ -363,7 +368,7 @@ export default function JobCosting() {
                     const phase = phases.find(p => p.id === cost.phase_id);
                     return (
                       <TableRow key={cost.id}>
-                        <TableCell>{format(new Date(cost.transaction_date), 'MMM d, yyyy')}</TableCell>
+                        <TableCell>{safeFormatDate(cost.transaction_date, 'MMM d, yyyy')}</TableCell>
                         <TableCell>{job?.job_number}</TableCell>
                         <TableCell>{phase?.phase_code || '-'}</TableCell>
                         <TableCell>
