@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { Invoice } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
@@ -9,19 +10,17 @@ import { useCompany } from "../components/auth/CompanyContext";
 import { toBaseDocument } from "@/lib/currency";
 import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn, FilterSelect } from "../components/shared/PageShell";
 
-const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return '—'; } };
 
-const currencySymbol = code => ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
 export default function Invoices() {
+  const money = useMoney();
   const [showForm, setShowForm]     = useState(false);
   const [editing, setEditing]       = useState(null);
   const [search, setSearch]         = useState("");
   const [statusFilter, setStatus]   = useState("all");
   const { currentCompany }          = useCompany();
   const baseCurrency = currentCompany?.base_currency || 'USD';
-  const sym = currencySymbol(baseCurrency);
 
   const { data: invoices = [], isLoading } = useQuery({
     queryKey: ['invoices', currentCompany?.id],
@@ -66,9 +65,9 @@ export default function Invoices() {
       />
 
       <StatBar stats={[
-        { label: 'Total Invoiced', value: fmt(totalAmt, sym), icon: DollarSign, color: '#2E7DE8' },
-        { label: 'Collected',      value: fmt(totalPaid, sym), icon: CheckCircle, color: '#00A86B' },
-        { label: 'AR Balance',     value: fmt(totalAR, sym), icon: Clock, color: '#F59E0B' },
+        { label: 'Total Invoiced', value: money(totalAmt), icon: DollarSign, color: '#2E7DE8' },
+        { label: 'Collected',      value: money(totalPaid), icon: CheckCircle, color: '#00A86B' },
+        { label: 'AR Balance',     value: money(totalAR), icon: Clock, color: '#F59E0B' },
         { label: 'Overdue',        value: overdue, icon: AlertCircle, color: '#EF4444' },
       ]} />
 
@@ -103,9 +102,9 @@ export default function Invoices() {
               <ERPTableCell bold>{inv.customer_name}</ERPTableCell>
               <ERPTableCell muted>{fmtDate(inv.invoice_date)}</ERPTableCell>
               <ERPTableCell muted>{fmtDate(inv.due_date)}</ERPTableCell>
-              <ERPTableCell right bold>{fmt(inv.total_amount, currencySymbol(inv.currency || baseCurrency))}</ERPTableCell>
+              <ERPTableCell right bold>{money(inv.total_amount, inv.currency || baseCurrency)}</ERPTableCell>
               <ERPTableCell right style={{ color: inv.balance_due > 0 ? '#EF4444' : '#00875A', fontWeight: 700 }}>
-                {fmt(inv.balance_due, currencySymbol(inv.currency || baseCurrency))}
+                {money(inv.balance_due, inv.currency || baseCurrency)}
               </ERPTableCell>
               <ERPTableCell><StatusBadge status={inv.status} /></ERPTableCell>
               <ERPTableCell>

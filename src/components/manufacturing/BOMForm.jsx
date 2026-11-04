@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { Product, BillOfMaterials } from "@/api/entities";
 import { useCompany } from "../auth/CompanyContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,6 +12,7 @@ import { X, Save, Plus, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export default function BOMForm({ bom, onClose }) {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -225,7 +227,7 @@ export default function BOMForm({ bom, onClose }) {
                     />
                   </TableCell>
                   <TableCell className="font-semibold">
-                    ${(comp.total_cost || 0).toFixed(2)}
+                    {money(comp.total_cost || 0)}
                   </TableCell>
                   <TableCell>
                     <Button

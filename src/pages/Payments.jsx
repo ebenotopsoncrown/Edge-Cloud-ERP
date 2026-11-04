@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
+import { getCurrencySymbol } from "@/components/shared/FinancialCalculations";
 import { pluralize } from "@/lib/utils";
 import { Payment, Customer, Vendor, Invoice, Bill, Account, JournalEntry } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -23,10 +25,7 @@ import PageShell, {
   NewBtn,
 } from "../components/shared/PageShell";
 
-const getCurrencySymbol = (code) =>
-  ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
-const fmt = (n, sym) => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return '—'; } };
 
 // Always read the current balance: the cached account list goes stale as soon as
@@ -37,6 +36,7 @@ const adjustBalance = async (accountId, delta) => {
 };
 
 export default function Payments() {
+  const money = useMoney();
   const { currentCompany, canPerformAction } = useCompany();
   const queryClient = useQueryClient();
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -363,9 +363,9 @@ export default function Payments() {
       />
 
       <StatBar stats={[
-        { label: 'Total Received', value: fmt(totalReceived, currencySymbol), icon: TrendingUp,   color: '#00A86B' },
-        { label: 'Total Made',     value: fmt(totalMade, currencySymbol),     icon: TrendingDown,  color: '#EF4444' },
-        { label: 'Net',            value: fmt(totalReceived - totalMade, currencySymbol), icon: DollarSign, color: '#1B4F8A' },
+        { label: 'Total Received', value: money(totalReceived), icon: TrendingUp,   color: '#00A86B' },
+        { label: 'Total Made',     value: money(totalMade),     icon: TrendingDown,  color: '#EF4444' },
+        { label: 'Net',            value: money(totalReceived - totalMade), icon: DollarSign, color: '#1B4F8A' },
         { label: 'Received Count', value: receivedPayments.length,             color: '#00A86B' },
         { label: 'Made Count',     value: madePayments.length,                 color: '#EF4444' },
       ]} />
@@ -382,7 +382,7 @@ export default function Payments() {
             <ERPTableRow key={p.id}>
               <ERPTableCell muted>{fmtDate(p.payment_date)}</ERPTableCell>
               <ERPTableCell bold>{p.contact_name}</ERPTableCell>
-              <ERPTableCell right bold style={{ color: '#00875A' }}>{fmt(p.amount, currencySymbol)}</ERPTableCell>
+              <ERPTableCell right bold style={{ color: '#00875A' }}>{money(p.amount)}</ERPTableCell>
               <ERPTableCell muted style={{ textTransform: 'capitalize' }}>{p.payment_method?.replace(/_/g, ' ')}</ERPTableCell>
               <ERPTableCell muted>{p.reference || '—'}</ERPTableCell>
               <ERPTableCell><StatusBadge status={p.status} /></ERPTableCell>
@@ -398,7 +398,7 @@ export default function Payments() {
             <ERPTableRow key={p.id}>
               <ERPTableCell muted>{fmtDate(p.payment_date)}</ERPTableCell>
               <ERPTableCell bold>{p.contact_name}</ERPTableCell>
-              <ERPTableCell right bold style={{ color: '#EF4444' }}>{fmt(p.amount, currencySymbol)}</ERPTableCell>
+              <ERPTableCell right bold style={{ color: '#EF4444' }}>{money(p.amount)}</ERPTableCell>
               <ERPTableCell muted style={{ textTransform: 'capitalize' }}>{p.payment_method?.replace(/_/g, ' ')}</ERPTableCell>
               <ERPTableCell muted>{p.reference || '—'}</ERPTableCell>
               <ERPTableCell><StatusBadge status={p.status} /></ERPTableCell>

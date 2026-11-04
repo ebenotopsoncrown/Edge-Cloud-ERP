@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { safeFormatDate } from "@/lib/utils";
 import { Vendor, Bill, Account, JournalEntry, Payment } from "@/api/entities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -17,6 +18,7 @@ import { useCompany } from "../auth/CompanyContext";
 import PaymentVoucherPrint from "../print/PaymentVoucherPrint"; // Added import
 
 export default function BillPaymentForm({ onClose }) {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
@@ -486,7 +488,7 @@ export default function BillPaymentForm({ onClose }) {
                         <TableCell className="font-medium">{bill.bill_number}</TableCell>
                         <TableCell>{safeFormatDate(bill.due_date, 'MMM d, yyyy')}</TableCell>
                         <TableCell className="text-right font-mono">
-                          ${bill.outstanding_amount.toFixed(2)}
+                          {money(bill.outstanding_amount)}
                         </TableCell>
                         <TableCell className="text-right">
                           <Input
@@ -505,7 +507,7 @@ export default function BillPaymentForm({ onClose }) {
                     <TableRow className="bg-blue-50 font-bold">
                       <TableCell colSpan={4} className="text-right">Total Payment:</TableCell>
                       <TableCell className="text-right text-blue-700 text-lg">
-                        ${formData.amount.toFixed(2)}
+                        {money(formData.amount)}
                       </TableCell>
                     </TableRow>
                   </TableBody>

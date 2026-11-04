@@ -1,7 +1,9 @@
 import React from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { format } from "date-fns";
 
 export default function InventoryReceiptPrintTemplate({ receipt, company }) {
+  const money = useMoney();
   return (
     <div className="hidden print:block print:p-8">
       <style>{`
@@ -66,7 +68,7 @@ export default function InventoryReceiptPrintTemplate({ receipt, company }) {
             )}
             <div className="flex justify-between">
               <span className="text-gray-600">Total Amount:</span>
-              <span className="font-semibold text-green-700">${receipt.total_amount?.toFixed(2)}</span>
+              <span className="font-semibold text-green-700">{money(receipt.total_amount)}</span>
             </div>
           </div>
         </div>
@@ -91,8 +93,8 @@ export default function InventoryReceiptPrintTemplate({ receipt, company }) {
               <td className="p-2">{item.product_name}</td>
               <td className="p-2">{item.sku}</td>
               <td className="text-right p-2 font-semibold">{item.quantity_received}</td>
-              <td className="text-right p-2">${item.unit_cost.toFixed(2)}</td>
-              <td className="text-right p-2 font-semibold">${item.line_total.toFixed(2)}</td>
+              <td className="text-right p-2">{money(item.unit_cost)}</td>
+              <td className="text-right p-2 font-semibold">{money(item.line_total)}</td>
             </tr>
           ))}
         </tbody>
@@ -103,15 +105,15 @@ export default function InventoryReceiptPrintTemplate({ receipt, company }) {
         <div className="w-64">
           <div className="flex justify-between py-2 border-b border-gray-300">
             <span className="text-gray-600">Subtotal:</span>
-            <span className="font-semibold">${receipt.subtotal?.toFixed(2)}</span>
+            <span className="font-semibold">{money(receipt.subtotal)}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-gray-300">
             <span className="text-gray-600">Tax:</span>
-            <span className="font-semibold">${receipt.tax_total?.toFixed(2)}</span>
+            <span className="font-semibold">{money(receipt.tax_total)}</span>
           </div>
           <div className="flex justify-between py-3 border-t-2 border-gray-800 bg-green-50 px-2">
             <span className="text-xl font-bold">TOTAL VALUE:</span>
-            <span className="text-xl font-bold text-green-700">${receipt.total_amount?.toFixed(2)}</span>
+            <span className="text-xl font-bold text-green-700">{money(receipt.total_amount)}</span>
           </div>
         </div>
       </div>

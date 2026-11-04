@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { POSSale, POSSession, Store } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
@@ -53,6 +54,7 @@ import { format, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfMonth, end
 const COLORS = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#EC4899'];
 
 export default function POSReports() {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const [dateFrom, setDateFrom] = useState(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [dateTo, setDateTo] = useState(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -207,11 +209,11 @@ export default function POSReports() {
       />
 
       <StatBar stats={[
-        { label: 'Total Sales',       value: `$${totalSales.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`, icon: DollarSign, color: '#1B4F8A' },
+        { label: 'Total Sales',       value: money(totalSales), icon: DollarSign, color: '#1B4F8A' },
         { label: 'Transactions',      value: totalTransactions,                icon: ShoppingCart, color: '#00A86B' },
-        { label: 'Avg Transaction',   value: `$${averageTransaction.toFixed(2)}`, icon: TrendingUp, color: '#8B5CF6' },
-        { label: 'Total Discount',    value: `$${totalDiscount.toFixed(2)}`,   color: '#F59E0B' },
-        { label: 'Tax Collected',     value: `$${totalTax.toFixed(2)}`,        icon: FileText, color: '#EF4444' },
+        { label: 'Avg Transaction',   value: money(averageTransaction), icon: TrendingUp, color: '#8B5CF6' },
+        { label: 'Total Discount',    value: money(totalDiscount),   color: '#F59E0B' },
+        { label: 'Tax Collected',     value: money(totalTax),        icon: FileText, color: '#EF4444' },
       ]} />
 
       {/* Filters */}
@@ -273,8 +275,8 @@ export default function POSReports() {
                   <LineChart data={hourlyChartData} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="hour" />
-                    <YAxis tickFormatter={(value) => `$${value}`} />
-                    <Tooltip formatter={(value) => [`$${value.toFixed(2)}`, 'Sales']} />
+                    <YAxis tickFormatter={(value) => money(value)} />
+                    <Tooltip formatter={(value) => [money(value), 'Sales']} />
                     <Line type="monotone" dataKey="sales" stroke="#3B82F6" strokeWidth={2} />
                   </LineChart>
                 </ResponsiveContainer>
@@ -302,7 +304,7 @@ export default function POSReports() {
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value) => `$${value.toFixed(2)}`} />
+                    <Tooltip formatter={(value) => money(value)} />
                     <Legend />
                   </PieChart>
                 </ResponsiveContainer>
@@ -331,7 +333,7 @@ export default function POSReports() {
                     <TableRow key={product.product_id}>
                       <TableCell className="font-medium">{product.product_name}</TableCell>
                       <TableCell>{product.quantity}</TableCell>
-                      <TableCell>${product.revenue.toFixed(2)}</TableCell>
+                      <TableCell>{money(product.revenue)}</TableCell>
                       <TableCell>
                         {totalSales > 0 ? ((product.revenue / totalSales) * 100).toFixed(1) : '0.0'}%
                       </TableCell>
@@ -359,7 +361,7 @@ export default function POSReports() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-2xl font-bold text-green-600">${amount.toFixed(2)}</p>
+                      <p className="text-2xl font-bold text-green-600">{money(amount)}</p>
                       <p className="text-xs text-gray-600">
                         {totalSales > 0 ? ((amount / totalSales) * 100).toFixed(1) : '0.0'}% of total
                       </p>
@@ -393,14 +395,14 @@ export default function POSReports() {
                     <TableRow key={cashier.cashier_id || index}>
                       <TableCell className="font-medium">{cashier.cashier_name}</TableCell>
                       <TableCell className="font-semibold text-green-600">
-                        ${cashier.total_sales.toFixed(2)}
+                        {money(cashier.total_sales)}
                       </TableCell>
                       <TableCell>{cashier.transactions}</TableCell>
                       <TableCell>
-                        ${cashier.transactions > 0 ? (cashier.total_sales / cashier.transactions).toFixed(2) : '0.00'}
+                        {money(cashier.transactions > 0 ? cashier.total_sales / cashier.transactions : 0)}
                       </TableCell>
                       <TableCell className="text-blue-600 font-semibold">
-                        ${cashier.gross_profit.toFixed(2)}
+                        {money(cashier.gross_profit)}
                       </TableCell>
                       <TableCell>
                         {totalSales > 0 ? ((cashier.total_sales / totalSales) * 100).toFixed(1) : '0.0'}%
@@ -438,7 +440,7 @@ export default function POSReports() {
                       <TableCell>{session.cashier_name}</TableCell>
                       <TableCell>{session.start_time ? format(new Date(session.start_time), 'MMM d, h:mm a') : '-'}</TableCell>
                       <TableCell>{session.end_time ? format(new Date(session.end_time), 'MMM d, h:mm a') : '-'}</TableCell>
-                      <TableCell>${session.total_sales?.toFixed(2) || '0.00'}</TableCell>
+                      <TableCell>{money(session.total_sales)}</TableCell>
                       <TableCell>{session.total_transactions || 0}</TableCell>
                       <TableCell>
                         <span className={`px-2 py-1 rounded text-xs ${
@@ -475,7 +477,7 @@ export default function POSReports() {
                         <p className="text-sm text-gray-600">{pluralize(store.transactions, 'transaction')}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-3xl font-bold text-green-600">${store.sales.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                        <p className="text-3xl font-bold text-green-600">{money(store.sales)}</p>
                         <p className="text-xs text-gray-600">
                           {totalSales > 0 ? ((store.sales / totalSales) * 100).toFixed(1) : '0.0'}% of total
                         </p>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { safeFormatDate } from "@/lib/utils";
 import { Job, JobPhase, CostCode, JobCost } from "@/api/entities";
 import { useCompany } from "../components/auth/CompanyContext";
@@ -37,6 +38,7 @@ const TABS = [
 ];
 
 export default function JobCosting() {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const [activeTab, setActiveTab] = useState("jobs");
   const [showJobForm, setShowJobForm] = useState(false);
@@ -122,9 +124,9 @@ export default function JobCosting() {
       <StatBar stats={[
         { label: 'Total Jobs', value: jobs.length, icon: Briefcase, color: '#F59E0B' },
         { label: 'Active Jobs', value: activeJobs, icon: Clock, color: '#1B4F8A' },
-        { label: 'Contract Value', value: `$${totalContractValue.toFixed(2)}`, icon: DollarSign, color: '#1B4F8A' },
-        { label: 'Actual Cost', value: `$${totalActualCost.toFixed(2)}`, icon: DollarSign, color: '#F59E0B' },
-        { label: 'Profit', value: `$${totalProfit.toFixed(2)}`, icon: TrendingUp, color: totalProfit >= 0 ? '#00A86B' : '#DC2626' },
+        { label: 'Contract Value', value: money(totalContractValue), icon: DollarSign, color: '#1B4F8A' },
+        { label: 'Actual Cost', value: money(totalActualCost), icon: DollarSign, color: '#F59E0B' },
+        { label: 'Profit', value: money(totalProfit), icon: TrendingUp, color: totalProfit >= 0 ? '#00A86B' : '#DC2626' },
       ]} />
 
       {/* Search */}
@@ -213,10 +215,10 @@ export default function JobCosting() {
                         <TableCell style={{ fontWeight: 600 }}>{job.job_number}</TableCell>
                         <TableCell>{job.job_name}</TableCell>
                         <TableCell>{job.customer_name}</TableCell>
-                        <TableCell style={{ fontWeight: 600 }}>${job.contract_amount?.toFixed(2)}</TableCell>
-                        <TableCell style={{ color: '#DC2626' }}>${job.actual_cost?.toFixed(2)}</TableCell>
+                        <TableCell style={{ fontWeight: 600 }}>{money(job.contract_amount)}</TableCell>
+                        <TableCell style={{ color: '#DC2626' }}>{money(job.actual_cost)}</TableCell>
                         <TableCell style={{ fontWeight: 600, color: profit >= 0 ? '#00875A' : '#DC2626' }}>
-                          ${profit.toFixed(2)}
+                          {money(profit)}
                         </TableCell>
                         <TableCell>{job.percent_complete || 0}%</TableCell>
                         <TableCell>{inlineStatusBadge(job.status)}</TableCell>
@@ -268,10 +270,10 @@ export default function JobCosting() {
                         <TableCell style={{ fontWeight: 600 }}>{phase.phase_code}</TableCell>
                         <TableCell>{phase.phase_name}</TableCell>
                         <TableCell>{job?.job_number}</TableCell>
-                        <TableCell>${phase.budgeted_amount?.toFixed(2)}</TableCell>
-                        <TableCell style={{ color: '#DC2626' }}>${phase.actual_cost?.toFixed(2)}</TableCell>
+                        <TableCell>{money(phase.budgeted_amount)}</TableCell>
+                        <TableCell style={{ color: '#DC2626' }}>{money(phase.actual_cost)}</TableCell>
                         <TableCell style={{ color: variance >= 0 ? '#00875A' : '#DC2626' }}>
-                          ${variance.toFixed(2)}
+                          {money(variance)}
                         </TableCell>
                         <TableCell>{phase.percent_complete || 0}%</TableCell>
                         <TableCell><StatusBadge status={phase.status} /></TableCell>
@@ -378,7 +380,7 @@ export default function JobCosting() {
                         </TableCell>
                         <TableCell>{cost.description}</TableCell>
                         <TableCell>{cost.quantity}</TableCell>
-                        <TableCell style={{ fontWeight: 600 }}>${cost.total_cost?.toFixed(2)}</TableCell>
+                        <TableCell style={{ fontWeight: 600 }}>{money(cost.total_cost)}</TableCell>
                         <TableCell>
                           {cost.is_billable ? (
                             <StatusBadge status={cost.is_billed ? 'paid' : 'pending'} />

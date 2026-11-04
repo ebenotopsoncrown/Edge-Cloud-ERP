@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { Product } from "@/api/entities";
 import { UploadFile, ExtractDataFromUploadedFile } from "@/api/integrations";
@@ -11,6 +12,7 @@ import { Upload, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react
 import { useCompany } from "../auth/CompanyContext";
 
 export default function ImportProducts() {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [file, setFile] = useState(null);
@@ -226,8 +228,8 @@ export default function ImportProducts() {
                       <TableCell className="font-medium">{result.row.sku}</TableCell>
                       <TableCell>{result.row.product_name}</TableCell>
                       <TableCell>{result.row.product_type}</TableCell>
-                      <TableCell>${parseFloat(result.row.unit_price || 0).toFixed(2)}</TableCell>
-                      <TableCell>${parseFloat(result.row.cost_price || 0).toFixed(2)}</TableCell>
+                      <TableCell>{money(parseFloat(result.row.unit_price || 0))}</TableCell>
+                      <TableCell>{money(parseFloat(result.row.cost_price || 0))}</TableCell>
                       <TableCell>{parseFloat(result.row.quantity_on_hand || 0)}</TableCell>
                       <TableCell>
                         {result.errors.length > 0 && (

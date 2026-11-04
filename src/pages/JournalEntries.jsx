@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { JournalEntry, Account } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { FileText, Eye, Trash2 } from "lucide-react";
@@ -9,16 +10,15 @@ import TransactionDetails from "../components/reports/TransactionDetails";
 import ManualJournalEntryForm from "../components/journalEntries/ManualJournalEntryForm";
 import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, ActionBtn, NewBtn } from "../components/shared/PageShell";
 
-const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return '—'; } };
 
 export default function JournalEntries() {
+  const money = useMoney();
   const [selectedEntryId, setSelectedEntryId] = useState(null);
   const [search, setSearch]                   = useState("");
   const [showNewEntry, setShowNewEntry]       = useState(false);
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
-  const sym = getCurrencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ['journal-entries', currentCompany?.id],
@@ -88,7 +88,7 @@ export default function JournalEntries() {
         { label: 'Total Entries', value: entries.length, icon: FileText, color: '#1B4F8A' },
         { label: 'Posted',        value: posted,          color: '#00A86B' },
         { label: 'Draft',         value: entries.filter(e => e.status === 'draft').length, color: '#F59E0B' },
-        { label: 'Total Posted Debits', value: fmt(totalDebits, sym), color: '#8B5CF6' },
+        { label: 'Total Posted Debits', value: money(totalDebits), color: '#8B5CF6' },
       ]} />
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search entry number, description or reference…" />
@@ -100,8 +100,8 @@ export default function JournalEntries() {
             <ERPTableCell muted>{fmtDate(entry.entry_date)}</ERPTableCell>
             <ERPTableCell bold>{entry.description}</ERPTableCell>
             <ERPTableCell muted style={{ fontSize: 12 }}>{entry.reference}</ERPTableCell>
-            <ERPTableCell right style={{ color: '#00875A', fontWeight: 700 }}>{fmt(entry.total_debits, sym)}</ERPTableCell>
-            <ERPTableCell right style={{ color: '#1B4F8A', fontWeight: 700 }}>{fmt(entry.total_credits, sym)}</ERPTableCell>
+            <ERPTableCell right style={{ color: '#00875A', fontWeight: 700 }}>{money(entry.total_debits)}</ERPTableCell>
+            <ERPTableCell right style={{ color: '#1B4F8A', fontWeight: 700 }}>{money(entry.total_credits)}</ERPTableCell>
             <ERPTableCell><StatusBadge status={entry.status} /></ERPTableCell>
             <ERPTableCell>
               {entry.source_type && (

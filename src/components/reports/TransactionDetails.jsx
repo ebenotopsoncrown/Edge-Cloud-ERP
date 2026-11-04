@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { JournalEntry, Account } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +22,7 @@ import { format } from "date-fns";
 import { useCompany } from "../auth/CompanyContext";
 
 export default function TransactionDetails({ entryId, onClose }) {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
@@ -382,14 +384,14 @@ export default function TransactionDetails({ entryId, onClose }) {
                 <div className="border-t pt-4">
                   <div className="flex justify-end gap-8 text-sm font-semibold">
                     <div>
-                      Total Debits: <span className="text-green-600">${totalDebits.toFixed(2)}</span>
+                      Total Debits: <span className="text-green-600">{money(totalDebits)}</span>
                     </div>
                     <div>
-                      Total Credits: <span className="text-blue-600">${totalCredits.toFixed(2)}</span>
+                      Total Credits: <span className="text-blue-600">{money(totalCredits)}</span>
                     </div>
                     <div>
                       Difference: <span className={isBalanced ? 'text-green-600' : 'text-red-600'}>
-                        ${Math.abs(totalDebits - totalCredits).toFixed(2)}
+                        {money(Math.abs(totalDebits - totalCredits))}
                       </span>
                     </div>
                   </div>
@@ -448,20 +450,20 @@ export default function TransactionDetails({ entryId, onClose }) {
                         <TableCell>{line.account_name}</TableCell>
                         <TableCell>{line.description}</TableCell>
                         <TableCell className="text-right text-green-600 font-semibold">
-                          {line.debit > 0 ? `$${line.debit.toFixed(2)}` : '-'}
+                          {line.debit > 0 ? money(line.debit) : '-'}
                         </TableCell>
                         <TableCell className="text-right text-blue-600 font-semibold">
-                          {line.credit > 0 ? `$${line.credit.toFixed(2)}` : '-'}
+                          {line.credit > 0 ? money(line.credit) : '-'}
                         </TableCell>
                       </TableRow>
                     ))}
                     <TableRow className="bg-gray-50 font-bold">
                       <TableCell colSpan={3}>Totals</TableCell>
                       <TableCell className="text-right text-green-600">
-                        ${entry.total_debits?.toFixed(2) || '0.00'}
+                        {money(entry.total_debits)}
                       </TableCell>
                       <TableCell className="text-right text-blue-600">
-                        ${entry.total_credits?.toFixed(2) || '0.00'}
+                        {money(entry.total_credits)}
                       </TableCell>
                     </TableRow>
                   </TableBody>

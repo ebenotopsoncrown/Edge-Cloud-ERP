@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { Employee, PayrollItem, PayrollRun } from "@/api/entities";
 import { useCompany } from "../components/auth/CompanyContext";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -43,6 +44,7 @@ const TABS = [
 ];
 
 export default function Payroll() {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const [activeTab, setActiveTab] = useState("payroll-runs");
   const [searchTerm, setSearchTerm] = useState("");
@@ -154,8 +156,8 @@ export default function Payroll() {
       <StatBar stats={[
         { label: 'Active Employees', value: activeEmployees, icon: Users, color: '#8B5CF6' },
         { label: 'Payroll Runs', value: payrollRuns.length, icon: Clock, color: '#1B4F8A' },
-        { label: 'Total Gross Pay', value: `$${totalGross.toFixed(2)}`, icon: DollarSign, color: '#F59E0B' },
-        { label: 'Total Net Pay', value: `$${totalNet.toFixed(2)}`, icon: CheckCircle, color: '#00A86B' },
+        { label: 'Total Gross Pay', value: money(totalGross), icon: DollarSign, color: '#F59E0B' },
+        { label: 'Total Net Pay', value: money(totalNet), icon: CheckCircle, color: '#00A86B' },
         { label: 'Pending Runs', value: pendingRuns, icon: Clock, color: '#F59E0B' },
       ]} />
 
@@ -230,8 +232,8 @@ export default function Payroll() {
                         <TableCell>{run.pay_period_start} to {run.pay_period_end}</TableCell>
                         <TableCell>{run.pay_date}</TableCell>
                         <TableCell>{run.employee_payments?.length || 0}</TableCell>
-                        <TableCell style={{ fontWeight: 600 }}>${run.total_gross?.toFixed(2)}</TableCell>
-                        <TableCell style={{ fontWeight: 600, color: '#00875A' }}>${run.total_net?.toFixed(2)}</TableCell>
+                        <TableCell style={{ fontWeight: 600 }}>{money(run.total_gross)}</TableCell>
+                        <TableCell style={{ fontWeight: 600, color: '#00875A' }}>{money(run.total_net)}</TableCell>
                         <TableCell>
                           <StatusBadge status={run.status} />
                         </TableCell>
@@ -277,7 +279,7 @@ export default function Payroll() {
                       <TableCell>{employee.first_name} {employee.last_name}</TableCell>
                       <TableCell>{employee.department}</TableCell>
                       <TableCell>{employee.job_title}</TableCell>
-                      <TableCell style={{ fontWeight: 600 }}>${employee.basic_salary?.toFixed(2)}</TableCell>
+                      <TableCell style={{ fontWeight: 600 }}>{money(employee.basic_salary)}</TableCell>
                       <TableCell>{employee.hire_date}</TableCell>
                       <TableCell>
                         <StatusBadge status={employee.is_active ? 'active' : 'inactive'} />
@@ -559,6 +561,7 @@ function PayrollItemForm({ payrollItem, onClose }) {
 
 // Payroll Run Form Component
 function PayrollRunForm({ payrollRun, employees, payrollItems, onClose }) {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [formData, setFormData] = useState({
@@ -672,7 +675,7 @@ function PayrollRunForm({ payrollRun, employees, payrollItems, onClose }) {
                 .filter(e => e.is_active && !selectedEmployees.includes(e.id))
                 .map(emp => (
                   <SelectItem key={emp.id} value={emp.id}>
-                    {emp.first_name} {emp.last_name} - ${emp.basic_salary}
+                    {emp.first_name} {emp.last_name} - {money(emp.basic_salary)}
                   </SelectItem>
                 ))}
             </SelectContent>
@@ -693,18 +696,18 @@ function PayrollRunForm({ payrollRun, employees, payrollItems, onClose }) {
             {formData.employee_payments.map((payment, idx) => (
               <TableRow key={idx}>
                 <TableCell style={{ fontWeight: 600 }}>{payment.employee_name}</TableCell>
-                <TableCell>${payment.gross_pay?.toFixed(2)}</TableCell>
-                <TableCell>${payment.total_deductions?.toFixed(2)}</TableCell>
-                <TableCell>${payment.total_taxes?.toFixed(2)}</TableCell>
-                <TableCell style={{ fontWeight: 600, color: '#00875A' }}>${payment.net_pay?.toFixed(2)}</TableCell>
+                <TableCell>{money(payment.gross_pay)}</TableCell>
+                <TableCell>{money(payment.total_deductions)}</TableCell>
+                <TableCell>{money(payment.total_taxes)}</TableCell>
+                <TableCell style={{ fontWeight: 600, color: '#00875A' }}>{money(payment.net_pay)}</TableCell>
               </TableRow>
             ))}
             <TableRow style={{ background: '#F8FAFC', fontWeight: 700 }}>
               <TableCell style={{ fontWeight: 700 }}>TOTAL</TableCell>
-              <TableCell style={{ fontWeight: 700 }}>${formData.total_gross?.toFixed(2)}</TableCell>
-              <TableCell style={{ fontWeight: 700 }}>${formData.total_deductions?.toFixed(2)}</TableCell>
-              <TableCell style={{ fontWeight: 700 }}>${formData.total_taxes?.toFixed(2)}</TableCell>
-              <TableCell style={{ fontWeight: 700, color: '#00875A' }}>${formData.total_net?.toFixed(2)}</TableCell>
+              <TableCell style={{ fontWeight: 700 }}>{money(formData.total_gross)}</TableCell>
+              <TableCell style={{ fontWeight: 700 }}>{money(formData.total_deductions)}</TableCell>
+              <TableCell style={{ fontWeight: 700 }}>{money(formData.total_taxes)}</TableCell>
+              <TableCell style={{ fontWeight: 700, color: '#00875A' }}>{money(formData.total_net)}</TableCell>
             </TableRow>
           </TableBody>
         </Table>

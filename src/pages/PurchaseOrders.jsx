@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { PurchaseOrder, Bill } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -13,11 +14,10 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return '—'; } };
-const currencySymbol = code => ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
 export default function PurchaseOrders() {
+  const money = useMoney();
   const [showForm, setShowForm]     = useState(false);
   const [editing, setEditing]       = useState(null);
   const [search, setSearch]         = useState("");
@@ -26,7 +26,6 @@ export default function PurchaseOrders() {
   const [toDelete, setToDelete]     = useState(null);
   const queryClient = useQueryClient();
   const { currentCompany } = useCompany();
-  const sym = currencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: purchaseOrders = [], isLoading } = useQuery({
     queryKey: ['purchase-orders', currentCompany?.id],
@@ -108,7 +107,7 @@ export default function PurchaseOrders() {
         { label: 'Total Orders',   value: purchaseOrders.length, icon: ShoppingCart, color: '#1B4F8A' },
         { label: 'Open',           value: openPOs,               color: '#F59E0B' },
         { label: 'Received',       value: received,              icon: CheckCircle,  color: '#00A86B' },
-        { label: 'Total Value',    value: fmt(totalAmt, sym),    icon: DollarSign,   color: '#8B5CF6' },
+        { label: 'Total Value',    value: money(totalAmt),    icon: DollarSign,   color: '#8B5CF6' },
       ]} />
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search PO number or vendor…">
@@ -134,7 +133,7 @@ export default function PurchaseOrders() {
             <ERPTableCell bold>{po.vendor_name}</ERPTableCell>
             <ERPTableCell muted>{fmtDate(po.po_date)}</ERPTableCell>
             <ERPTableCell muted>{po.expected_delivery_date ? fmtDate(po.expected_delivery_date) : '—'}</ERPTableCell>
-            <ERPTableCell right bold>{fmt(po.total_amount, sym)}</ERPTableCell>
+            <ERPTableCell right bold>{money(po.total_amount, po.currency)}</ERPTableCell>
             <ERPTableCell><StatusBadge status={po.status} /></ERPTableCell>
             <ERPTableCell>
               <div style={{ display: 'flex', gap: 6 }}>

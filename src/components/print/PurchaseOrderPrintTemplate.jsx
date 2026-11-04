@@ -1,7 +1,9 @@
 import React from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { format } from "date-fns";
 
 export default function PurchaseOrderPrintTemplate({ purchaseOrder, company }) {
+  const money = useMoney();
   const safeToFixed = (value, decimals = 2) => {
     const num = parseFloat(value);
     return isNaN(num) ? '0.00' : num.toFixed(decimals);
@@ -136,7 +138,7 @@ export default function PurchaseOrderPrintTemplate({ purchaseOrder, company }) {
             <tr style={{backgroundColor: 'black', color: 'white', fontWeight: 'bold'}}>
               <td colSpan="4" style={{border: '1px solid black', padding: '4px', textAlign: 'right'}}>TOTAL</td>
               <td style={{border: '1px solid black', padding: '4px', textAlign: 'right'}}>
-                ${safeToFixed(purchaseOrder.total_amount || 0)}
+                {money(purchaseOrder.total_amount || 0, purchaseOrder.currency)}
               </td>
             </tr>
           </tbody>

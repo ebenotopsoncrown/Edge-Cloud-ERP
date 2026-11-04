@@ -1,4 +1,6 @@
 import React from "react";
+import { useMoney } from "@/components/shared/useMoney";
+import { getCurrencySymbol } from "@/components/shared/FinancialCalculations";
 import { Job, JobCost } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -7,12 +9,10 @@ import { useCompany } from "../components/auth/CompanyContext";
 import { Briefcase, Plus, Upload, Clock, DollarSign, TrendingUp, FileText } from "lucide-react";
 import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, ActionBtn } from "../components/shared/PageShell";
 
-const CURRENCY_SYMBOLS = { USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' };
-const getCurrencySymbol = (code) => CURRENCY_SYMBOLS[code] || code;
-const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const ACCENT = '#7C3AED';
 
 export default function JobCostingDashboard() {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const sym = getCurrencySymbol(currentCompany?.base_currency || 'USD');
 
@@ -58,10 +58,10 @@ export default function JobCostingDashboard() {
       <StatBar stats={[
         { label: 'Active Jobs',      value: activeJobs,              icon: Briefcase,  color: ACCENT },
         { label: 'Completed',        value: completedJobs,           color: '#00A86B' },
-        { label: 'Contract Value',   value: fmt(totalContractValue, sym), icon: DollarSign, color: '#1B4F8A' },
-        { label: 'Total Costs',      value: fmt(totalCosts, sym),    icon: TrendingUp, color: '#EF4444' },
+        { label: 'Contract Value',   value: money(totalContractValue), icon: DollarSign, color: '#1B4F8A' },
+        { label: 'Total Costs',      value: money(totalCosts),    icon: TrendingUp, color: '#EF4444' },
         { label: totalProfit >= 0 ? 'Total Profit' : 'Total Loss',
-          value: fmt(Math.abs(totalProfit), sym),
+          value: money(Math.abs(totalProfit)),
           color: totalProfit >= 0 ? '#00A86B' : '#EF4444' },
         { label: 'Margin',           value: `${profitMargin}%`,      color: '#F59E0B' },
       ]} />
@@ -74,10 +74,10 @@ export default function JobCostingDashboard() {
               <ERPTableCell style={{ fontFamily: 'monospace', fontSize: 12.5, color: ACCENT, fontWeight: 700 }}>{job.job_number}</ERPTableCell>
               <ERPTableCell bold>{job.job_name}</ERPTableCell>
               <ERPTableCell muted>{job.customer_name || '—'}</ERPTableCell>
-              <ERPTableCell right bold>{fmt(job.contract_amount, sym)}</ERPTableCell>
-              <ERPTableCell right muted>{fmt(job.actual_cost, sym)}</ERPTableCell>
+              <ERPTableCell right bold>{money(job.contract_amount)}</ERPTableCell>
+              <ERPTableCell right muted>{money(job.actual_cost)}</ERPTableCell>
               <ERPTableCell right bold style={{ color: profit >= 0 ? '#00A86B' : '#EF4444' }}>
-                {profit >= 0 ? '' : '-'}{fmt(Math.abs(profit), sym)}
+                {profit >= 0 ? '' : '-'}{money(Math.abs(profit))}
               </ERPTableCell>
               <ERPTableCell>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>

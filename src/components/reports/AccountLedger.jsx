@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { getCurrencySymbol } from "@/components/shared/FinancialCalculations";
 import { JournalEntry, Invoice, Bill, Account } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,25 +21,6 @@ import { useCompany } from "../auth/CompanyContext";
 import TransactionDetails from "./TransactionDetails";
 import InvoiceForm from "../invoices/InvoiceForm";
 import BillForm from "../bills/BillForm";
-
-// CRITICAL FIX: Currency symbol function
-const getCurrencySymbol = (currencyCode) => {
-  const symbols = {
-    'USD': '$',
-    'EUR': '€',
-    'GBP': '£',
-    'NGN': '₦',
-    'ZAR': 'R',
-    'KES': 'KSh',
-    'GHS': '₵',
-    'CAD': 'C$',
-    'AUD': 'A$',
-    'INR': '₹',
-    'JPY': '¥',
-    'CNY': '¥'
-  };
-  return symbols[currencyCode] || currencyCode;
-};
 
 export default function AccountLedger({ account, onClose, onTransactionClick }) {
   const { currentCompany } = useCompany();

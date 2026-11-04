@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { Account, JournalEntry } from "@/api/entities";
 import { UploadFile, ExtractDataFromUploadedFile } from "@/api/integrations";
@@ -11,6 +12,7 @@ import { Upload, CheckCircle, XCircle, AlertCircle, Loader2 } from "lucide-react
 import { useCompany } from "../auth/CompanyContext";
 
 export default function ImportChartOfAccounts() {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [file, setFile] = useState(null);
@@ -294,7 +296,7 @@ export default function ImportChartOfAccounts() {
                       <TableCell>{result.row.account_name}</TableCell>
                       <TableCell>{result.row.account_type}</TableCell>
                       <TableCell>{result.row.account_category}</TableCell>
-                      <TableCell>${parseFloat(result.row.opening_balance || 0).toFixed(2)}</TableCell>
+                      <TableCell>{money(parseFloat(result.row.opening_balance || 0))}</TableCell>
                       <TableCell>
                         {result.errors.length > 0 && (
                           <ul className="text-xs text-red-600 list-disc ml-4">

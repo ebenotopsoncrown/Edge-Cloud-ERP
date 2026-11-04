@@ -1,4 +1,5 @@
 import React from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { Account, Payment } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -10,12 +11,10 @@ import {
 } from "lucide-react";
 import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, ActionBtn } from "../components/shared/PageShell";
 
-const getCurrencySymbol = (code) =>
-  ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
-const fmt = (n, sym) => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function Banking() {
+  const money = useMoney();
   const { currentCompany } = useCompany();
 
   const { data: accounts = [] } = useQuery({
@@ -31,7 +30,6 @@ export default function Banking() {
   });
 
   const baseCurrency   = currentCompany?.base_currency || 'USD';
-  const currencySymbol = getCurrencySymbol(baseCurrency);
 
   const bankAccounts     = accounts.filter(acc => acc.account_type === 'asset' && (acc.account_name?.toLowerCase().includes('cash') || acc.account_name?.toLowerCase().includes('bank')));
   const totalCash        = bankAccounts.reduce((s, a) => s + (parseFloat(a.balance) || 0), 0);
@@ -60,10 +58,10 @@ export default function Banking() {
       />
 
       <StatBar stats={[
-        { label: 'Total Cash & Bank', value: fmt(totalCash, currencySymbol),                  icon: Wallet,      color: '#1B4F8A' },
-        { label: 'Money In',          value: fmt(totalReceived, currencySymbol),               icon: TrendingUp,  color: '#00A86B' },
-        { label: 'Money Out',         value: fmt(totalPaid, currencySymbol),                   icon: TrendingDown,color: '#EF4444' },
-        { label: 'Net Cash Flow',     value: fmt(totalReceived - totalPaid, currencySymbol),   icon: DollarSign,  color: '#8B5CF6' },
+        { label: 'Total Cash & Bank', value: money(totalCash),                  icon: Wallet,      color: '#1B4F8A' },
+        { label: 'Money In',          value: money(totalReceived),               icon: TrendingUp,  color: '#00A86B' },
+        { label: 'Money Out',         value: money(totalPaid),                   icon: TrendingDown,color: '#EF4444' },
+        { label: 'Net Cash Flow',     value: money(totalReceived - totalPaid),   icon: DollarSign,  color: '#8B5CF6' },
         { label: 'Accounts',          value: bankAccounts.length,                              icon: Building2,   color: '#64748B' },
       ]} />
 
@@ -106,7 +104,7 @@ export default function Banking() {
               </div>
             </ERPTableCell>
             <ERPTableCell right bold style={{ color: parseFloat(account.balance) < 0 ? '#EF4444' : '#0F172A', fontSize: 15 }}>
-              {fmt(parseFloat(account.balance) || 0, currencySymbol)}
+              {money(parseFloat(account.balance) || 0)}
             </ERPTableCell>
           </ERPTableRow>
         ))}
@@ -116,7 +114,7 @@ export default function Banking() {
       {bankAccounts.length > 0 && (
         <div style={{ background: '#1B4F8A', borderRadius: 10, padding: '14px 20px', marginTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ color: 'white', fontWeight: 700, fontSize: 14 }}>Total Cash &amp; Bank Position</span>
-          <span style={{ color: 'white', fontWeight: 800, fontSize: 20, fontFamily: 'monospace' }}>{fmt(totalCash, currencySymbol)}</span>
+          <span style={{ color: 'white', fontWeight: 800, fontSize: 20, fontFamily: 'monospace' }}>{money(totalCash)}</span>
         </div>
       )}
     </PageShell>

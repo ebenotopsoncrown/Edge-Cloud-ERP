@@ -1,9 +1,11 @@
 import React from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { safeFormatDate } from "@/lib/utils";
 import { useCompany } from "../auth/CompanyContext";
 import { format } from "date-fns";
 
 export default function InvoiceTemplate({ invoice, customer }) {
+  const money = useMoney();
   const { currentCompany } = useCompany();
 
   return (
@@ -90,7 +92,7 @@ export default function InvoiceTemplate({ invoice, customer }) {
               <div className="grid grid-cols-2 gap-4 text-sm mt-4 pt-4 border-t">
                 <span className="font-bold text-gray-900">Amount Due:</span>
                 <span className="font-bold text-red-600 text-lg">
-                  ${invoice.balance_due?.toFixed(2)}
+                  {money(invoice.balance_due, invoice.currency)}
                 </span>
               </div>
             )}
@@ -116,9 +118,9 @@ export default function InvoiceTemplate({ invoice, customer }) {
                 <p className="font-medium text-gray-900">{item.description}</p>
               </td>
               <td className="py-4 px-2 text-center text-gray-700">{item.quantity}</td>
-              <td className="py-4 px-2 text-right text-gray-700">${item.unit_price?.toFixed(2)}</td>
-              <td className="py-4 px-2 text-right text-gray-700">${item.tax_amount?.toFixed(2) || '0.00'}</td>
-              <td className="py-4 px-2 text-right font-semibold text-gray-900">${item.line_total?.toFixed(2)}</td>
+              <td className="py-4 px-2 text-right text-gray-700">{money(item.unit_price, invoice.currency)}</td>
+              <td className="py-4 px-2 text-right text-gray-700">{money(item.tax_amount, invoice.currency)}</td>
+              <td className="py-4 px-2 text-right font-semibold text-gray-900">{money(item.line_total, invoice.currency)}</td>
             </tr>
           ))}
         </tbody>
@@ -129,31 +131,31 @@ export default function InvoiceTemplate({ invoice, customer }) {
         <div className="w-80 space-y-3">
           <div className="flex justify-between text-gray-700">
             <span>Subtotal:</span>
-            <span className="font-semibold">${invoice.subtotal?.toFixed(2)}</span>
+            <span className="font-semibold">{money(invoice.subtotal, invoice.currency)}</span>
           </div>
           {invoice.discount_amount > 0 && (
             <div className="flex justify-between text-orange-600">
               <span>Discount:</span>
-              <span className="font-semibold">-${invoice.discount_amount?.toFixed(2)}</span>
+              <span className="font-semibold">-{money(invoice.discount_amount, invoice.currency)}</span>
             </div>
           )}
           <div className="flex justify-between text-gray-700">
             <span>Tax:</span>
-            <span className="font-semibold">${invoice.tax_total?.toFixed(2)}</span>
+            <span className="font-semibold">{money(invoice.tax_total, invoice.currency)}</span>
           </div>
           <div className="flex justify-between text-xl font-bold text-gray-900 pt-3 border-t-2 border-gray-800">
             <span>TOTAL:</span>
-            <span>${invoice.total_amount?.toFixed(2)}</span>
+            <span>{money(invoice.total_amount, invoice.currency)}</span>
           </div>
           {invoice.amount_paid > 0 && (
             <>
               <div className="flex justify-between text-green-600">
                 <span>Amount Paid:</span>
-                <span className="font-semibold">-${invoice.amount_paid?.toFixed(2)}</span>
+                <span className="font-semibold">-{money(invoice.amount_paid, invoice.currency)}</span>
               </div>
               <div className="flex justify-between text-xl font-bold text-red-600 pt-2 border-t">
                 <span>BALANCE DUE:</span>
-                <span>${invoice.balance_due?.toFixed(2)}</span>
+                <span>{money(invoice.balance_due, invoice.currency)}</span>
               </div>
             </>
           )}

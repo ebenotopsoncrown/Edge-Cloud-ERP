@@ -1,4 +1,5 @@
 import React from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { Employee, PayrollRun } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
@@ -9,9 +10,9 @@ import { Users, DollarSign, Calendar, Plus, Upload, FileText } from "lucide-reac
 import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn } from "../components/shared/PageShell";
 import { format } from "date-fns";
 
-const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function PayrollDashboard() {
+  const money = useMoney();
   const { currentCompany } = useCompany();
 
   const { data: employees = [] } = useQuery({
@@ -49,8 +50,8 @@ export default function PayrollDashboard() {
 
       <StatBar stats={[
         { label: 'Active Employees', value: activeEmployees,         icon: Users,      color: '#8B5CF6' },
-        { label: 'Total Payroll Paid', value: fmt(totalPayroll),    icon: DollarSign, color: '#00A86B' },
-        { label: 'Total Gross',      value: fmt(totalGross),        icon: DollarSign, color: '#F59E0B' },
+        { label: 'Total Payroll Paid', value: money(totalPayroll),    icon: DollarSign, color: '#00A86B' },
+        { label: 'Total Gross',      value: money(totalGross),        icon: DollarSign, color: '#F59E0B' },
         { label: 'Payroll Runs',     value: payrollRuns.length,     icon: Calendar,   color: '#1B4F8A' },
         { label: 'Pending Runs',     value: pendingRuns,            color: '#F59E0B' },
       ]} />
@@ -67,8 +68,8 @@ export default function PayrollDashboard() {
             <ERPTableCell muted style={{ fontSize: 12.5 }}>{run.pay_period_start} → {run.pay_period_end}</ERPTableCell>
             <ERPTableCell muted>{run.pay_date ? format(new Date(run.pay_date), 'MMM d, yyyy') : '—'}</ERPTableCell>
             <ERPTableCell>{run.employee_payments?.length || 0}</ERPTableCell>
-            <ERPTableCell right bold>{fmt(run.total_gross)}</ERPTableCell>
-            <ERPTableCell right bold style={{ color: '#00875A' }}>{fmt(run.total_net)}</ERPTableCell>
+            <ERPTableCell right bold>{money(run.total_gross)}</ERPTableCell>
+            <ERPTableCell right bold style={{ color: '#00875A' }}>{money(run.total_net)}</ERPTableCell>
             <ERPTableCell><StatusBadge status={run.status} /></ERPTableCell>
           </ERPTableRow>
         ))}

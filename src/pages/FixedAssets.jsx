@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { FixedAsset, Account, JournalEntry } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -8,9 +9,7 @@ import FixedAssetForm from "../components/fixedAssets/FixedAssetForm";
 import { useCompany } from "../components/auth/CompanyContext";
 import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn, FilterSelect } from "../components/shared/PageShell";
 
-const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return '—'; } };
-const currencySymbol = code => ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
 function calculateDepreciation(asset) {
   const today = new Date();
@@ -26,13 +25,13 @@ function calculateDepreciation(asset) {
 }
 
 export default function FixedAssets() {
+  const money = useMoney();
   const [showForm, setShowForm]   = useState(false);
   const [editing, setEditing]     = useState(null);
   const [search, setSearch]       = useState("");
   const [catFilter, setCatFilter] = useState("all");
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
-  const sym = currencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: assets = [], isLoading } = useQuery({
     queryKey: ['fixed-assets', currentCompany?.id],
@@ -126,8 +125,8 @@ export default function FixedAssets() {
       <StatBar stats={[
         { label: 'Total Assets',   value: assets.length, icon: Package,      color: '#1B4F8A' },
         { label: 'Active',         value: activeCount,   color: '#00A86B' },
-        { label: 'Total Cost',     value: fmt(totalCost, sym),  icon: DollarSign, color: '#F59E0B' },
-        { label: 'Net Book Value', value: fmt(totalBook, sym), icon: TrendingDown, color: '#8B5CF6' },
+        { label: 'Total Cost',     value: money(totalCost),  icon: DollarSign, color: '#F59E0B' },
+        { label: 'Net Book Value', value: money(totalBook), icon: TrendingDown, color: '#8B5CF6' },
       ]} />
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search by asset name or code…">
@@ -152,8 +151,8 @@ export default function FixedAssets() {
                 </span>
               </ERPTableCell>
               <ERPTableCell muted>{fmtDate(a.acquisition_date)}</ERPTableCell>
-              <ERPTableCell right bold>{fmt(a.acquisition_cost, sym)}</ERPTableCell>
-              <ERPTableCell right style={{ color: bv < a.acquisition_cost * 0.2 ? '#EF4444' : '#0F172A', fontWeight: 700 }}>{fmt(bv, sym)}</ERPTableCell>
+              <ERPTableCell right bold>{money(a.acquisition_cost)}</ERPTableCell>
+              <ERPTableCell right style={{ color: bv < a.acquisition_cost * 0.2 ? '#EF4444' : '#0F172A', fontWeight: 700 }}>{money(bv)}</ERPTableCell>
               <ERPTableCell><StatusBadge status={a.is_active ? 'active' : 'inactive'} /></ERPTableCell>
               <ERPTableCell>
                 <ActionBtn onClick={() => { setEditing(a); setShowForm(true); }} icon={Pencil} variant="outline" />

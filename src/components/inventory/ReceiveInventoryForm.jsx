@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { Vendor, PurchaseOrder, Account, InventoryLocation, InventoryReceipt, Bill, JournalEntry, Product, InventoryTransaction } from "@/api/entities";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { format } from "date-fns";
 import { useCompany } from "../auth/CompanyContext";
 
 export default function ReceiveInventoryForm({ onClose, pendingPOs = [] }) {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(false);
@@ -534,7 +536,7 @@ export default function ReceiveInventoryForm({ onClose, pendingPOs = [] }) {
                 <SelectContent>
                   {vendorPOs.map(po => (
                     <SelectItem key={po.id} value={po.id}>
-                      {po.po_number} - ${po.total_amount.toFixed(2)}
+                      {po.po_number} - {money(po.total_amount, po.currency)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -623,9 +625,9 @@ export default function ReceiveInventoryForm({ onClose, pendingPOs = [] }) {
                           </SelectContent>
                         </Select>
                       </TableCell>
-                      <TableCell className="text-right">${item.unit_cost.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">{money(item.unit_cost)}</TableCell>
                       <TableCell className="text-right font-semibold">
-                        ${((item.quantity_received_now || 0) * item.unit_cost).toFixed(2)}
+                        {money((item.quantity_received_now || 0) * item.unit_cost)}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -636,15 +638,15 @@ export default function ReceiveInventoryForm({ onClose, pendingPOs = [] }) {
                 <div className="w-64 space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span className="font-semibold">${formData.subtotal.toFixed(2)}</span>
+                    <span className="font-semibold">{money(formData.subtotal)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Tax:</span>
-                    <span className="font-semibold">${formData.tax_total.toFixed(2)}</span>
+                    <span className="font-semibold">{money(formData.tax_total)}</span>
                   </div>
                   <div className="flex justify-between text-lg font-bold border-t pt-2">
                     <span>Invoice Total:</span>
-                    <span className="text-blue-600">${formData.total_amount.toFixed(2)}</span>
+                    <span className="text-blue-600">{money(formData.total_amount)}</span>
                   </div>
                 </div>
               </div>

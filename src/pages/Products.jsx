@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { Product } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -11,10 +12,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const currencySymbol = code => ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
 export default function Products() {
+  const money = useMoney();
   const [showForm, setShowForm]     = useState(false);
   const [editing, setEditing]       = useState(null);
   const [search, setSearch]         = useState("");
@@ -23,7 +23,6 @@ export default function Products() {
   const [toDelete, setToDelete]     = useState(null);
   const queryClient = useQueryClient();
   const { currentCompany } = useCompany();
-  const sym = currencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', currentCompany?.id],
@@ -83,7 +82,7 @@ export default function Products() {
         { label: 'Total Products', value: products.length,        icon: Package,       color: '#1B4F8A' },
         { label: 'Inventory Items',value: inventoryProducts.length, icon: Boxes,        color: '#00A86B' },
         { label: 'Low Stock',      value: lowStock,               icon: AlertTriangle, color: '#EF4444' },
-        { label: 'Inventory Value',value: fmt(totalValue, sym),   icon: DollarSign,    color: '#F59E0B' },
+        { label: 'Inventory Value',value: money(totalValue),   icon: DollarSign,    color: '#F59E0B' },
       ]} />
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search by name or SKU…">
@@ -111,8 +110,8 @@ export default function Products() {
                   {typeLabel(p.product_type)}
                 </span>
               </ERPTableCell>
-              <ERPTableCell right style={{ color: '#00875A', fontWeight: 700 }}>{fmt(p.unit_price, sym)}</ERPTableCell>
-              <ERPTableCell right>{fmt(p.cost_price, sym)}</ERPTableCell>
+              <ERPTableCell right style={{ color: '#00875A', fontWeight: 700 }}>{money(p.unit_price)}</ERPTableCell>
+              <ERPTableCell right>{money(p.cost_price)}</ERPTableCell>
               <ERPTableCell>
                 {p.product_type === 'inventory' ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>

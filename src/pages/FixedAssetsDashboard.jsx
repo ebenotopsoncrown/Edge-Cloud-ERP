@@ -1,4 +1,5 @@
 import React from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { FixedAsset } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
@@ -9,8 +10,6 @@ import { Package, Plus, TrendingDown, DollarSign, Play } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
 import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn } from "../components/shared/PageShell";
 
-const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const currencySymbol = code => ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
 function calcBookValue(asset) {
   const months   = differenceInMonths(new Date(), new Date(asset.acquisition_date));
@@ -23,8 +22,8 @@ function calcBookValue(asset) {
 }
 
 export default function FixedAssetsDashboard() {
+  const money = useMoney();
   const { currentCompany } = useCompany();
-  const sym = currencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: assets = [] } = useQuery({
     queryKey: ['fixed-assets', currentCompany?.id],
@@ -57,9 +56,9 @@ export default function FixedAssetsDashboard() {
       <StatBar stats={[
         { label: 'Total Assets',   value: assets.length,           icon: Package,     color: '#8B5CF6' },
         { label: 'Active Assets',  value: activeAssets.length,     color: '#00A86B' },
-        { label: 'Total Cost',     value: fmt(totalCost, sym),     icon: DollarSign,  color: '#F59E0B' },
-        { label: 'Accumulated Dep',value: fmt(totalDepreciation, sym), icon: TrendingDown, color: '#EF4444' },
-        { label: 'Net Book Value', value: fmt(totalBookValue, sym), icon: DollarSign, color: '#8B5CF6' },
+        { label: 'Total Cost',     value: money(totalCost),     icon: DollarSign,  color: '#F59E0B' },
+        { label: 'Accumulated Dep',value: money(totalDepreciation), icon: TrendingDown, color: '#EF4444' },
+        { label: 'Net Book Value', value: money(totalBookValue), icon: DollarSign, color: '#8B5CF6' },
       ]} />
 
       {/* Category Summary */}
@@ -74,7 +73,7 @@ export default function FixedAssetsDashboard() {
                   {cat.replace(/_/g, ' ').replace(/\b\w/g, x => x.toUpperCase())}
                 </p>
                 <p style={{ fontSize: 20, fontWeight: 800, color: '#8B5CF6' }}>{catAssets.length}</p>
-                <p style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{fmt(catCost, sym)}</p>
+                <p style={{ fontSize: 12, color: '#64748B', marginTop: 2 }}>{money(catCost)}</p>
               </div>
             );
           })}
@@ -94,8 +93,8 @@ export default function FixedAssetsDashboard() {
                   {(a.category || '').replace(/_/g, ' ').replace(/\b\w/g, x => x.toUpperCase())}
                 </span>
               </ERPTableCell>
-              <ERPTableCell right bold>{fmt(a.acquisition_cost, sym)}</ERPTableCell>
-              <ERPTableCell right bold style={{ color: bv < (a.acquisition_cost || 0) * 0.2 ? '#EF4444' : '#0F172A' }}>{fmt(bv, sym)}</ERPTableCell>
+              <ERPTableCell right bold>{money(a.acquisition_cost)}</ERPTableCell>
+              <ERPTableCell right bold style={{ color: bv < (a.acquisition_cost || 0) * 0.2 ? '#EF4444' : '#0F172A' }}>{money(bv)}</ERPTableCell>
               <ERPTableCell><StatusBadge status={a.is_active ? 'active' : 'inactive'} /></ERPTableCell>
             </ERPTableRow>
           );

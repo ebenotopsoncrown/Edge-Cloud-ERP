@@ -1,8 +1,10 @@
 import React from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { safeFormatDate } from "@/lib/utils";
 import { format } from "date-fns";
 
 export default function BillPrintTemplate({ bill, company }) {
+  const money = useMoney();
   return (
     <div className="hidden print:block print:p-8">
       <style>{`
@@ -66,9 +68,9 @@ export default function BillPrintTemplate({ bill, company }) {
               <td className="p-2">{index + 1}</td>
               <td className="p-2">{item.description}</td>
               <td className="text-right p-2">{item.quantity}</td>
-              <td className="text-right p-2">${item.unit_cost.toFixed(2)}</td>
-              <td className="text-right p-2">${item.tax_amount.toFixed(2)}</td>
-              <td className="text-right p-2 font-semibold">${item.line_total.toFixed(2)}</td>
+              <td className="text-right p-2">{money(item.unit_cost, bill.currency)}</td>
+              <td className="text-right p-2">{money(item.tax_amount, bill.currency)}</td>
+              <td className="text-right p-2 font-semibold">{money(item.line_total, bill.currency)}</td>
             </tr>
           ))}
         </tbody>
@@ -79,20 +81,20 @@ export default function BillPrintTemplate({ bill, company }) {
         <div className="w-64">
           <div className="flex justify-between py-2 border-b border-gray-300">
             <span className="text-gray-600">Subtotal:</span>
-            <span className="font-semibold">${bill.subtotal.toFixed(2)}</span>
+            <span className="font-semibold">{money(bill.subtotal, bill.currency)}</span>
           </div>
           <div className="flex justify-between py-2 border-b border-gray-300">
             <span className="text-gray-600">Tax:</span>
-            <span className="font-semibold">${bill.tax_total.toFixed(2)}</span>
+            <span className="font-semibold">{money(bill.tax_total, bill.currency)}</span>
           </div>
           <div className="flex justify-between py-2 border-t-2 border-gray-800">
             <span className="text-xl font-bold">TOTAL:</span>
-            <span className="text-xl font-bold">${bill.total_amount.toFixed(2)}</span>
+            <span className="text-xl font-bold">{money(bill.total_amount, bill.currency)}</span>
           </div>
           {bill.balance_due > 0 && (
             <div className="flex justify-between py-2 bg-red-50 px-2 mt-2">
               <span className="font-bold text-red-700">Amount Due:</span>
-              <span className="font-bold text-red-700">${bill.balance_due.toFixed(2)}</span>
+              <span className="font-bold text-red-700">{money(bill.balance_due, bill.currency)}</span>
             </div>
           )}
         </div>

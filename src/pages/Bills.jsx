@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { Bill } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
@@ -8,17 +9,15 @@ import BillForm from "../components/bills/BillForm";
 import { useCompany } from "../components/auth/CompanyContext";
 import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, FilterSelect } from "../components/shared/PageShell";
 
-const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const fmtDate = d => { try { return format(new Date(d), 'MMM d, yyyy'); } catch { return '—'; } };
-const currencySymbol = code => ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
 export default function Bills() {
+  const money = useMoney();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing]   = useState(null);
   const [search, setSearch]     = useState("");
   const [statusFilter, setStatus] = useState("all");
   const { currentCompany }      = useCompany();
-  const sym = currencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: bills = [], isLoading } = useQuery({
     queryKey: ['bills', currentCompany?.id],
@@ -60,9 +59,9 @@ export default function Bills() {
       />
 
       <StatBar stats={[
-        { label: 'Total Bills',  value: fmt(totalAmt, sym), icon: DollarSign,  color: '#1B4F8A' },
-        { label: 'Paid',         value: fmt(paid, sym),     icon: CheckCircle, color: '#00A86B' },
-        { label: 'AP Balance',   value: fmt(ap, sym),       icon: Clock,       color: '#F59E0B' },
+        { label: 'Total Bills',  value: money(totalAmt), icon: DollarSign,  color: '#1B4F8A' },
+        { label: 'Paid',         value: money(paid),     icon: CheckCircle, color: '#00A86B' },
+        { label: 'AP Balance',   value: money(ap),       icon: Clock,       color: '#F59E0B' },
         { label: 'Overdue',      value: overdueN,           icon: AlertCircle, color: '#EF4444' },
       ]} />
 
@@ -89,9 +88,9 @@ export default function Bills() {
             <ERPTableCell bold>{bill.vendor_name}</ERPTableCell>
             <ERPTableCell muted>{fmtDate(bill.bill_date)}</ERPTableCell>
             <ERPTableCell muted>{fmtDate(bill.due_date)}</ERPTableCell>
-            <ERPTableCell right bold>{fmt(bill.total_amount, sym)}</ERPTableCell>
+            <ERPTableCell right bold>{money(bill.total_amount)}</ERPTableCell>
             <ERPTableCell right style={{ color: (bill.balance_due || bill.total_amount) > 0 ? '#EF4444' : '#00875A', fontWeight: 700 }}>
-              {fmt(bill.balance_due ?? bill.total_amount, sym)}
+              {money(bill.balance_due ?? bill.total_amount)}
             </ERPTableCell>
             <ERPTableCell><StatusBadge status={bill.status} /></ERPTableCell>
           </ERPTableRow>

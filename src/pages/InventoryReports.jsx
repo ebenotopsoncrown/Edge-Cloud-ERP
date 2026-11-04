@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { Product, InventoryTransaction } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +16,7 @@ const PRIMARY = "#1B4F8A";
 const ACCENT  = "#00A86B";
 
 export default function InventoryReports() {
+  const money = useMoney();
   const [activeReport, setActiveReport] = useState("stock-status");
   const [dateRange, setDateRange] = useState("current-month");
   const { currentCompany } = useCompany();
@@ -114,7 +116,7 @@ export default function InventoryReports() {
           { label: 'Total SKUs', value: inventoryProducts.length, color: PRIMARY },
           {
             label: 'Total Value',
-            value: `$${totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+            value: money(totalInventoryValue),
             color: ACCENT,
           },
           { label: 'Low Stock', value: lowStockItems.length, color: '#EF4444' },
@@ -379,8 +381,8 @@ export default function InventoryReports() {
                   <TableHead className="font-bold">Item ID / Description</TableHead>
                   <TableHead className="font-bold text-center">UOM</TableHead>
                   <TableHead className="font-bold text-right">Qty on Hand</TableHead>
-                  <TableHead className="font-bold text-right">Unit Cost ($)</TableHead>
-                  <TableHead className="font-bold text-right">Total Value ($)</TableHead>
+                  <TableHead className="font-bold text-right">Unit Cost ({currentCompany?.base_currency})</TableHead>
+                  <TableHead className="font-bold text-right">Total Value ({currentCompany?.base_currency})</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -417,7 +419,7 @@ export default function InventoryReports() {
                         TOTAL INVENTORY VALUE:
                       </TableCell>
                       <TableCell style={{ textAlign: 'right', fontSize: 15, fontFamily: 'monospace' }}>
-                        ${totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        {money(totalInventoryValue)}
                       </TableCell>
                     </TableRow>
                   </>
@@ -449,7 +451,7 @@ export default function InventoryReports() {
                 <div>
                   <p style={{ color: '#64748B' }}>Total Value:</p>
                   <p style={{ fontWeight: 700, color: '#0F172A' }}>
-                    ${totalInventoryValue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {money(totalInventoryValue)}
                   </p>
                 </div>
               </div>

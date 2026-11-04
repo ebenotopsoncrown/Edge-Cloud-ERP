@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { safeFormatDate } from "@/lib/utils";
 import { WorkOrder, BillOfMaterials } from "@/api/entities";
 import { useCompany } from "../components/auth/CompanyContext";
@@ -32,6 +33,7 @@ const TABS = [
 ];
 
 export default function Manufacturing() {
+  const money = useMoney();
   const { currentCompany } = useCompany();
   const [activeTab, setActiveTab] = useState("work-orders");
   const [showWOForm, setShowWOForm] = useState(false);
@@ -97,7 +99,7 @@ export default function Manufacturing() {
         { label: 'Work Orders', value: workOrders.length, icon: Factory, color: '#F59E0B' },
         { label: 'In Progress', value: inProgressWOs, icon: Clock, color: '#1B4F8A' },
         { label: 'Completed', value: completedWOs, icon: CheckCircle, color: '#00A86B' },
-        { label: 'Total WO Cost', value: `$${totalWOCost.toFixed(2)}`, icon: DollarSign, color: '#F59E0B' },
+        { label: 'Total WO Cost', value: money(totalWOCost), icon: DollarSign, color: '#F59E0B' },
         { label: 'Active BOMs', value: activeBOMs, icon: Layers, color: '#1B4F8A' },
       ]} />
 
@@ -187,7 +189,7 @@ export default function Manufacturing() {
                       <TableCell>{wo.quantity_produced || 0}</TableCell>
                       <TableCell>{safeFormatDate(wo.start_date, 'MMM d, yyyy')}</TableCell>
                       <TableCell><StatusBadge status={wo.status} /></TableCell>
-                      <TableCell style={{ fontWeight: 600 }}>${wo.total_cost?.toFixed(2)}</TableCell>
+                      <TableCell style={{ fontWeight: 600 }}>{money(wo.total_cost)}</TableCell>
                       <TableCell>
                         <ActionBtn
                           icon={Pencil}
@@ -237,9 +239,9 @@ export default function Manufacturing() {
                       <TableCell style={{ fontWeight: 600 }}>{bom.bom_number}</TableCell>
                       <TableCell>{bom.product_name}</TableCell>
                       <TableCell>{bom.version}</TableCell>
-                      <TableCell>${bom.total_material_cost?.toFixed(2)}</TableCell>
-                      <TableCell>${bom.total_labor_cost?.toFixed(2)}</TableCell>
-                      <TableCell style={{ fontWeight: 600 }}>${bom.total_cost?.toFixed(2)}</TableCell>
+                      <TableCell>{money(bom.total_material_cost)}</TableCell>
+                      <TableCell>{money(bom.total_labor_cost)}</TableCell>
+                      <TableCell style={{ fontWeight: 600 }}>{money(bom.total_cost)}</TableCell>
                       <TableCell>
                         <StatusBadge status={bom.is_active ? 'active' : 'inactive'} />
                       </TableCell>

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { Product, Customer, Store, POSTerminal, POSSession, Account, POSSale, ProductLocation, Invoice, JournalEntry } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCompany } from "../components/auth/CompanyContext";
@@ -29,6 +30,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function POS() {
+  const money = useMoney();
   const { currentCompany, user } = useCompany();
   const queryClient = useQueryClient();
   
@@ -578,7 +580,7 @@ export default function POS() {
                     <p className="text-xs text-gray-500 mb-2">{product.sku}</p>
                     <div className="flex justify-between items-center">
                       <span className="text-lg font-bold text-green-600">
-                        ${product.unit_price?.toFixed(2)}
+                        {money(product.unit_price)}
                       </span>
                       {product.product_type === 'inventory' && (
                         <Badge variant="outline" className="text-xs">
@@ -626,7 +628,7 @@ export default function POS() {
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex-1">
                           <h4 className="font-semibold text-sm">{item.product_name}</h4>
-                          <p className="text-xs text-gray-500">${item.unit_price?.toFixed(2)} each</p>
+                          <p className="text-xs text-gray-500">{money(item.unit_price)} each</p>
                         </div>
                         <Button
                           variant="ghost"
@@ -661,12 +663,12 @@ export default function POS() {
                           </Button>
                         </div>
                         <span className="font-bold">
-                          ${(item.unit_price * item.quantity - (item.discount_amount || 0)).toFixed(2)}
+                          {money(item.unit_price * item.quantity - (item.discount_amount || 0))}
                         </span>
                       </div>
                       {item.discount_percent > 0 && (
                         <div className="text-xs text-orange-600">
-                          Discount: {item.discount_percent}% (-${item.discount_amount.toFixed(2)})
+                          Discount: {item.discount_percent}% (-{money(item.discount_amount)})
                         </div>
                       )}
                     </div>
@@ -677,21 +679,21 @@ export default function POS() {
               <div className="border-t pt-4 space-y-2 bg-white">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-semibold">${subtotal.toFixed(2)}</span>
+                  <span className="font-semibold">{money(subtotal)}</span>
                 </div>
                 {discountTotal > 0 && (
                   <div className="flex justify-between text-sm text-orange-600">
                     <span>Discount:</span>
-                    <span className="font-semibold">-${discountTotal.toFixed(2)}</span>
+                    <span className="font-semibold">-{money(discountTotal)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Tax:</span>
-                  <span className="font-semibold">${taxTotal.toFixed(2)}</span>
+                  <span className="font-semibold">{money(taxTotal)}</span>
                 </div>
                 <div className="flex justify-between text-2xl font-bold border-t pt-2">
                   <span>Total:</span>
-                  <span className="text-green-600">${total.toFixed(2)}</span>
+                  <span className="text-green-600">{money(total)}</span>
                 </div>
               </div>
 
@@ -743,7 +745,7 @@ export default function POS() {
             <div className="bg-gray-50 rounded-lg p-4">
               <div className="flex justify-between text-xl font-bold">
                 <span>Total Amount:</span>
-                <span className="text-green-600">${total.toFixed(2)}</span>
+                <span className="text-green-600">{money(total)}</span>
               </div>
             </div>
 
@@ -778,7 +780,7 @@ export default function POS() {
                     <div className="flex justify-between">
                       <span className="font-medium">Change:</span>
                       <span className="text-xl font-bold text-blue-600">
-                        ${(amountTendered - total).toFixed(2)}
+                        {money(amountTendered - total)}
                       </span>
                     </div>
                   </div>

@@ -1,4 +1,5 @@
 import React from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { Donation, Donor, Program, Grant } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -8,10 +9,10 @@ import { Heart, Users, Target, DollarSign, Plus, Receipt, CreditCard, FileText, 
 import { format } from "date-fns";
 import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, ActionBtn } from "../components/shared/PageShell";
 
-const fmt = (n) => `$${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const ACCENT = '#EC4899';
 
 export default function NonProfitDashboard() {
+  const money = useMoney();
   const { currentCompany } = useCompany();
 
   const { data: donations = [] } = useQuery({
@@ -54,8 +55,8 @@ export default function NonProfitDashboard() {
       />
 
       <StatBar stats={[
-        { label: 'Total Donations',  value: fmt(totalDonations), icon: Heart,       color: ACCENT },
-        { label: 'Active Grants',    value: fmt(totalGrants),    icon: DollarSign,  color: '#8B5CF6' },
+        { label: 'Total Donations',  value: money(totalDonations), icon: Heart,       color: ACCENT },
+        { label: 'Active Grants',    value: money(totalGrants),    icon: DollarSign,  color: '#8B5CF6' },
         { label: 'Total Donors',     value: donors.length,       icon: Users,       color: '#1B4F8A' },
         { label: 'Active Programs',  value: activePrograms,      icon: Target,      color: '#00A86B' },
         { label: 'Total Programs',   value: programs.length,     color: '#64748B' },
@@ -96,7 +97,7 @@ export default function NonProfitDashboard() {
             <ERPTableCell muted>
               {donation.donation_date ? format(new Date(donation.donation_date), 'MMM d, yyyy') : '—'}
             </ERPTableCell>
-            <ERPTableCell right bold style={{ color: '#00A86B' }}>{fmt(donation.amount)}</ERPTableCell>
+            <ERPTableCell right bold style={{ color: '#00A86B' }}>{money(donation.amount)}</ERPTableCell>
             <ERPTableCell><StatusBadge status={donation.status || 'received'} /></ERPTableCell>
           </ERPTableRow>
         ))}

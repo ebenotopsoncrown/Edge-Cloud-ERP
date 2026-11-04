@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { Customer, Invoice } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -12,10 +13,9 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-const fmt = (n, sym = '$') => `${sym}${Number(n || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const currencySymbol = code => ({ USD:'$',EUR:'€',GBP:'£',NGN:'₦',ZAR:'R',KES:'KSh',GHS:'₵',CAD:'C$',AUD:'A$',INR:'₹',JPY:'¥',CNY:'¥' }[code] || code);
 
 export default function Customers() {
+  const money = useMoney();
   const [showForm, setShowForm]       = useState(false);
   const [editing, setEditing]         = useState(null);
   const [search, setSearch]           = useState("");
@@ -23,7 +23,6 @@ export default function Customers() {
   const [toDelete, setToDelete]       = useState(null);
   const queryClient = useQueryClient();
   const { currentCompany } = useCompany();
-  const sym = currencySymbol(currentCompany?.base_currency || 'USD');
 
   const { data: customers = [], isLoading } = useQuery({
     queryKey: ['customers', currentCompany?.id],
@@ -89,8 +88,8 @@ export default function Customers() {
       <StatBar stats={[
         { label: 'Total Customers', value: customers.length, icon: Users,     color: '#1B4F8A' },
         { label: 'Active',          value: activeCount,       icon: UserCheck, color: '#00A86B' },
-        { label: 'Credit Extended', value: fmt(totalCredit, sym), icon: DollarSign, color: '#F59E0B' },
-        { label: 'AR Outstanding',  value: fmt(totalOutstand, sym), icon: DollarSign, color: '#EF4444' },
+        { label: 'Credit Extended', value: money(totalCredit), icon: DollarSign, color: '#F59E0B' },
+        { label: 'AR Outstanding',  value: money(totalOutstand), icon: DollarSign, color: '#EF4444' },
       ]} />
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search by name or email…" />
@@ -102,9 +101,9 @@ export default function Customers() {
             <ERPTableCell>{c.contact_person}</ERPTableCell>
             <ERPTableCell muted>{c.email}</ERPTableCell>
             <ERPTableCell muted>{c.phone}</ERPTableCell>
-            <ERPTableCell right>{fmt(c.credit_limit, sym)}</ERPTableCell>
+            <ERPTableCell right>{money(c.credit_limit)}</ERPTableCell>
             <ERPTableCell right style={{ color: c.outstanding > 0 ? '#EF4444' : '#00875A', fontWeight: 700 }}>
-              {fmt(c.outstanding, sym)}
+              {money(c.outstanding)}
             </ERPTableCell>
             <ERPTableCell><StatusBadge status={c.is_active ? 'active' : 'inactive'} /></ERPTableCell>
             <ERPTableCell>
