@@ -31,7 +31,7 @@ export default function AccountForm({ account, onClose }) {
     account_type: 'asset',
     account_category: 'current_asset',
     description: '',
-    currency: 'USD',
+    currency: currentCompany?.base_currency || 'USD',
     is_active: true,
     balance: 0,
     ...account

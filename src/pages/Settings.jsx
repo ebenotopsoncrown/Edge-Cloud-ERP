@@ -3,7 +3,7 @@ import { Company, createEntity } from "@/api/entities";
 const UserRecord = createEntity('users');
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Save, Building2, DollarSign, User, CheckCircle, Globe, Clock } from "lucide-react";
+import { Save, Building2, Banknote, User, CheckCircle, Globe, Clock } from "lucide-react";
 import { useCompany } from "../components/auth/CompanyContext";
 import PageShell, { PageHeader, NewBtn, ActionBtn } from "../components/shared/PageShell";
 
@@ -152,7 +152,7 @@ export default function Settings() {
 
       {/* Currency notice */}
       <div style={{ background: '#EBF4FB', border: '1.5px solid #AED6F1', borderRadius: 12, padding: '14px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-        <DollarSign style={{ width: 18, height: 18, color: PRIMARY, flexShrink: 0, marginTop: 1 }} />
+        <Banknote style={{ width: 18, height: 18, color: PRIMARY, flexShrink: 0, marginTop: 1 }} />
         <div>
           <p style={{ fontWeight: 700, color: PRIMARY, fontSize: 13.5 }}>Base Currency: <strong>{company.base_currency}</strong></p>
           <p style={{ color: '#2E86C1', fontSize: 13, marginTop: 3 }}>All financial reports and dashboards display amounts in {company.base_currency}. Sales invoices in another currency post to the ledger in {company.base_currency}.</p>

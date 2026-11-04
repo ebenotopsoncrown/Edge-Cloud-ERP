@@ -3,7 +3,7 @@ import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { Customer, Invoice } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Users, Pencil, Trash2, DollarSign, UserCheck, UserX } from "lucide-react";
+import { Users, Pencil, Trash2, Banknote, UserCheck, UserX } from "lucide-react";
 import CustomerForm from "../components/customers/CustomerForm";
 import { useCompany } from "../components/auth/CompanyContext";
 import { toBaseAmount } from "@/lib/currency";
@@ -88,8 +88,8 @@ export default function Customers() {
       <StatBar stats={[
         { label: 'Total Customers', value: customers.length, icon: Users,     color: '#1B4F8A' },
         { label: 'Active',          value: activeCount,       icon: UserCheck, color: '#00A86B' },
-        { label: 'Credit Extended', value: money(totalCredit), icon: DollarSign, color: '#F59E0B' },
-        { label: 'AR Outstanding',  value: money(totalOutstand), icon: DollarSign, color: '#EF4444' },
+        { label: 'Credit Extended', value: money(totalCredit), icon: Banknote, color: '#F59E0B' },
+        { label: 'AR Outstanding',  value: money(totalOutstand), icon: Banknote, color: '#EF4444' },
       ]} />
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search by name or email…" />

@@ -11,7 +11,7 @@ import AccountLedger from "../components/reports/AccountLedger";
 import { useFinancialMetrics, formatCurrency } from "../components/shared/FinancialCalculations";
 import AgedReceivables from "../components/reports/AgedReceivables";
 import {
-  DollarSign,
+  Banknote,
   TrendingUp,
   Users,
   FileText,
@@ -213,7 +213,7 @@ export default function SalesDashboard() {
           title="Total Sales"
           value={formatCurrency(metrics.totalRevenue, baseCurrency)}
           subtitle="From revenue accounts"
-          icon={DollarSign}
+          icon={Banknote}
           accentColor="#1B4F8A"
           onClick={handleRevenueClick}
         />

@@ -9,7 +9,7 @@ import PageShell, { PageHeader } from "../components/shared/PageShell";
 import AccountLedger from "../components/reports/AccountLedger";
 import { useFinancialMetrics, formatCurrency } from "../components/shared/FinancialCalculations";
 import {
-  DollarSign,
+  Banknote,
   TrendingUp,
   TrendingDown,
   BookOpen,
@@ -187,7 +187,7 @@ export default function AccountingDashboard() {
           title="Total Equity"
           value={formatCurrency(metrics.totalEquity, baseCurrency)}
           subtitle={`Net income: ${formatCurrency(metrics.netIncome, baseCurrency)}`}
-          icon={DollarSign}
+          icon={Banknote}
           accentColor="#8B5CF6"
           onClick={handleEquityClick}
         />

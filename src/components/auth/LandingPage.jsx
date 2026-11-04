@@ -21,7 +21,7 @@ import {
   Cloud,
   Rocket,
   ShoppingCart,
-  DollarSign,
+  Banknote,
   AlertCircle
 } from "lucide-react";
 
@@ -121,7 +121,7 @@ export default function LandingPage({ onLogin }) {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
           <Card className="bg-slate-800/50 border-slate-700 backdrop-blur">
             <CardHeader>
-              <DollarSign className="w-12 h-12 text-blue-400 mb-4" />
+              <Banknote className="w-12 h-12 text-blue-400 mb-4" />
               <CardTitle className="text-white">Financial Management</CardTitle>
             </CardHeader>
             <CardContent className="text-gray-300">

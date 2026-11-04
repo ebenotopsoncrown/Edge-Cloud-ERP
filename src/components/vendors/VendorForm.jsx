@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { useCompany } from "../auth/CompanyContext";
 import { Vendor, Account, JournalEntry } from "@/api/entities";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { X, Save, AlertCircle } from "lucide-react";
 
 export default function VendorForm({ vendor, onClose, companyId }) {
+  const { currentCompany } = useCompany();
+  const baseCurrency = currentCompany?.base_currency || 'USD';
   const queryClient = useQueryClient();
   const [errors, setErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
@@ -33,7 +36,7 @@ export default function VendorForm({ vendor, onClose, companyId }) {
     },
     payment_terms: 'net_30',
     tax_number: '',
-    currency: 'USD',
+    currency: baseCurrency,
     bank_details: {
       bank_name: '',
       account_number: '',
@@ -367,10 +370,10 @@ export default function VendorForm({ vendor, onClose, companyId }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                    <SelectItem value="GBP">GBP</SelectItem>
-                    <SelectItem value="NGN">NGN</SelectItem>
+                    {/* The base currency is always offered, even if it isn't one of the usual four. */}
+                    {[...new Set([baseCurrency, 'USD', 'EUR', 'GBP', 'NGN'])].map(code => (
+                      <SelectItem key={code} value={code}>{code}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

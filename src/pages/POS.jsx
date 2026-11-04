@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Search, Plus, Minus, Trash2, ShoppingCart, DollarSign, 
+  Search, Plus, Minus, Trash2, ShoppingCart, Banknote, 
   CreditCard, Store as StoreIcon, Clock, User, Package, 
   Pause, X, Check, Receipt, Calculator, AlertCircle
 } from "lucide-react";

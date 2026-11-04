@@ -6,7 +6,7 @@ import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useCompany } from "../components/auth/CompanyContext";
 import {
-  DollarSign, TrendingUp, TrendingDown, CreditCard,
+  Banknote, TrendingUp, TrendingDown, CreditCard,
   ArrowRightLeft, Plus, Receipt, Wallet, Building2,
 } from "lucide-react";
 import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, ActionBtn } from "../components/shared/PageShell";
@@ -53,7 +53,7 @@ export default function Banking() {
       <PageHeader
         title="Banking & Cash Management"
         subtitle={`${baseCurrency} · ${bankAccounts.length} bank / cash accounts`}
-        icon={DollarSign}
+        icon={Banknote}
         accentColor="#1B4F8A"
       />
 
@@ -61,7 +61,7 @@ export default function Banking() {
         { label: 'Total Cash & Bank', value: money(totalCash),                  icon: Wallet,      color: '#1B4F8A' },
         { label: 'Money In',          value: money(totalReceived),               icon: TrendingUp,  color: '#00A86B' },
         { label: 'Money Out',         value: money(totalPaid),                   icon: TrendingDown,color: '#EF4444' },
-        { label: 'Net Cash Flow',     value: money(totalReceived - totalPaid),   icon: DollarSign,  color: '#8B5CF6' },
+        { label: 'Net Cash Flow',     value: money(totalReceived - totalPaid),   icon: Banknote,  color: '#8B5CF6' },
         { label: 'Accounts',          value: bankAccounts.length,                              icon: Building2,   color: '#64748B' },
       ]} />
 

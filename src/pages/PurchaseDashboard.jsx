@@ -12,7 +12,7 @@ import { useFinancialMetrics, formatCurrency } from "../components/shared/Financ
 import AgedPayables from "../components/reports/AgedPayables";
 import BillPaymentForm from "../components/purchases/BillPaymentForm";
 import {
-  DollarSign,
+  Banknote,
   TrendingDown,
   Building2,
   Receipt,
@@ -231,7 +231,7 @@ export default function PurchaseDashboard() {
           title="Total Purchases"
           value={formatCurrency(metrics.totalCOGS + metrics.totalOperatingExpenses, baseCurrency)}
           subtitle="From expense accounts"
-          icon={DollarSign}
+          icon={Banknote}
           accentColor="#F97316"
           onClick={handleExpensesClick}
         />

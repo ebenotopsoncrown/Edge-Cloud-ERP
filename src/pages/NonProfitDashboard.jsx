@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useCompany } from "../components/auth/CompanyContext";
-import { Heart, Users, Target, DollarSign, Plus, Receipt, CreditCard, FileText, TrendingUp, Briefcase } from "lucide-react";
+import { Heart, Users, Target, Banknote, Plus, Receipt, CreditCard, FileText, TrendingUp, Briefcase } from "lucide-react";
 import { format } from "date-fns";
 import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, ActionBtn } from "../components/shared/PageShell";
 
@@ -56,7 +56,7 @@ export default function NonProfitDashboard() {
 
       <StatBar stats={[
         { label: 'Total Donations',  value: money(totalDonations), icon: Heart,       color: ACCENT },
-        { label: 'Active Grants',    value: money(totalGrants),    icon: DollarSign,  color: '#8B5CF6' },
+        { label: 'Active Grants',    value: money(totalGrants),    icon: Banknote,  color: '#8B5CF6' },
         { label: 'Total Donors',     value: donors.length,       icon: Users,       color: '#1B4F8A' },
         { label: 'Active Programs',  value: activePrograms,      icon: Target,      color: '#00A86B' },
         { label: 'Total Programs',   value: programs.length,     color: '#64748B' },

@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useCompany } from "../components/auth/CompanyContext";
-import { Users, DollarSign, Calendar, Plus, Upload, FileText } from "lucide-react";
+import { Users, Banknote, Calendar, Plus, Upload, FileText } from "lucide-react";
 import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn } from "../components/shared/PageShell";
 import { format } from "date-fns";
 
@@ -50,8 +50,8 @@ export default function PayrollDashboard() {
 
       <StatBar stats={[
         { label: 'Active Employees', value: activeEmployees,         icon: Users,      color: '#8B5CF6' },
-        { label: 'Total Payroll Paid', value: money(totalPayroll),    icon: DollarSign, color: '#00A86B' },
-        { label: 'Total Gross',      value: money(totalGross),        icon: DollarSign, color: '#F59E0B' },
+        { label: 'Total Payroll Paid', value: money(totalPayroll),    icon: Banknote, color: '#00A86B' },
+        { label: 'Total Gross',      value: money(totalGross),        icon: Banknote, color: '#F59E0B' },
         { label: 'Payroll Runs',     value: payrollRuns.length,     icon: Calendar,   color: '#1B4F8A' },
         { label: 'Pending Runs',     value: pendingRuns,            color: '#F59E0B' },
       ]} />

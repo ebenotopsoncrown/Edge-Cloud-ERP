@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useCompany } from "../components/auth/CompanyContext";
 import PageShell, { PageHeader } from "../components/shared/PageShell";
 import ProductForm from "../components/products/ProductForm";
-import { Plus, Package, AlertTriangle, TrendingUp, DollarSign, Layers } from "lucide-react";
+import { Plus, Package, AlertTriangle, TrendingUp, Banknote, Layers } from "lucide-react";
 import { formatCurrency } from "../components/shared/FinancialCalculations";
 
 function KpiCard({ title, value, subtitle, icon: Icon, accentColor }) {
@@ -164,7 +164,7 @@ export default function InventoryDashboard() {
           title="Stock Value"
           value={formatCurrency(totalValue, baseCurrency)}
           subtitle={pluralize(totalQuantity.toFixed(0), 'total unit')}
-          icon={DollarSign}
+          icon={Banknote}
           accentColor="#00A86B"
         />
         <KpiCard

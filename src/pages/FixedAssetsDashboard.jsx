@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useCompany } from "../components/auth/CompanyContext";
-import { Package, Plus, TrendingDown, DollarSign, Play } from "lucide-react";
+import { Package, Plus, TrendingDown, Banknote, Play } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
 import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn } from "../components/shared/PageShell";
 
@@ -56,9 +56,9 @@ export default function FixedAssetsDashboard() {
       <StatBar stats={[
         { label: 'Total Assets',   value: assets.length,           icon: Package,     color: '#8B5CF6' },
         { label: 'Active Assets',  value: activeAssets.length,     color: '#00A86B' },
-        { label: 'Total Cost',     value: money(totalCost),     icon: DollarSign,  color: '#F59E0B' },
+        { label: 'Total Cost',     value: money(totalCost),     icon: Banknote,  color: '#F59E0B' },
         { label: 'Accumulated Dep',value: money(totalDepreciation), icon: TrendingDown, color: '#EF4444' },
-        { label: 'Net Book Value', value: money(totalBookValue), icon: DollarSign, color: '#8B5CF6' },
+        { label: 'Net Book Value', value: money(totalBookValue), icon: Banknote, color: '#8B5CF6' },
       ]} />
 
       {/* Category Summary */}

@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CreditCard, TrendingDown, TrendingUp, Save, Pencil, DollarSign, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { CreditCard, TrendingDown, TrendingUp, Save, Pencil, Banknote, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../components/auth/CompanyContext";
 import { isForeignDocument, round2 } from "@/lib/currency";
@@ -365,7 +365,7 @@ export default function Payments() {
       <StatBar stats={[
         { label: 'Total Received', value: money(totalReceived), icon: TrendingUp,   color: '#00A86B' },
         { label: 'Total Made',     value: money(totalMade),     icon: TrendingDown,  color: '#EF4444' },
-        { label: 'Net',            value: money(totalReceived - totalMade), icon: DollarSign, color: '#1B4F8A' },
+        { label: 'Net',            value: money(totalReceived - totalMade), icon: Banknote, color: '#1B4F8A' },
         { label: 'Received Count', value: receivedPayments.length,             color: '#00A86B' },
         { label: 'Made Count',     value: madePayments.length,                 color: '#EF4444' },
       ]} />

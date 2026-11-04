@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { pluralize } from "@/lib/utils";
 import { Vendor } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Building2, Pencil, Trash2, DollarSign, Globe } from "lucide-react";
+import { Building2, Pencil, Trash2, Banknote, Globe } from "lucide-react";
 import VendorForm from "../components/vendors/VendorForm";
 import { useCompany } from "../components/auth/CompanyContext";
 import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn } from "../components/shared/PageShell";
@@ -74,7 +74,7 @@ export default function Vendors() {
       <StatBar stats={[
         { label: 'Total Vendors',  value: vendors.length, icon: Building2, color: '#1B4F8A' },
         { label: 'Active',         value: activeCount,    icon: Globe,     color: '#00A86B' },
-        { label: 'With Credit',    value: withCredit,     icon: DollarSign, color: '#8B5CF6' },
+        { label: 'With Credit',    value: withCredit,     icon: Banknote, color: '#8B5CF6' },
       ]} />
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search by vendor name, contact or email…" />

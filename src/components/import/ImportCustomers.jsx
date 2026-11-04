@@ -159,7 +159,7 @@ export default function ImportCustomers() {
             },
             credit_limit: parseFloat(row.credit_limit) || 0,
             payment_terms: row.payment_terms || 'net_30',
-            currency: 'USD',
+            currency: currentCompany?.base_currency || 'USD',
             is_active: true,
             total_outstanding: openingBalance
           };

@@ -14,7 +14,7 @@ import ReportActions from "../components/reports/ReportActions";
 import AccountLedger from "../components/reports/AccountLedger";
 import { useFinancialMetrics, formatCurrency } from "../components/shared/FinancialCalculations";
 import {
-  FileText, TrendingUp, DollarSign, BarChart3,
+  FileText, TrendingUp, Banknote, BarChart3,
   Package, ShoppingCart, Building2,
 } from "lucide-react";
 import { format, startOfMonth, startOfQuarter, startOfYear } from "date-fns";
@@ -182,7 +182,7 @@ export default function Reports() {
       <StatBar stats={[
         { label: 'Total Revenue',  value: formatCurrency(pTotalRevenue, baseCurrency),  icon: TrendingUp,  color: '#00A86B' },
         { label: 'Total Expenses', value: formatCurrency(pTotalExpenses, baseCurrency), icon: TrendingUp,  color: '#EF4444' },
-        { label: 'Net Profit',     value: formatCurrency(pNetIncome, baseCurrency),     icon: DollarSign,  color: pNetIncome >= 0 ? '#00A86B' : '#EF4444' },
+        { label: 'Net Profit',     value: formatCurrency(pNetIncome, baseCurrency),     icon: Banknote,  color: pNetIncome >= 0 ? '#00A86B' : '#EF4444' },
         { label: 'Total Assets',   value: formatCurrency(totalAssets, baseCurrency),   icon: BarChart3,   color: '#1B4F8A' },
       ]} />
 

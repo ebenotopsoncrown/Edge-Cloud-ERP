@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Pencil, Upload, Save, Calendar, Users, DollarSign, CheckCircle, Clock } from "lucide-react";
+import { Plus, Pencil, Upload, Save, Calendar, Users, Banknote, CheckCircle, Clock } from "lucide-react";
 import { format, addDays } from "date-fns";
 import PageShell, { PageHeader, StatBar, StatusBadge, NewBtn, ActionBtn } from "../components/shared/PageShell";
 
@@ -156,7 +156,7 @@ export default function Payroll() {
       <StatBar stats={[
         { label: 'Active Employees', value: activeEmployees, icon: Users, color: '#8B5CF6' },
         { label: 'Payroll Runs', value: payrollRuns.length, icon: Clock, color: '#1B4F8A' },
-        { label: 'Total Gross Pay', value: money(totalGross), icon: DollarSign, color: '#F59E0B' },
+        { label: 'Total Gross Pay', value: money(totalGross), icon: Banknote, color: '#F59E0B' },
         { label: 'Total Net Pay', value: money(totalNet), icon: CheckCircle, color: '#00A86B' },
         { label: 'Pending Runs', value: pendingRuns, icon: Clock, color: '#F59E0B' },
       ]} />
@@ -366,7 +366,7 @@ function EmployeeForm({ employee, onClose }) {
     employment_type: 'full_time',
     pay_frequency: 'monthly',
     basic_salary: 0,
-    currency: 'USD',
+    currency: currentCompany?.base_currency || 'USD',
     tax_id: '',
     is_active: true,
     ...employee

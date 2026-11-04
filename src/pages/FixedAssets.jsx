@@ -3,7 +3,7 @@ import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { FixedAsset, Account, JournalEntry } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, Pencil, TrendingDown, AlertCircle, Play, DollarSign } from "lucide-react";
+import { Package, Pencil, TrendingDown, AlertCircle, Play, Banknote } from "lucide-react";
 import { format, differenceInMonths } from "date-fns";
 import FixedAssetForm from "../components/fixedAssets/FixedAssetForm";
 import { useCompany } from "../components/auth/CompanyContext";
@@ -125,7 +125,7 @@ export default function FixedAssets() {
       <StatBar stats={[
         { label: 'Total Assets',   value: assets.length, icon: Package,      color: '#1B4F8A' },
         { label: 'Active',         value: activeCount,   color: '#00A86B' },
-        { label: 'Total Cost',     value: money(totalCost),  icon: DollarSign, color: '#F59E0B' },
+        { label: 'Total Cost',     value: money(totalCost),  icon: Banknote, color: '#F59E0B' },
         { label: 'Net Book Value', value: money(totalBook), icon: TrendingDown, color: '#8B5CF6' },
       ]} />
 

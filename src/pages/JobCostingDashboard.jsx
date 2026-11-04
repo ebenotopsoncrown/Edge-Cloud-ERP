@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { createPageUrl } from "@/utils";
 import { useCompany } from "../components/auth/CompanyContext";
-import { Briefcase, Plus, Upload, Clock, DollarSign, TrendingUp, FileText } from "lucide-react";
+import { Briefcase, Plus, Upload, Clock, Banknote, TrendingUp, FileText } from "lucide-react";
 import PageShell, { PageHeader, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, ActionBtn } from "../components/shared/PageShell";
 
 const ACCENT = '#7C3AED';
@@ -58,7 +58,7 @@ export default function JobCostingDashboard() {
       <StatBar stats={[
         { label: 'Active Jobs',      value: activeJobs,              icon: Briefcase,  color: ACCENT },
         { label: 'Completed',        value: completedJobs,           color: '#00A86B' },
-        { label: 'Contract Value',   value: money(totalContractValue), icon: DollarSign, color: '#1B4F8A' },
+        { label: 'Contract Value',   value: money(totalContractValue), icon: Banknote, color: '#1B4F8A' },
         { label: 'Total Costs',      value: money(totalCosts),    icon: TrendingUp, color: '#EF4444' },
         { label: totalProfit >= 0 ? 'Total Profit' : 'Total Loss',
           value: money(Math.abs(totalProfit)),

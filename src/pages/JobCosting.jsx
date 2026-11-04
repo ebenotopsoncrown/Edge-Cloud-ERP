@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Briefcase, Layers, Code, Pencil, DollarSign, TrendingUp, Clock } from "lucide-react";
+import { Briefcase, Layers, Code, Pencil, Banknote, TrendingUp, Clock } from "lucide-react";
 import { format } from "date-fns";
 import JobForm from "../components/jobCosting/JobForm";
 import JobPhaseForm from "../components/jobCosting/JobPhaseForm";
@@ -124,8 +124,8 @@ export default function JobCosting() {
       <StatBar stats={[
         { label: 'Total Jobs', value: jobs.length, icon: Briefcase, color: '#F59E0B' },
         { label: 'Active Jobs', value: activeJobs, icon: Clock, color: '#1B4F8A' },
-        { label: 'Contract Value', value: money(totalContractValue), icon: DollarSign, color: '#1B4F8A' },
-        { label: 'Actual Cost', value: money(totalActualCost), icon: DollarSign, color: '#F59E0B' },
+        { label: 'Contract Value', value: money(totalContractValue), icon: Banknote, color: '#1B4F8A' },
+        { label: 'Actual Cost', value: money(totalActualCost), icon: Banknote, color: '#F59E0B' },
         { label: 'Profit', value: money(totalProfit), icon: TrendingUp, color: totalProfit >= 0 ? '#00A86B' : '#DC2626' },
       ]} />
 

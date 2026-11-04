@@ -3,7 +3,7 @@ import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { PurchaseOrder, Bill } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ShoppingCart, Pencil, Trash2, FileText, DollarSign, CheckCircle } from "lucide-react";
+import { ShoppingCart, Pencil, Trash2, FileText, Banknote, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import PurchaseOrderForm from "../components/purchaseOrders/PurchaseOrderForm";
 import { useCompany } from "../components/auth/CompanyContext";
@@ -107,7 +107,7 @@ export default function PurchaseOrders() {
         { label: 'Total Orders',   value: purchaseOrders.length, icon: ShoppingCart, color: '#1B4F8A' },
         { label: 'Open',           value: openPOs,               color: '#F59E0B' },
         { label: 'Received',       value: received,              icon: CheckCircle,  color: '#00A86B' },
-        { label: 'Total Value',    value: money(totalAmt),    icon: DollarSign,   color: '#8B5CF6' },
+        { label: 'Total Value',    value: money(totalAmt),    icon: Banknote,   color: '#8B5CF6' },
       ]} />
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search PO number or vendor…">

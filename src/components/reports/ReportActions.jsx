@@ -1,14 +1,54 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Printer, FileSpreadsheet } from "lucide-react";
+import { useCompany } from "../auth/CompanyContext";
 
-export default function ReportActions({ 
-  reportTitle, 
-  tableData, 
+// "₦1,234.50" or "-₦1,234.50" becomes 1234.50, so a spreadsheet can add it up.
+const toCellValue = (text) => {
+  const value = text.replace(/\s+/g, ' ').trim();
+  const money = value.match(/^(-?)[^\d\s.,-]{0,3}([\d,]+\.\d{2})$/);
+  return money ? `${money[1]}${money[2].replace(/,/g, '')}` : value;
+};
+
+const toCsvField = (value) => {
+  // Stops a name such as "=SUM(...)" running as a formula when the file is opened.
+  const safe = /^[=+@\t\r]/.test(value) || /^-[^\d.\s]/.test(value) ? `'${value}` : value;
+  return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+};
+
+// Reads the report as displayed: section headings, tables and total lines, in page order.
+function readReportRows(scope) {
+  const rows = [];
+  scope.querySelectorAll('table, h3, h4, .font-bold.text-sm, .flex.justify-between').forEach((element) => {
+    if (element.closest('table') && element.tagName !== 'TABLE') return;
+    if (element.tagName === 'TABLE') {
+      element.querySelectorAll('tr').forEach((tr) => {
+        const cells = [];
+        tr.querySelectorAll('th, td').forEach((cell) => {
+          cells.push(toCellValue(cell.innerText));
+          for (let i = 1; i < cell.colSpan; i++) cells.push('');
+        });
+        if (cells.some(Boolean)) rows.push(cells);
+      });
+    } else if (element.classList.contains('flex')) {
+      const cells = [...element.children].map((child) => toCellValue(child.innerText));
+      if (cells.some(Boolean)) rows.push(cells);
+    } else {
+      rows.push([]);
+      rows.push([element.innerText.replace(/\s*\n+\s*/g, ' - ').trim()]);
+    }
+  });
+  return rows;
+}
+
+export default function ReportActions({
+  reportTitle,
   onPrint,
-  fileName 
+  fileName
 }) {
-  
+  const { currentCompany } = useCompany();
+  const rootRef = useRef(null);
+
   const handlePrint = () => {
     if (onPrint) {
       onPrint();
@@ -17,26 +57,29 @@ export default function ReportActions({
     }
   };
 
-  const handleExportExcel = () => {
-    if (!tableData || tableData.length === 0) {
+  const handleExportCsv = () => {
+    const rows = readReportRows(rootRef.current.parentElement);
+    if (!rows.some(row => row.length > 1)) {
       alert('No data to export');
       return;
     }
 
-    // Create a simple CSV instead of Excel for now
-    const headers = Object.keys(tableData[0]).join(',');
-    const rows = tableData.map(row => 
-      Object.values(row).map(val => 
-        typeof val === 'string' && val.includes(',') ? `"${val}"` : val
-      ).join(',')
-    );
-    const csv = [headers, ...rows].join('\n');
-    
-    const blob = new Blob([csv], { type: 'text/csv' });
+    const header = [
+      [reportTitle],
+      [currentCompany?.company_name || ''],
+      [`Reporting Currency: ${currentCompany?.base_currency || ''}`],
+      [`Exported: ${new Date().toISOString().split('T')[0]}`],
+      [],
+    ];
+    const csv = [...header, ...rows].map(row => row.map(toCsvField).join(',')).join('\r\n');
+
+    // The byte order mark tells Excel the file is UTF-8.
+    const blob = new Blob([`﻿${csv}\r\n`], { type: 'text/csv;charset=utf-8' });
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = fileName || `report_${new Date().toISOString().split('T')[0]}.csv`;
+    const slug = (reportTitle || 'report').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+    a.download = fileName || `${slug}_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -48,16 +91,16 @@ export default function ReportActions({
   };
 
   return (
-    <div className="flex gap-3 print:hidden">
+    <div ref={rootRef} className="flex gap-3 print:hidden">
       <Button
-        onClick={handleExportExcel}
+        onClick={handleExportCsv}
         variant="outline"
         className="bg-green-50 hover:bg-green-100 border-green-200"
       >
         <FileSpreadsheet className="w-4 h-4 mr-2" />
         Export to CSV
       </Button>
-      
+
       <Button
         onClick={handleExportPDF}
         variant="outline"
@@ -66,7 +109,7 @@ export default function ReportActions({
         <Download className="w-4 h-4 mr-2" />
         Export to PDF
       </Button>
-      
+
       <Button
         onClick={handlePrint}
         variant="outline"

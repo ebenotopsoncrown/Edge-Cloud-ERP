@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Checkbox } from "@/components/ui/checkbox";
-import { X, Save, DollarSign } from "lucide-react";
+import { X, Save, Banknote } from "lucide-react";
 import { format } from "date-fns";
 import { useCompany } from "../auth/CompanyContext";
 import PaymentVoucherPrint from "../print/PaymentVoucherPrint"; // Added import
@@ -402,7 +402,7 @@ export default function BillPaymentForm({ onClose }) {
                 <div className="space-y-2">
                   <Label>Total Amount</Label>
                   <div className="flex items-center gap-2">
-                    <DollarSign className="w-5 h-5 text-gray-400" />
+                    <Banknote className="w-5 h-5 text-gray-400" />
                     <Input
                       type="number"
                       step="0.01"

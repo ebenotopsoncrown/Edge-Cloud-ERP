@@ -11,8 +11,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { X, Save, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useCompany } from "../auth/CompanyContext";
 
 export default function CustomerForm({ customer, onClose, companyId }) {
+  const { currentCompany } = useCompany();
+  const baseCurrency = currentCompany?.base_currency || 'USD';
   const queryClient = useQueryClient();
   const [errors, setErrors] = useState({});
   const [showErrors, setShowErrors] = useState(false);
@@ -41,7 +44,7 @@ export default function CustomerForm({ customer, onClose, companyId }) {
     credit_limit: 0,
     payment_terms: 'net_30',
     tax_number: '',
-    currency: 'USD',
+    currency: baseCurrency,
     notes: '',
     is_active: true,
     total_outstanding: 0,
@@ -467,10 +470,10 @@ export default function CustomerForm({ customer, onClose, companyId }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                    <SelectItem value="GBP">GBP</SelectItem>
-                    <SelectItem value="NGN">NGN</SelectItem>
+                    {/* The base currency is always offered, even if it isn't one of the usual four. */}
+                    {[...new Set([baseCurrency, 'USD', 'EUR', 'GBP', 'NGN'])].map(code => (
+                      <SelectItem key={code} value={code}>{code}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>

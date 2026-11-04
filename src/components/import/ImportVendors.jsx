@@ -150,7 +150,7 @@ export default function ImportVendors() {
               country: row.country || ''
             },
             payment_terms: row.payment_terms || 'net_30',
-            currency: 'USD',
+            currency: currentCompany?.base_currency || 'USD',
             is_active: true,
             total_outstanding: openingBalance
           };

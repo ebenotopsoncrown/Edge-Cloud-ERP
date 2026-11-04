@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Factory, FileText, Pencil, DollarSign, CheckCircle, Clock, Layers } from "lucide-react";
+import { Factory, FileText, Pencil, Banknote, CheckCircle, Clock, Layers } from "lucide-react";
 import { format } from "date-fns";
 import WorkOrderForm from "../components/manufacturing/WorkOrderForm";
 import BOMForm from "../components/manufacturing/BOMForm";
@@ -99,7 +99,7 @@ export default function Manufacturing() {
         { label: 'Work Orders', value: workOrders.length, icon: Factory, color: '#F59E0B' },
         { label: 'In Progress', value: inProgressWOs, icon: Clock, color: '#1B4F8A' },
         { label: 'Completed', value: completedWOs, icon: CheckCircle, color: '#00A86B' },
-        { label: 'Total WO Cost', value: money(totalWOCost), icon: DollarSign, color: '#F59E0B' },
+        { label: 'Total WO Cost', value: money(totalWOCost), icon: Banknote, color: '#F59E0B' },
         { label: 'Active BOMs', value: activeBOMs, icon: Layers, color: '#1B4F8A' },
       ]} />
 

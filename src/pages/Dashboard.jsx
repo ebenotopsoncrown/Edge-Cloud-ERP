@@ -12,7 +12,7 @@ import { useFinancialMetrics, formatCurrency, getCurrencySymbol, getMonthlyReven
 import GoogleReviewRequest from "../components/shared/GoogleReviewRequest";
 import { toBaseAmount } from "@/lib/currency";
 import {
-  DollarSign, TrendingUp, TrendingDown, FileText, Users, Package,
+  Banknote, TrendingUp, TrendingDown, FileText, Users, Package,
   ShoppingCart, AlertCircle, Receipt, ArrowUpRight, ArrowDownRight,
   MoreHorizontal, RefreshCw, ChevronRight, Clock, CheckCircle2,
   XCircle, Zap,
@@ -218,7 +218,7 @@ export default function Dashboard() {
       <PageHeader
         title="Financial Dashboard"
         subtitle={`Welcome back · ${currentCompany.company_name} · ${today}`}
-        icon={DollarSign}
+        icon={Banknote}
         accentColor="#2E7DE8"
         actions={
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -276,7 +276,7 @@ export default function Dashboard() {
           title="Total Revenue"
           value={formatCurrency(metrics.totalRevenue, baseCurrency)}
           subtitle="All time · From revenue accounts"
-          icon={DollarSign}
+          icon={Banknote}
           accentColor={PRIMARY}
           onClick={() => metrics.revenueAccounts.length > 0 && setSelectedAccount(metrics.revenueAccounts[0])}
         />
@@ -422,7 +422,7 @@ export default function Dashboard() {
           {
             label: 'Avg Invoice Value',
             value: formatCurrency(postedInvoices.length > 0 ? postedInvoices.reduce((sum, i) => sum + toBaseAmount(i.total_amount, i, baseCurrency), 0) / postedInvoices.length : 0, baseCurrency),
-            icon: DollarSign,
+            icon: Banknote,
             color: '#8B5CF6',
           },
         ].map(({ label, value, icon: Icon, color }) => (

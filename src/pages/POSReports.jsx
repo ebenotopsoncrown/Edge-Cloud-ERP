@@ -42,7 +42,7 @@ import {
   FileText,
   Download,
   TrendingUp,
-  DollarSign,
+  Banknote,
   ShoppingCart,
   Users,
   Package,
@@ -209,7 +209,7 @@ export default function POSReports() {
       />
 
       <StatBar stats={[
-        { label: 'Total Sales',       value: money(totalSales), icon: DollarSign, color: '#1B4F8A' },
+        { label: 'Total Sales',       value: money(totalSales), icon: Banknote, color: '#1B4F8A' },
         { label: 'Transactions',      value: totalTransactions,                icon: ShoppingCart, color: '#00A86B' },
         { label: 'Avg Transaction',   value: money(averageTransaction), icon: TrendingUp, color: '#8B5CF6' },
         { label: 'Total Discount',    value: money(totalDiscount),   color: '#F59E0B' },

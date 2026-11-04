@@ -3,7 +3,7 @@ import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { Invoice } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
-import { FileText, Plus, Pencil, DollarSign, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { FileText, Plus, Pencil, Banknote, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import InvoiceForm from "../components/invoices/InvoiceForm";
 import { useCompany } from "../components/auth/CompanyContext";
@@ -65,7 +65,7 @@ export default function Invoices() {
       />
 
       <StatBar stats={[
-        { label: 'Total Invoiced', value: money(totalAmt), icon: DollarSign, color: '#2E7DE8' },
+        { label: 'Total Invoiced', value: money(totalAmt), icon: Banknote, color: '#2E7DE8' },
         { label: 'Collected',      value: money(totalPaid), icon: CheckCircle, color: '#00A86B' },
         { label: 'AR Balance',     value: money(totalAR), icon: Clock, color: '#F59E0B' },
         { label: 'Overdue',        value: overdue, icon: AlertCircle, color: '#EF4444' },

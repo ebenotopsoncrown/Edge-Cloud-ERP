@@ -13,7 +13,7 @@ import {
   ShoppingCart,
   Users,
   Package,
-  DollarSign,
+  Banknote,
   TrendingUp,
   Settings,
   Book,
@@ -143,9 +143,9 @@ const navigationGroups = [
       { title: "Chart of Accounts",    url: createPageUrl("ChartOfAccounts"),     icon: Book },
       { title: "Journal Entries",      url: createPageUrl("JournalEntries"),      icon: FileText },
       { title: "Payments",             url: createPageUrl("Payments"),            icon: CreditCard },
-      { title: "Banking",              url: createPageUrl("Banking"),             icon: DollarSign },
+      { title: "Banking",              url: createPageUrl("Banking"),             icon: Banknote },
       { title: "Exchange Rates",       url: createPageUrl("ExchangeRates"),       icon: TrendingUp },
-      { title: "FX Revaluation",       url: createPageUrl("FXRevaluation"),       icon: DollarSign },
+      { title: "FX Revaluation",       url: createPageUrl("FXRevaluation"),       icon: Banknote },
     ]
   },
   {

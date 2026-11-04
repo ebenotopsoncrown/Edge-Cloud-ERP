@@ -3,7 +3,7 @@ import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { Product } from "@/api/entities";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Package, Pencil, Trash2, AlertTriangle, DollarSign, Boxes } from "lucide-react";
+import { Package, Pencil, Trash2, AlertTriangle, Banknote, Boxes } from "lucide-react";
 import ProductForm from "../components/products/ProductForm";
 import { useCompany } from "../components/auth/CompanyContext";
 import PageShell, { PageHeader, SearchBar, StatBar, ERPTable, ERPTableRow, ERPTableCell, StatusBadge, NewBtn, ActionBtn, FilterSelect } from "../components/shared/PageShell";
@@ -82,7 +82,7 @@ export default function Products() {
         { label: 'Total Products', value: products.length,        icon: Package,       color: '#1B4F8A' },
         { label: 'Inventory Items',value: inventoryProducts.length, icon: Boxes,        color: '#00A86B' },
         { label: 'Low Stock',      value: lowStock,               icon: AlertTriangle, color: '#EF4444' },
-        { label: 'Inventory Value',value: money(totalValue),   icon: DollarSign,    color: '#F59E0B' },
+        { label: 'Inventory Value',value: money(totalValue),   icon: Banknote,    color: '#F59E0B' },
       ]} />
 
       <SearchBar value={search} onChange={setSearch} placeholder="Search by name or SKU…">

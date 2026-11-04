@@ -3,7 +3,7 @@ import { useMoney } from "@/components/shared/useMoney";
 import { pluralize } from "@/lib/utils";
 import { Bill } from "@/api/entities";
 import { useQuery } from "@tanstack/react-query";
-import { Receipt, DollarSign, Clock, AlertCircle, CheckCircle } from "lucide-react";
+import { Receipt, Banknote, Clock, AlertCircle, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import BillForm from "../components/bills/BillForm";
 import { useCompany } from "../components/auth/CompanyContext";
@@ -59,7 +59,7 @@ export default function Bills() {
       />
 
       <StatBar stats={[
-        { label: 'Total Bills',  value: money(totalAmt), icon: DollarSign,  color: '#1B4F8A' },
+        { label: 'Total Bills',  value: money(totalAmt), icon: Banknote,  color: '#1B4F8A' },
         { label: 'Paid',         value: money(paid),     icon: CheckCircle, color: '#00A86B' },
         { label: 'AP Balance',   value: money(ap),       icon: Clock,       color: '#F59E0B' },
         { label: 'Overdue',      value: overdueN,           icon: AlertCircle, color: '#EF4444' },
