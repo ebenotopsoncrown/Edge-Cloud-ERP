@@ -64,6 +64,17 @@ export default function Login() {
           </div>
 
           <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 sm:p-8">
+            {/* Only this word uses the font, so only its letters are downloaded, on this page only. */}
+            <link
+              rel="stylesheet"
+              href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&text=Welcome&display=swap"
+            />
+            <p
+              className="text-3xl sm:text-4xl font-bold leading-tight text-[#1B4F8A] mb-2"
+              style={{ fontFamily: "'Playfair Display', Georgia, 'Times New Roman', serif" }}
+            >
+              Welcome
+            </p>
             <h1 className="text-2xl font-bold text-slate-900">Sign in</h1>
             <p className="text-slate-500 text-sm mt-1 mb-6">Enter your details to access your account.</p>
 
@@ -134,7 +145,7 @@ export default function Login() {
       </main>
 
       {/* Product panel */}
-      <aside className="flex items-center justify-center bg-sky-50 border-t border-sky-100 px-6 py-10 sm:px-10 lg:border-t-0 lg:border-l lg:min-h-screen lg:px-16">
+      <aside className="relative flex flex-col items-center justify-center bg-sky-50 border-t border-sky-100 px-6 py-10 sm:px-10 lg:border-t-0 lg:border-l lg:min-h-screen lg:px-16">
         <div className="w-full max-w-md">
           <div className="hidden lg:block mb-10">
             <Logo />
@@ -153,6 +164,9 @@ export default function Login() {
             ))}
           </ul>
         </div>
+        <p className="w-full mt-10 text-right text-xs text-slate-500 [text-wrap:balance] lg:absolute lg:bottom-4 lg:right-6 lg:w-auto lg:mt-0">
+          © 2026 edgeclouderp.com · Powered by InspiredEdge ICT Solutions
+        </p>
       </aside>
     </div>
   );
